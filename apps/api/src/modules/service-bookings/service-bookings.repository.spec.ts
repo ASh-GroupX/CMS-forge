@@ -26,3 +26,21 @@ test('appointment creation writes a metadata-only audit in the same transaction'
   assert.equal(JSON.stringify(audit).includes('Private customer'), false);
   assert.equal(JSON.stringify(audit).includes('0790000000'), false);
 });
+
+test('appointment reschedule and its audit commit in one transaction', async () => {
+  const events: string[] = [];
+  const client = {
+    serviceAppointment: { update: async () => { events.push('appointment'); return { id: 'apt-1' }; } },
+    auditLog: { create: async () => { events.push('audit'); } },
+  };
+  const repository = new ServiceBookingsRepository({ $transaction: async (work: any) => {
+    events.push('begin');
+    const result = await work(client);
+    events.push('commit');
+    return result;
+  } } as never);
+  await repository.updateAppointmentWithAudits('apt-1', { bookingLaneId: 'lane-notes' }, [{
+    action: 'service_booking_reschedule', actorId: 'staff-1', metadata: { newBookingLaneId: 'lane-notes' },
+  }]);
+  assert.deepEqual(events, ['begin', 'appointment', 'audit', 'commit']);
+});

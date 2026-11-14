@@ -4,11 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDown, Clock } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { useServiceBooking } from './service-booking-context';
-import {
-  getNowTimeParts,
-  getTodayDateString,
-  matchesBranch,
-} from './service-booking-utils';
+import { getNowTimeParts, getTodayDateString, matchesBranch } from './service-booking-utils';
 import { TimelineSlotContent } from './timeline-slot-content';
 import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api';
 
@@ -18,10 +14,11 @@ const SLOTS_PER_HOUR = ['00', '15', '30', '45'];
 export function TimelineDayView() {
   const {
     appointments,
+    bookingLanes,
     branches,
     locale,
     openNewModalWithSlot,
-    selectedBranchId,
+    selectedBranchIds,
     selectedDate,
     slotAvailability,
     setIsDetailModalOpen,
@@ -104,9 +101,8 @@ export function TimelineDayView() {
       clearInterval(interval);
       if (observer) observer.disconnect();
     };
-  }, [updateMarkerPosition, appointments, selectedBranchId, showPastHours]);
+  }, [updateMarkerPosition, appointments, selectedBranchIds, showPastHours]);
 
-  // Auto-scroll to the red line marker when today's view is opened or navigated to
   useEffect(() => {
     if (!isToday) {
       scrolledDateRef.current = null;
@@ -128,46 +124,52 @@ export function TimelineDayView() {
     }
   }, [isToday, markerTop, selectedDate]);
 
-  const activeBranches =
-    selectedBranchId === 'ALL'
-      ? branches
-      : branches.filter((b) => b.id === selectedBranchId || b.code === selectedBranchId);
+  const activeBranches = branches.filter((branch) => selectedBranchIds.includes(branch.id));
+  const columns = bookingLanes.filter((lane) => lane.isActive && selectedBranchIds.includes(lane.serviceCenterId)).map((lane) => ({
+    lane,
+    branch: activeBranches.find((branch) => branch.id === lane.serviceCenterId),
+  })).filter((column) => column.branch !== undefined);
+  const matchesColumn = (appointment: ServiceAppointment, laneId: string, branchId: string) => {
+    if (appointment.bookingLaneId) return appointment.bookingLaneId === laneId;
+    const firstLane = bookingLanes.find((lane) => lane.isActive && lane.serviceCenterId === branchId);
+    return firstLane?.id === laneId;
+  };
 
-  // Group appointments by branch with normalized date comparison
   const dateAppointments = appointments.filter((a) => {
     const aDate = typeof a.date === 'string' ? a.date.slice(0, 10) : new Date(a.date).toISOString().slice(0, 10);
     return aDate === selectedDate;
   });
   const hiddenCancelledCount = dateAppointments.filter((appointment) =>
     appointment.status === 'CANCELLED' &&
-    activeBranches.some((branch) => matchesBranch(appointment, branch)) &&
+    columns.some(({ branch, lane }) => matchesBranch(appointment, branch!) && matchesColumn(appointment, lane.id, branch!.id)) &&
     (selectedDate < todayAmman || Number(appointment.startTime.slice(0, 2)) < nowParts.hour),
   ).length;
 
   return (
-    <div className="relative flex flex-col rounded-2xl border border-line-subtle bg-surface shadow-sm overflow-hidden">
-      {/* Branch Headers */}
-      <div className="grid grid-cols-[4.5rem_1fr] border-b border-line-subtle bg-surface-canvas/60">
+    <div className="relative flex flex-col overflow-x-auto rounded-2xl border border-line-subtle bg-surface shadow-sm" data-timeline-scroll>
+      <div className="grid grid-cols-[4.5rem_1fr] border-b border-line-subtle bg-surface-canvas/60"
+        style={{ minWidth: `calc(4.5rem + ${Math.max(columns.length, 1)} * 10rem)` }}>
         <div className="p-3 text-center text-xs font-semibold text-content-muted">
           {t.timeline.time}
         </div>
         <div
           className="grid divide-x divide-line-subtle"
-          style={{ gridTemplateColumns: `repeat(${Math.max(activeBranches.length, 1)}, minmax(0, 1fr))` }}
+          style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(10rem, 1fr))` }}
         >
-          {activeBranches.map((b) => (
-            <div className="p-3 text-center font-bold text-sm text-content-strong flex items-center justify-center gap-2" key={b.id}>
-              <span>{isAr ? b.nameAr : b.nameEn}</span>
+          {columns.map(({ branch, lane }) => (
+            <div className="p-3 text-center text-content-strong" data-booking-lane-header={lane.id} key={lane.id}>
+              <span className="block text-xs font-medium text-content-muted">{isAr ? branch!.nameAr : branch!.nameEn}</span>
+              <span className="mt-0.5 inline-flex items-center gap-2 text-sm font-bold">{isAr ? lane.nameAr : lane.nameEn}
               <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand">
-                {dateAppointments.filter((a) => matchesBranch(a, b)).length}
-              </span>
+                {dateAppointments.filter((appointment) => matchesColumn(appointment, lane.id, branch!.id)).length}
+              </span></span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Timeline Grid */}
-      <div ref={timelineContainerRef} className="relative divide-y divide-line-subtle/70 overflow-x-auto">
+      <div ref={timelineContainerRef} className="relative divide-y divide-line-subtle/70"
+        style={{ minWidth: `calc(4.5rem + ${Math.max(columns.length, 1)} * 10rem)` }}>
         {pastHourCount > 0 && <Button aria-expanded={showPastHours}
           className="flex h-11 w-full items-center justify-center gap-2 rounded-none border-b border-line-subtle bg-surface-canvas/60 text-xs font-semibold text-content-strong hover:bg-surface-canvas focus-visible:ring-2 focus-visible:ring-brand"
           onClick={() => setShowPastHours((visible) => !visible)} type="button" variant="ghost">
@@ -175,7 +177,6 @@ export function TimelineDayView() {
           {showPastHours ? t.timeline.hidePastHours : t.timeline.showPastHours.replace('{count}', String(pastHourCount))}
           {!showPastHours && hiddenCancelledCount > 0 && <span className="rounded-full bg-status-error-bg px-2 py-0.5 text-status-error">{hiddenCancelledCount} {t.status.CANCELLED}</span>}
         </Button>}
-        {/* Live Red Current Time Marker */}
         {isToday && markerTop !== null && (
           <div
             id="timeline-current-time-marker"
@@ -203,25 +204,24 @@ export function TimelineDayView() {
                 {hourKey}
               </div>
 
-              {/* Branch Columns */}
               <div
                 className="grid divide-x divide-line-subtle"
-                style={{ gridTemplateColumns: `repeat(${Math.max(activeBranches.length, 1)}, minmax(0, 1fr))` }}
+                style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(10rem, 1fr))` }}
               >
-                {activeBranches.map((branch) => {
-                  const branchHourApts = dateAppointments.filter(
+                {columns.map(({ branch, lane }) => {
+                  const laneHourAppointments = dateAppointments.filter(
                     (a) =>
-                      matchesBranch(a, branch) &&
+                      matchesBranch(a, branch!) && matchesColumn(a, lane.id, branch!.id) &&
                       a.startTime.startsWith(String(hour).padStart(2, '0')),
                   );
-                  const availability = slotAvailability[branch.id];
+                  const availability = slotAvailability[lane.id];
                   const hourLimit = availability?.slots.find((slot) => slot.hour === `${String(hour).padStart(2, '0')}:00`)?.maxPerHour;
-                  const activeHourCount = branchHourApts.filter((apt) => apt.status !== 'CANCELLED' && apt.status !== 'NO_SHOW').length;
+                  const activeHourCount = laneHourAppointments.filter((apt) => apt.status !== 'CANCELLED' && apt.status !== 'NO_SHOW').length;
                   const isHourFull = hourLimit !== undefined && activeHourCount >= hourLimit;
                   const isHourPartial = activeHourCount > 0 && !isHourFull;
 
                   return (
-                    <div className="relative flex flex-col divide-y divide-line-subtle/30" key={branch.id}>
+                    <div className="relative flex flex-col divide-y divide-line-subtle/30" key={lane.id}>
                       {/* Hour Capacity Badge */}
                       <div className="flex h-6 items-center justify-end gap-1 border-b border-line-subtle/30 px-2 text-[10px] font-bold">
                         <span
@@ -242,7 +242,7 @@ export function TimelineDayView() {
                       {SLOTS_PER_HOUR.map((slotMin) => {
                         const timeStr = `${String(hour).padStart(2, '0')}:${slotMin}`;
                         const slotApts = dateAppointments.filter(
-                          (a) => matchesBranch(a, branch) && a.startTime === timeStr,
+                          (a) => matchesBranch(a, branch!) && matchesColumn(a, lane.id, branch!.id) && a.startTime === timeStr,
                         );
                         const slotCapacity = availability?.slots.find((slot) => slot.slot === timeStr);
                         const isPastSlot = selectedDate < todayAmman || (selectedDate === todayAmman && timeStr < currentTime);
@@ -263,7 +263,8 @@ export function TimelineDayView() {
                                   ? 'bg-status-warning-bg/40'
                                   : 'hover:bg-brand/[0.03]'
                             }`}
-                            data-branch-id={branch.id}
+                            data-branch-id={branch!.id}
+                            data-booking-lane-id={lane.id}
                             data-slot-time={timeStr}
                             key={slotMin}
                           >
@@ -272,7 +273,7 @@ export function TimelineDayView() {
                               blockedReason={blockedReason}
                               capacity={slotCapacity}
                               mayAdd={mayAdd}
-                              onAdd={() => openNewModalWithSlot({ branchId: branch.id, date: selectedDate, time: timeStr })}
+                              onAdd={() => openNewModalWithSlot({ branchId: branch!.id, bookingLaneId: lane.id, date: selectedDate, time: timeStr })}
                               onSelect={(appointment) => {
                                 setSelectedAppointment(appointment);
                                 setIsDetailModalOpen(true);

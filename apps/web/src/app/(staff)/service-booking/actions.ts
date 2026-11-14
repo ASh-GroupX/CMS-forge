@@ -86,8 +86,8 @@ export async function updateAppointmentStatusAction(id: string, status: ServiceA
   return updateAppointmentAction(id, { status });
 }
 
-export async function rescheduleAppointmentAction(id: string, branchId: string, date: string, startTime: string) {
-  return updateAppointmentAction(id, { branchId, date, startTime });
+export async function rescheduleAppointmentAction(id: string, branchId: string, bookingLaneId: string, date: string, startTime: string) {
+  return updateAppointmentAction(id, { branchId, bookingLaneId, date, startTime });
 }
 
 export async function saveBranchRulesAction(branchId: string, rules: DayRule[]) {

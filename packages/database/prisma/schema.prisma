@@ -1870,9 +1870,32 @@ model ServiceCenter {
   createdAt    DateTime             @default(now()) @map("created_at")
   updatedAt    DateTime             @updatedAt @map("updated_at")
   rules        ServiceBookingRule[]
+  bookingLanes ServiceBookingLane[]
   appointments ServiceAppointment[]
 
   @@map("service_centers")
+}
+
+model ServiceBookingLane {
+  id                   String               @id @default(cuid())
+  serviceCenterId      String               @map("service_center_id")
+  code                 String
+  nameEn               String               @map("name_en")
+  nameAr               String               @map("name_ar")
+  maxDailyAppointments Int                  @default(80) @map("max_daily_appointments")
+  maxPerHour           Int                  @default(5) @map("max_per_hour")
+  maxPerSlot           Int                  @default(2) @map("max_per_slot")
+  position             Int                  @default(0)
+  isActive             Boolean              @default(true) @map("is_active")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  serviceCenter        ServiceCenter        @relation(fields: [serviceCenterId], references: [id], onDelete: Cascade)
+  appointments         ServiceAppointment[]
+
+  @@unique([serviceCenterId, code])
+  @@index([serviceCenterId, isActive, position])
+  @@map("service_booking_lanes")
 }
 
 model ServiceBookingRule {
@@ -1903,6 +1926,7 @@ model ServiceAppointment {
   referenceNumber     String                   @unique @map("reference_number")
   branchId            String?                  @map("branch_id")
   serviceCenterId     String                   @default("center_main") @map("service_center_id")
+  bookingLaneId       String                   @map("booking_lane_id")
   customerName        String                   @map("customer_name")
   customerPhone       String                   @map("customer_phone")
   vin                 String?                  @map("vin")
@@ -1923,12 +1947,14 @@ model ServiceAppointment {
 
   branch              Branch?                  @relation(fields: [branchId], references: [id])
   serviceCenter       ServiceCenter?           @relation(fields: [serviceCenterId], references: [id])
+  bookingLane         ServiceBookingLane       @relation(fields: [bookingLaneId], references: [id], onDelete: Restrict)
   carModel            ServiceCarModel?         @relation(fields: [carModelId], references: [id])
   maintenanceType     ServiceMaintenanceType?  @relation(fields: [maintenanceTypeId], references: [id])
   createdBy           User?                    @relation("ServiceAppointmentCreatedBy", fields: [createdById], references: [id])
   smsNotifications    Notification[]
 
   @@index([serviceCenterId, date])
+  @@index([bookingLaneId, date, startTime])
   @@index([customerPhone])
   @@map("service_appointments")
 }

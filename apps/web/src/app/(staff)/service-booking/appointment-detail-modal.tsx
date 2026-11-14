@@ -20,6 +20,7 @@ const STATUS_OPTIONS: ServiceAppointmentStatus[] = ['BOOKED', 'CONFIRMED', 'IN_S
 export function AppointmentDetailModal() {
   const {
     branches,
+    bookingLanes,
     isDetailModalOpen,
     locale,
     selectedAppointment,
@@ -228,6 +229,7 @@ export function AppointmentDetailModal() {
         {activeTab === 'reschedule' && userRules.canRescheduleBookings && (
           <AppointmentRescheduleForm
             appointment={apt}
+            bookingLanes={bookingLanes}
             branches={branches}
             isAr={isAr}
             onSuccess={(updated) => {

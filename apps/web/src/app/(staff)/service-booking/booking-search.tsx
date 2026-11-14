@@ -16,7 +16,7 @@ const RESULT_LIMIT = 20;
 export function BookingSearch({ loadError = false }: { loadError?: boolean }) {
   const {
     appointments, branches, locale, setIsDetailModalOpen, setSelectedAppointment,
-    setSelectedBranchId, setSelectedDate, setView, t,
+    selectOnlyBranch, setSelectedDate, setView, t,
   } = useServiceBooking();
   const copy = bookingSearchCopy[locale];
   const [query, setQuery] = useState('');
@@ -61,7 +61,7 @@ export function BookingSearch({ loadError = false }: { loadError?: boolean }) {
               </div>
             </div>
             <Button aria-label={`${copy.view}: ${appointment.customerName}, ${date}, ${appointment.startTime}`} className="shrink-0 gap-1.5 rounded-lg" onClick={() => {
-              setSelectedBranchId(branch?.id ?? 'ALL');
+              if (branch) selectOnlyBranch(branch.id);
               setSelectedDate(appointment.date.slice(0, 10));
               setView('day');
               setSelectedAppointment(appointment);

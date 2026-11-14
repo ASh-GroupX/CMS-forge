@@ -4,6 +4,7 @@ export class UpdateServiceAppointmentDto {
   startTime?: string;
   notes?: string;
   branchId?: string;
+  bookingLaneId?: string;
   customerName?: string;
   customerPhone?: string;
   vin?: string | null;
@@ -42,6 +43,11 @@ export function parseUpdateServiceAppointmentBody(input: unknown): UpdateService
   }
   if (body.branchId !== undefined) {
     result.branchId = String(body.branchId).trim();
+  }
+  if (body.bookingLaneId !== undefined) {
+    const laneId = String(body.bookingLaneId).trim();
+    if (!laneId) throw new Error('Invalid booking lane');
+    result.bookingLaneId = laneId;
   }
   if (body.customerName !== undefined) {
     result.customerName = String(body.customerName).trim();

@@ -8,18 +8,18 @@ const FALLBACK_TIMES = Array.from({ length: 40 }, (_, index) => {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 });
 
-export function useBookingTimeOptions(open: boolean, branchId: string, date: string, selectedTime: string,
+export function useBookingTimeOptions(open: boolean, branchId: string, bookingLaneId: string, date: string, selectedTime: string,
   today: string, nowTime: string) {
   const [day, setDay] = useState<DayAvailability | null>(null);
   useEffect(() => {
-    if (!open || !branchId || !date) return;
+    if (!open || !branchId || !bookingLaneId || !date) return;
     let active = true;
     setDay(null);
-    void fetchSlotAvailability(branchId, date).then((availability) => {
+    void fetchSlotAvailability(branchId, date, bookingLaneId).then((availability) => {
       if (active) setDay(availability);
     }).catch(() => { if (active) setDay(null); });
     return () => { active = false; };
-  }, [open, branchId, date]);
+  }, [open, branchId, bookingLaneId, date]);
 
   const offered = day?.slots.map((slot) => slot.slot) ?? FALLBACK_TIMES;
   const times = Array.from(new Set([...offered, selectedTime])).sort();

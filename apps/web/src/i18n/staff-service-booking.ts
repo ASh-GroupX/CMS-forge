@@ -1,11 +1,12 @@
 import type { Locale } from './staff-shell';
+import { bookingLaneText, bookingStatusText } from './staff-service-booking-lanes';
 
 export const serviceBookingText = {
   en: {
     title: 'Service Center Booking & Appointments',
     subtitle: 'Manage workshop schedules, view capacity, and book customer service appointments.',
     branches: 'Branches',
-    allBranches: 'Both Branches (Side-by-side)',
+    allBranches: 'Service centers to compare',
     mainBranch: 'Main Branch',
     northBranch: 'North Branch',
     views: {
@@ -55,14 +56,7 @@ export const serviceBookingText = {
       vin: 'VIN',
       duration: 'mins',
     },
-    status: {
-      BOOKED: 'Booked',
-      CONFIRMED: 'Confirmed',
-      IN_SERVICE: 'In Service',
-      COMPLETED: 'Completed',
-      CANCELLED: 'Cancelled',
-      NO_SHOW: 'No Show',
-    },
+    status: bookingStatusText.en,
     modal: {
       newTitle: 'Book Service Appointment',
       newSubtitle: 'Enter customer and vehicle details to schedule an appointment.',
@@ -83,6 +77,8 @@ export const serviceBookingText = {
       periodicMaintenance: 'Periodic Maintenance', periodicMileage: 'Service mileage',
       selectMileage: 'Select mileage', mileageRequired: 'Select a mileage for periodic maintenance.',
       branch: 'Service Branch',
+      bookingLane: 'Booking Lane',
+      bookingLaneRequired: 'Select an active booking lane for this service center.',
       date: 'Appointment Date',
       timeSlot: '15-Minute Slot',
       duration: 'Estimated Duration',
@@ -111,6 +107,7 @@ export const serviceBookingText = {
       title: 'Service Booking Settings',
       subtitle: 'Configure branch working hours, appointment limits, car models, and maintenance types.',
       tabHours: 'Working Hours & Limits',
+      tabLanes: 'Booking Lanes',
       tabCarModels: 'Car Models',
       tabMaintenance: 'Maintenance Types',
       tabBranches: 'Service Centers',
@@ -146,13 +143,14 @@ export const serviceBookingText = {
       durationMinutes: 'Duration (Minutes)',
       active: 'Active',
       inactive: 'Inactive',
+      lanes: bookingLaneText.en,
     },
   },
   ar: {
     title: 'جدول وحجوزات مركز الصيانة',
     subtitle: 'إدارة مواعيد الورشة والفرعين، مراقبة السعة المتاحة، وحجز مواعيد العملاء.',
     branches: 'الفروع',
-    allBranches: 'كلا الفرعين (جنباً إلى جنب)',
+    allBranches: 'مراكز الصيانة للمقارنة',
     mainBranch: 'الفرع الرئيسي',
     northBranch: 'فرع الشمال',
     views: {
@@ -202,14 +200,7 @@ export const serviceBookingText = {
       vin: 'الشاصي',
       duration: 'دقيقة',
     },
-    status: {
-      BOOKED: 'محجوز',
-      CONFIRMED: 'مؤكد',
-      IN_SERVICE: 'قيد الخدمة',
-      COMPLETED: 'مكتمل',
-      CANCELLED: 'ملغي',
-      NO_SHOW: 'لم يحضر',
-    },
+    status: bookingStatusText.ar,
     modal: {
       newTitle: 'حجز موعد صيانة جديد',
       newSubtitle: 'أدخل بيانات العميل والمركبة لتحديد موعد الصيانة.',
@@ -230,6 +221,8 @@ export const serviceBookingText = {
       periodicMaintenance: 'الصيانة الدورية', periodicMileage: 'مسافة الصيانة',
       selectMileage: 'اختر المسافة', mileageRequired: 'يرجى اختيار المسافة للصيانة الدورية.',
       branch: 'فرع الصيانة',
+      bookingLane: 'مسار الحجز',
+      bookingLaneRequired: 'اختر مسار حجز نشطاً لمركز الصيانة.',
       date: 'تاريخ الموعد',
       timeSlot: 'الفترة (كل 15 دقيقة)',
       duration: 'المدة التقديرية',
@@ -258,6 +251,7 @@ export const serviceBookingText = {
       title: 'إعدادات حجز الصيانة',
       subtitle: 'تهيئة ساعات عمل الفروع، حدود المواعيد اليومية والساعية، وموديلات السيارات وأنواع الصيانة.',
       tabHours: 'ساعات العمل وحدود السعة',
+      tabLanes: 'مسارات الحجز',
       tabCarModels: 'موديلات السيارات',
       tabMaintenance: 'أنواع الصيانة',
       tabBranches: 'مراكز الخدمة',
@@ -293,6 +287,7 @@ export const serviceBookingText = {
       durationMinutes: 'المدة (بالدقائق)',
       active: 'نشط',
       inactive: 'غير نشط',
+      lanes: bookingLaneText.ar,
     },
   },
 } as const;

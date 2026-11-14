@@ -4,6 +4,7 @@ import { createServer } from 'node:http';
 import { mkdirSync, readFileSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium } from 'playwright-core';
+import { AxeBuilder } from '@axe-core/playwright';
 import { compileTailwind } from './web-browser-check.mjs';
 import { serviceBookingText } from '../apps/web/src/i18n/staff-service-booking.ts';
 import { getTodayDateString } from '../apps/web/src/app/(staff)/service-booking/service-booking-utils.ts';
@@ -32,7 +33,7 @@ const server = createServer((req, res) => {
   const history = url.searchParams.get('history') === '1';
   const markup = renderToString(React.createElement(TimelineCapacityFixture, { locale, history }));
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.end(`<!doctype html><html lang="${locale}" data-history="${history ? '1' : '0'}"><head><link rel="stylesheet" href="/proof.css"></head><body><div id="root">${markup}</div><script src="/fixture.js"></script></body></html>`);
+  res.end(`<!doctype html><html lang="${locale}" data-history="${history ? '1' : '0'}"><head><title>Service booking timeline</title><link rel="stylesheet" href="/proof.css"></head><body><div id="root">${markup}</div><script src="/fixture.js"></script></body></html>`);
 });
 const { TimelineCapacityFixture } = await import('../apps/web/test/browser/timeline-capacity.fixture.tsx');
 await new Promise((done) => server.listen(0, '127.0.0.1', done));
@@ -40,13 +41,16 @@ const browser = await chromium.launch({ headless: true });
 try {
   for (const locale of ['en', 'ar']) {
     for (const full of [false, true]) {
-      const page = await browser.newPage({ viewport: { width: locale === 'en' ? 1440 : 390, height: 950 } });
+      const context = await browser.newContext({ viewport: { width: locale === 'en' ? 1440 : 390, height: 950 } });
+      const page = await context.newPage();
       const errors = [];
       page.on('pageerror', (error) => errors.push(error.message));
       page.on('requestfailed', (request) => errors.push(`request failed ${request.url()}`));
       await page.route('**/service-bookings/slots-availability**', (route) => {
         const branchId = new URL(route.request().url()).searchParams.get('branchId');
-        const main = branchId === 'center_main';
+        const laneId = new URL(route.request().url()).searchParams.get('bookingLaneId');
+        const main = branchId === 'center_main' && laneId === 'lane_notes';
+        const maxPerHour = laneId === 'lane_notes' ? 9 : laneId === 'lane_other' ? 5 : 4;
         return route.fulfill({
         status: 200, contentType: 'application/json', body: JSON.stringify({
           date: proofDate, dayOfWeek: new Date(`${proofDate}T00:00:00Z`).getUTCDay(), branchId, isOpen: true,
@@ -57,8 +61,8 @@ try {
               return {
                 slot: `${String(hour).padStart(2, '0')}:${minute}`, hour: `${String(hour).padStart(2, '0')}:00`,
                 bookedCount: isBooked ? 2 : 0, hourBookedCount: main && hour === 12 ? 2 : 0,
-                maxPerSlot: 3, maxPerHour: 3, status: isBooked ? 'PARTIAL' : 'AVAILABLE',
-                remainingInSlot: isBooked ? 1 : 3, remainingInHour: main && hour === 12 ? 1 : 3,
+                maxPerSlot: 3, maxPerHour, status: isBooked ? 'PARTIAL' : 'AVAILABLE',
+                remainingInSlot: isBooked ? 1 : 3, remainingInHour: main && hour === 12 ? maxPerHour - 2 : maxPerHour,
               };
             })),
         }),
@@ -66,10 +70,21 @@ try {
       });
       const params = new URLSearchParams({ locale, full: full ? '1' : '0' });
       await page.goto(`http://127.0.0.1:${server.address().port}/?${params}`);
+      const northName = locale === 'ar' ? 'مركز الصيانة الشمالي' : 'North Service Center';
+      assert.equal(await page.locator('[data-booking-lane-id]').evaluateAll((items) => new Set(items.map((item) => item.getAttribute('data-booking-lane-id'))).size), 3);
+      if (locale === 'ar') assert.ok(await page.locator('[data-timeline-scroll]').evaluate((element) => element.scrollWidth > element.clientWidth), 'mobile lane timeline scrolls as one aligned surface');
+      assert.ok(await page.locator('[data-booking-lane-id="lane_notes"]').count() > 0 && await page.locator('[data-booking-lane-id="lane_other"]').count() > 0,
+        `${locale}: lanes in the same service center stay side-by-side`);
+      assert.match(await page.locator('[data-booking-lane-header="lane_other"]').innerText(), locale === 'ar' ? /الخدمات الأخرى/ : /Other services/);
+      await page.getByRole('checkbox', { name: northName }).click();
+      assert.equal(await page.locator('[data-branch-id="center_north"]').count(), 0, `${locale}: second unchecked center is hidden`);
+      await page.getByRole('checkbox', { name: locale === 'ar' ? 'مركز الصيانة الرئيسي' : 'Main Service Center' }).click();
+      assert.ok(await page.locator('[data-branch-id="center_main"]').count() > 0, `${locale}: last center cannot be unchecked`);
+      await page.getByRole('checkbox', { name: northName }).click();
       await page.getByText('Customer One', { exact: true }).waitFor({ state: 'visible' });
       await page.getByText('Customer Two', { exact: true }).waitFor({ state: 'visible' });
-      const mainSlot = page.locator('[data-branch-id="center_main"][data-slot-time="12:00"]');
-      const northSlot = page.locator('[data-branch-id="center_north"][data-slot-time="12:00"]');
+      const mainSlot = page.locator('[data-booking-lane-id="lane_notes"][data-slot-time="12:00"]');
+      const northSlot = page.locator('[data-booking-lane-id="lane_north"][data-slot-time="12:00"]');
       const region = mainSlot.getByRole('region', { name: `12:00 ${serviceBookingText[locale].timeline.appointment}` });
       await region.waitFor({ state: 'visible' });
       await page.getByText(new RegExp(`${serviceBookingText[locale].timeline.slotOccupancy}: 2/3`)).first().waitFor({ state: 'visible', timeoutMs: 2000 });
@@ -89,12 +104,20 @@ try {
         assert.ok(pinned && Math.abs(pinned.x - plus.x) < 1, `${locale}: add button stays pinned when cards scroll`);
       }
       assert.equal(await region.evaluate((el) => getComputedStyle(el).overflowX), 'auto');
+      if (!full) {
+        const accessibility = await new AxeBuilder({ page }).include('fieldset').analyze();
+        const severe = accessibility.violations.filter((violation) => ['critical', 'serious'].includes(violation.impact));
+        assert.deepEqual(severe.map((violation) => ({
+          id: violation.id,
+          targets: violation.nodes.map((node) => node.target.join(' ')),
+        })), [], `${locale}: serious accessibility violations`);
+      }
       assert.deepEqual(errors, [], `${locale} full=${full}: browser errors`);
       if (!full) {
         await page.screenshot({ path: `${output}/${locale}-capacity-available.png`, fullPage: true });
         await page.locator('[data-hour="12"]').screenshot({ path: `${output}/${locale}-noon-detail.png` });
       }
-      await page.close();
+      await context.close();
     }
     const page = await browser.newPage({ viewport: { width: locale === 'en' ? 1440 : 390, height: 950 } });
     const errors = [];
@@ -102,7 +125,8 @@ try {
     let cancelled = false;
     await page.route('**/service-bookings/slots-availability**', (route) => {
       const branchId = new URL(route.request().url()).searchParams.get('branchId');
-      const booked = branchId === 'center_main' && !cancelled ? 1 : 0;
+      const laneId = new URL(route.request().url()).searchParams.get('bookingLaneId');
+      const booked = branchId === 'center_main' && laneId === 'lane_notes' && !cancelled ? 1 : 0;
       const slots = Array.from({ length: 10 }, (_, offset) => 8 + offset).flatMap((hour) =>
         ['00', '15', '30', '45'].map((minute) => ({
           slot: `${String(hour).padStart(2, '0')}:${minute}`, hour: `${String(hour).padStart(2, '0')}:00`,
@@ -124,7 +148,7 @@ try {
     cancelled = true;
     await page.getByRole('button', { name: 'Cancel booking' }).click();
     assert.equal(await page.locator('[data-appointment-status="CANCELLED"]').count(), 1);
-    const slot = page.locator('[data-branch-id="center_main"][data-slot-time="12:00"]');
+    const slot = page.locator('[data-booking-lane-id="lane_notes"][data-slot-time="12:00"]');
     await slot.getByText(serviceBookingText[locale].status.CANCELLED, { exact: true }).waitFor({ state: 'visible' });
     await slot.getByText(new RegExp(`${serviceBookingText[locale].timeline.slotOccupancy}: 0/3`)).waitFor({ state: 'visible' });
     await page.screenshot({ path: `${output}/${locale}-cancelled-day.png`, fullPage: true });

@@ -7,6 +7,7 @@ export class CreateServiceAppointmentDto {
   carModelId!: string;
   maintenanceTypeId!: string;
   branchId!: string;
+  bookingLaneId?: string;
   date!: string; // YYYY-MM-DD
   startTime!: string; // HH:mm (e.g. "09:15")
   notes!: string;
@@ -29,6 +30,8 @@ export function parseCreateServiceAppointmentBody(input: unknown): CreateService
   const branchId = String(body.branchId ?? '').trim() || 'center_main';
   const carModelId = String(body.carModelId ?? '').trim();
   if (!carModelId) throw new BadRequestException('A vehicle model is required');
+  const bookingLaneId = String(body.bookingLaneId ?? '').trim();
+  if (!bookingLaneId) throw new BadRequestException('A booking lane is required');
   const maintenanceTypeId = String(body.maintenanceTypeId ?? '').trim() || 'maint_periodic_10k';
 
   const date = String(body.date ?? '').trim();
@@ -58,6 +61,7 @@ export function parseCreateServiceAppointmentBody(input: unknown): CreateService
     carModelId,
     maintenanceTypeId,
     branchId,
+    bookingLaneId,
     date,
     startTime,
     notes,

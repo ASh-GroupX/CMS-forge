@@ -5,6 +5,9 @@ export interface ServiceAppointmentDto {
   branchNameEn?: string | undefined;
   branchNameAr?: string | undefined;
   serviceCenterId?: string | undefined;
+  bookingLaneId: string;
+  bookingLaneNameEn: string;
+  bookingLaneNameAr: string;
   serviceCenterNameEn?: string | undefined;
   serviceCenterNameAr?: string | undefined;
   customerName: string;
@@ -64,6 +67,9 @@ export interface DayAvailabilityDto {
   date: string; // YYYY-MM-DD
   dayOfWeek: number;
   branchId: string;
+  bookingLaneId?: string;
+  bookingLaneNameEn?: string;
+  bookingLaneNameAr?: string;
   branchNameEn?: string;
   branchNameAr?: string;
   isOpen: boolean;

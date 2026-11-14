@@ -86,6 +86,9 @@ export function mapAppointment(record: AppointmentRecord, historyRecords: any[] 
     branchNameEn: centerNameEn,
     branchNameAr: centerNameAr,
     serviceCenterId: effectiveId,
+    bookingLaneId: record.bookingLaneId,
+    bookingLaneNameEn: record.bookingLane?.nameEn ?? 'General bookings',
+    bookingLaneNameAr: record.bookingLane?.nameAr ?? 'الحجوزات العامة',
     serviceCenterNameEn: centerNameEn,
     serviceCenterNameAr: centerNameAr,
     customerName: record.customerName,
@@ -132,14 +135,17 @@ export function buildDayAvailability(params: {
     slotDurationMinutes?: number;
   };
   appointments: AppointmentRecord[];
+  lane?: { id: string; nameEn: string; nameAr: string };
 }): DayAvailabilityDto {
-  const { branchId, dateStr, dayOfWeek, rule, appointments } = params;
+  const { branchId, dateStr, dayOfWeek, rule, appointments, lane } = params;
+  const laneFields = lane ? { bookingLaneId: lane.id, bookingLaneNameEn: lane.nameEn, bookingLaneNameAr: lane.nameAr } : {};
 
   if (!rule.isOpen) {
     return {
       date: dateStr,
       dayOfWeek,
       branchId,
+      ...laneFields,
       isOpen: false,
       startTime: rule.startTime,
       endTime: rule.endTime,
@@ -199,6 +205,7 @@ export function buildDayAvailability(params: {
     date: dateStr,
     dayOfWeek,
     branchId,
+    ...laneFields,
     isOpen: true,
     startTime: rule.startTime,
     endTime: rule.endTime,

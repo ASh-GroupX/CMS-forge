@@ -4,16 +4,17 @@ import React from 'react';
 import { Calendar, Plus, Wrench } from 'lucide-react';
 import { useServiceBooking } from './service-booking-context';
 import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api';
-import { maintenanceLabel } from './service-booking-utils';
+import { maintenanceLabel, matchesBranch } from './service-booking-utils';
 
 export function TimelineWeekView() {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const {
     appointments,
+    bookingLanes,
     branches,
     locale,
     openNewModalWithSlot,
-    selectedBranchId,
+    selectedBranchIds,
     selectedDate,
     setIsDetailModalOpen,
     setSelectedAppointment,
@@ -38,22 +39,16 @@ export function TimelineWeekView() {
     return d;
   });
 
-  const matchesSelectedBranch = (a: ServiceAppointment) => {
-    if (selectedBranchId === 'ALL') return true;
-    const target = a.branchId || a.serviceCenterId || '';
-    if (target === selectedBranchId) return true;
-    const selectedBranch = branches.find((b) => b.id === selectedBranchId);
-    if (selectedBranch?.code && target === selectedBranch.code) return true;
-    if ((selectedBranchId === 'center_main' || selectedBranch?.code === 'MAIN_CENTER') && (target === 'center_main' || target === 'MAIN_CENTER')) return true;
-    if ((selectedBranchId === 'center_north' || selectedBranch?.code === 'NORTH_CENTER') && (target === 'center_north' || target === 'NORTH_CENTER')) return true;
-    return false;
-  };
+  const selectedBranches = branches.filter((branch) => selectedBranchIds.includes(branch.id));
+  const matchesSelectedBranch = (appointment: ServiceAppointment) =>
+    selectedBranches.some((branch) => matchesBranch(appointment, branch));
 
   const weekApts = appointments.filter(
     (a) => matchesSelectedBranch(a),
   );
 
-  const defaultBranchId = selectedBranchId === 'ALL' ? branches[0]?.id || '' : selectedBranchId;
+  const defaultBranchId = selectedBranchIds[0] ?? branches[0]?.id ?? '';
+  const defaultLaneId = bookingLanes.find((lane) => lane.serviceCenterId === defaultBranchId && lane.isActive)?.id ?? '';
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-line-subtle bg-surface shadow-sm" ref={scrollRef}>
@@ -165,11 +160,12 @@ export function TimelineWeekView() {
                     </button>
                   ))}
 
-                  {!isFriday && <button
+                  {!isFriday && defaultLaneId && <button
                     className="flex w-full items-center justify-center gap-1 rounded-xl border border-dashed border-line-subtle py-2 text-xs font-medium text-content-muted transition-colors hover:border-brand hover:text-brand"
                     onClick={() =>
                       openNewModalWithSlot({
                         branchId: defaultBranchId,
+                        bookingLaneId: defaultLaneId,
                         date: dateStr,
                         time: '09:00',
                       })

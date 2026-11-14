@@ -4,7 +4,7 @@ import React from 'react';
 import { Calendar, Wrench } from 'lucide-react';
 import { useServiceBooking } from './service-booking-context';
 import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api';
-import { maintenanceLabel } from './service-booking-utils';
+import { maintenanceLabel, matchesBranch } from './service-booking-utils';
 
 export function TimelineMonthView() {
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -12,7 +12,7 @@ export function TimelineMonthView() {
     appointments,
     branches,
     locale,
-    selectedBranchId,
+    selectedBranchIds,
     selectedDate,
     setSelectedDate,
     setView,
@@ -38,16 +38,9 @@ export function TimelineMonthView() {
     ? ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
     : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-  const matchesSelectedBranch = (a: ServiceAppointment) => {
-    if (selectedBranchId === 'ALL') return true;
-    const target = a.branchId || a.serviceCenterId || '';
-    if (target === selectedBranchId) return true;
-    const selectedBranch = branches.find((b) => b.id === selectedBranchId);
-    if (selectedBranch?.code && target === selectedBranch.code) return true;
-    if ((selectedBranchId === 'center_main' || selectedBranch?.code === 'MAIN_CENTER') && (target === 'center_main' || target === 'MAIN_CENTER')) return true;
-    if ((selectedBranchId === 'center_north' || selectedBranch?.code === 'NORTH_CENTER') && (target === 'center_north' || target === 'NORTH_CENTER')) return true;
-    return false;
-  };
+  const selectedBranches = branches.filter((branch) => selectedBranchIds.includes(branch.id));
+  const matchesSelectedBranch = (appointment: ServiceAppointment) =>
+    selectedBranches.some((branch) => matchesBranch(appointment, branch));
 
   const monthApts = appointments.filter(
     (a) => matchesSelectedBranch(a),

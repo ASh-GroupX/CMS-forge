@@ -7,6 +7,9 @@ export type NextAvailableSlot = {
   branchId: string;
   branchNameEn: string;
   branchNameAr: string;
+  bookingLaneId: string;
+  bookingLaneNameEn: string;
+  bookingLaneNameAr: string;
   date: string;
   time: string;
   bookedCount: number;
@@ -32,15 +35,17 @@ export class ServiceBookingNextAvailableService {
 
     for (let offset = 0; offset < 30 && suggestions.length < 3; offset += 1) {
       const date = new Date(baseDay + offset * 86400000).toISOString().slice(0, 10);
-      const days = await Promise.all(selected.map(async (center) => ({ center,
-        availability: await this.bookings.getSlotAvailability(center.id, date),
-      })));
-      const candidates = days.flatMap(({ center, availability }) => availability.slots
+      const centerLanes = await Promise.all(selected.map(async (center) => ({ center, lanes: await this.bookings.getActiveBookingLanes(center.id) })));
+      const days = await Promise.all(centerLanes.flatMap(({ center, lanes }) => lanes.map(async (lane) => ({ center, lane,
+        availability: await this.bookings.getSlotAvailability(center.id, date, lane.id),
+      }))));
+      const candidates = days.flatMap(({ center, lane, availability }) => availability.slots
         .filter((slot) => availability.isOpen && availability.bookedDailyCount < availability.maxDailyAppointments
           && slot.remainingInSlot > 0 && slot.remainingInHour > 0
           && (offset > 0 || slot.slot >= current.time))
         .map((slot): NextAvailableSlot => ({
           branchId: center.id, branchNameEn: center.nameEn, branchNameAr: center.nameAr,
+          bookingLaneId: lane.id, bookingLaneNameEn: lane.nameEn, bookingLaneNameAr: lane.nameAr,
           date, time: slot.slot, bookedCount: slot.bookedCount,
           maxPerSlot: slot.maxPerSlot, remainingInSlot: Math.min(slot.remainingInSlot,
             slot.remainingInHour, availability.maxDailyAppointments - availability.bookedDailyCount),

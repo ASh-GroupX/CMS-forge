@@ -6,21 +6,22 @@ import type { UpdateServiceAppointmentDto } from './dto/update-service-appointme
 import type { DayRuleInput } from './dto/service-booking-rules.dto.js';
 import type { DayAvailabilityDto, ServiceAppointmentDto } from './dto/service-booking-response.dto.js';
 import {
-  DEFAULT_CAR_MODELS, DEFAULT_DAY_RULES, DEFAULT_MAINTENANCE_TYPES,
+  DEFAULT_DAY_RULES,
   buildDayAvailability, calculateEndTime, getAmmanNow, isBookableTime, mapAppointment, periodicMaintenance,
 } from './service-bookings.utils.js';
 import { UserBookingRulesService } from './user-booking-rules.service.js';
 import { ServiceBookingSmsReminderService } from './service-booking-sms-reminder.service.js';
+import { ServiceBookingsCatalogService } from './service-bookings-catalog.service.js';
 
 export { DEFAULT_DAY_RULES };
 
 @Injectable()
-export class ServiceBookingsService {
+export class ServiceBookingsService extends ServiceBookingsCatalogService {
   constructor(
-    private readonly repository: ServiceBookingsRepository,
+    repository: ServiceBookingsRepository,
     private readonly userRulesService?: UserBookingRulesService,
     private readonly smsReminderService?: ServiceBookingSmsReminderService,
-  ) {}
+  ) { super(repository); }
 
   // ── Appointments ──────────────────────────────────────────────────────────
   async listAppointments(params: { branchId?: string | undefined; fromDate?: string | undefined; toDate?: string | undefined; status?: string | undefined }, actorId?: string | null, roleCode?: string): Promise<ServiceAppointmentDto[]> {
@@ -62,21 +63,22 @@ export class ServiceBookingsService {
 
     const dateObj = new Date(`${dto.date}T00:00:00Z`);
     const rule = await this.resolveRule(centerId, dateObj.getUTCDay());
+    const lane = await this.resolveLane(centerId, dto.bookingLaneId);
     if (!rule.isOpen) throw new BadRequestException('The selected branch is closed on this day');
     if (!isBookableTime(rule, dto.startTime)) throw new BadRequestException('Select a time within the branch booking slots');
 
-    const dailyCount = await this.repository.countDailyActive(centerId, dateObj);
-    if (dailyCount >= rule.maxDailyAppointments) {
-      throw new BadRequestException(`Service center daily appointment limit (${rule.maxDailyAppointments}) reached`);
+    const dailyCount = await this.repository.countDailyActive(centerId, dateObj, lane.id);
+    if (dailyCount >= lane.maxDailyAppointments) {
+      throw new BadRequestException(`Booking lane daily appointment limit (${lane.maxDailyAppointments}) reached`);
     }
 
-    const slotCount = await this.repository.countInSlot(centerId, dateObj, dto.startTime);
-    if (slotCount >= rule.maxPerSlot) throw new BadRequestException('This 15-minute slot is already booked to capacity');
+    const slotCount = await this.repository.countInSlot(centerId, dateObj, dto.startTime, lane.id);
+    if (slotCount >= lane.maxPerSlot) throw new BadRequestException('This booking lane slot is already booked to capacity');
 
     const hourPrefix = dto.startTime.split(':')[0] + ':';
-    const hourCount = await this.repository.countInHourWindow(centerId, dateObj, hourPrefix);
-    if (hourCount >= rule.maxPerHour) {
-      throw new BadRequestException(`Maximum appointments per hour limit (${rule.maxPerHour}) reached for this hour`);
+    const hourCount = await this.repository.countInHourWindow(centerId, dateObj, hourPrefix, lane.id);
+    if (hourCount >= lane.maxPerHour) {
+      throw new BadRequestException(`Maximum appointments per hour limit (${lane.maxPerHour}) reached for this lane`);
     }
 
     const carModel = dto.carModelId ? await this.repository.findCarModelById(dto.carModelId).catch(() => null) : null;
@@ -89,7 +91,7 @@ export class ServiceBookingsService {
     const referenceNumber = await this.repository.generateReferenceNumber(dateObj);
 
     const created = await this.repository.createAppointment({
-      referenceNumber, serviceCenterId: centerId, branchId: null,
+      referenceNumber, serviceCenterId: centerId, bookingLaneId: lane.id, branchId: null,
       customerName: dto.customerName, customerPhone: dto.customerPhone, vin: dto.vin || null,
       carModelId: carModel.id,
       carModelName: `${carModel.brand} ${carModel.nameEn}`,
@@ -123,12 +125,15 @@ export class ServiceBookingsService {
     const oldCenter = existing.serviceCenterId || existing.branchId || 'center_main';
     const targetBranch = dto.branchId || oldCenter;
     const isCenterChanged = Boolean(dto.branchId && dto.branchId !== oldCenter);
+    const targetLaneId = dto.bookingLaneId || existing.bookingLaneId;
+    const isLaneChanged = Boolean(dto.bookingLaneId && dto.bookingLaneId !== existing.bookingLaneId);
     const oldDateStr = existing.date.toISOString().slice(0, 10);
     const targetDateStr = dto.date || oldDateStr;
     const targetDate = new Date(`${targetDateStr}T00:00:00Z`);
     const targetTime = dto.startTime || existing.startTime;
+    let resolvedTargetLaneId = existing.bookingLaneId;
 
-    if ((dto.date && dto.date !== oldDateStr) || (dto.startTime && dto.startTime !== existing.startTime) || isCenterChanged) {
+    if ((dto.date && dto.date !== oldDateStr) || (dto.startTime && dto.startTime !== existing.startTime) || isCenterChanged || isLaneChanged) {
       isRescheduled = true;
       if (actorId && this.userRulesService) {
         await this.userRulesService.checkPermission(actorId, roleCode, 'canRescheduleBookings');
@@ -139,56 +144,67 @@ export class ServiceBookingsService {
       }
 
       const rule = await this.resolveRule(targetBranch, targetDate.getUTCDay());
+      const lane = await this.resolveLane(targetBranch, targetLaneId);
+      resolvedTargetLaneId = lane.id;
       if (!rule.isOpen) throw new BadRequestException('Branch is closed on target day');
       if (!isBookableTime(rule, targetTime)) throw new BadRequestException('Select a time within the branch booking slots');
 
       const hourPrefix = targetTime.split(':')[0] + ':';
-      const [slotCount, hourCount] = await Promise.all([
-        this.repository.countInSlot(targetBranch, targetDate, targetTime, id),
-        this.repository.countInHourWindow(targetBranch, targetDate, hourPrefix, id),
+      const [dailyCount, slotCount, hourCount] = await Promise.all([
+        this.repository.countDailyActive(targetBranch, targetDate, lane.id, id),
+        this.repository.countInSlot(targetBranch, targetDate, targetTime, lane.id, id),
+        this.repository.countInHourWindow(targetBranch, targetDate, hourPrefix, lane.id, id),
       ]);
-      if (slotCount >= rule.maxPerSlot) throw new BadRequestException('Target slot is already full');
-      if (hourCount >= rule.maxPerHour) throw new BadRequestException(`Target hour exceeds maximum of ${rule.maxPerHour} appointments`);
+      if (dailyCount >= lane.maxDailyAppointments) throw new BadRequestException(`Target booking lane daily limit (${lane.maxDailyAppointments}) reached`);
+      if (slotCount >= lane.maxPerSlot) throw new BadRequestException('Target booking lane slot is already full');
+      if (hourCount >= lane.maxPerHour) throw new BadRequestException(`Target lane hour exceeds maximum of ${lane.maxPerHour} appointments`);
 
       updateData.serviceCenterId = targetBranch;
+      updateData.bookingLaneId = lane.id;
       updateData.date = targetDate;
       updateData.startTime = targetTime;
       updateData.endTime = calculateEndTime(targetTime, existing.durationMinutes);
     }
 
-    const updated = await this.repository.updateAppointment(id, updateData);
+    const audits: Array<{ action: string; actorId?: string | null; metadata: Prisma.InputJsonValue }> = [];
     if (isRescheduled) {
-      await this.repository.recordAppointmentAudit({
-        action: 'service_booking_reschedule', actorId: actorId ?? null, targetId: id,
-        metadata: { oldDate: oldDateStr, newDate: targetDateStr, oldStartTime: existing.startTime, newStartTime: targetTime, oldCenter, newCenter: targetBranch },
+      audits.push({
+        action: 'service_booking_reschedule', actorId: actorId ?? null,
+        metadata: { oldDate: oldDateStr, newDate: targetDateStr, oldStartTime: existing.startTime, newStartTime: targetTime,
+          oldCenter, newCenter: targetBranch, oldBookingLaneId: existing.bookingLaneId, newBookingLaneId: resolvedTargetLaneId },
       });
     }
     if (isStatusChanged && dto.status) {
-      await this.repository.recordAppointmentAudit({
-        action: 'service_booking_status_change', actorId: actorId ?? null, targetId: id,
+      audits.push({
+        action: 'service_booking_status_change', actorId: actorId ?? null,
         metadata: { oldStatus: existing.status, newStatus: dto.status },
       });
     }
+    const updated = audits.length > 0
+      ? await this.repository.updateAppointmentWithAudits(id, updateData, audits)
+      : await this.repository.updateAppointment(id, updateData);
     if (isRescheduled || isStatusChanged || isReminderDataChanged) await this.smsReminderService?.sync(updated, updated.updatedAt.toISOString());
     const history = await this.repository.findAppointmentHistory(id);
     return mapAppointment(updated, history);
   }
 
   // ── Availability Engine ───────────────────────────────────────────────────
-  async getSlotAvailability(branchId: string, dateStr: string): Promise<DayAvailabilityDto> {
+  async getSlotAvailability(branchId: string, dateStr: string, bookingLaneId?: string): Promise<DayAvailabilityDto> {
     const dateObj = new Date(`${dateStr}T00:00:00Z`);
     const dayOfWeek = dateObj.getUTCDay();
     const rule = await this.resolveRule(branchId, dayOfWeek);
+    const lane = await this.resolveLane(branchId, bookingLaneId);
     const appointments = rule.isOpen
-      ? await this.repository.findAppointmentsForDate(branchId, dateObj)
+      ? await this.repository.findAppointmentsForDate(branchId, dateObj, lane.id)
       : [];
 
     return buildDayAvailability({
       branchId,
       dateStr,
       dayOfWeek,
-      rule,
+      rule: { ...rule, maxDailyAppointments: lane.maxDailyAppointments, maxPerHour: lane.maxPerHour, maxPerSlot: lane.maxPerSlot },
       appointments,
+      lane,
     });
   }
 
@@ -225,76 +241,21 @@ export class ServiceBookingsService {
     })));
   }
 
-  // ── Service Centers ───────────────────────────────────────────────────────
-  async getServiceCenters(activeOnly = true) {
-    const centers = await this.repository.listServiceCenters(activeOnly);
-    if (centers.length === 0 && !activeOnly) {
-      const defaultCenters = [
-        { id: 'center_main', code: 'MAIN_CENTER', nameEn: 'AMMAN Service Center', nameAr: 'مركز صيانة عمان', isActive: true },
-        { id: 'center_north', code: 'NORTH_CENTER', nameEn: 'North Service Center', nameAr: 'مركز صيانة الشمال', isActive: true },
-      ];
-      await Promise.all(defaultCenters.map((c) => this.repository.upsertServiceCenter(c).catch(() => null)));
-      return this.repository.listServiceCenters(activeOnly);
-    }
-    return centers;
-  }
-
-  async upsertServiceCenter(data: {
-    id?: string | undefined;
-    code?: string | undefined;
-    nameEn: string;
-    nameAr: string;
-    address?: string | null | undefined;
-    phone?: string | null | undefined;
-    isActive?: boolean | undefined;
-  }) {
-    return this.repository.upsertServiceCenter(data);
-  }
-
-  async deleteServiceCenter(id: string) {
-    return this.repository.deleteServiceCenter(id);
-  }
-
-  // ── Master Data ───────────────────────────────────────────────────────────
-  async getCarModels(activeOnly = true) {
-    const models = await this.repository.listCarModels(activeOnly);
-    if (models.length === 0 && !activeOnly) {
-      await Promise.all(DEFAULT_CAR_MODELS.map((d) => this.repository.upsertCarModel(d).catch(() => null)));
-      return this.repository.listCarModels(activeOnly);
-    }
-    return models;
-  }
-
-  async upsertCarModel(data: { id?: string | undefined; nameEn: string; nameAr: string; brand?: string | undefined; isActive?: boolean | undefined }) {
-    return this.repository.upsertCarModel(data);
-  }
-
-  async deleteCarModel(id: string) {
-    return this.repository.deleteCarModel(id);
-  }
-
-  async getMaintenanceTypes(activeOnly = true) {
-    const types = await this.repository.listMaintenanceTypes(activeOnly);
-    if (types.length === 0 && !activeOnly) {
-      await Promise.all(DEFAULT_MAINTENANCE_TYPES.map((d) => this.repository.upsertMaintenanceType(d).catch(() => null)));
-      return this.repository.listMaintenanceTypes(activeOnly);
-    }
-    return types;
-  }
-
-  async upsertMaintenanceType(data: { id?: string | undefined; nameEn: string; nameAr: string; estimatedDurationMinutes?: number | undefined; isActive?: boolean | undefined }) {
-    return this.repository.upsertMaintenanceType(data);
-  }
-
-  async deleteMaintenanceType(id: string) {
-    return this.repository.deleteMaintenanceType(id);
-  }
-
   // ── Private Helpers ───────────────────────────────────────────────────────
   private async resolveRule(branchId: string, dayOfWeek: number) {
     const rule = await this.repository.findRuleForDay(branchId, dayOfWeek);
     if (rule) return rule;
     const def = DEFAULT_DAY_RULES[dayOfWeek] || DEFAULT_DAY_RULES[0]!;
     return { ...def, id: 'default', branchId, dayOfWeek };
+  }
+
+  private async resolveLane(serviceCenterId: string, bookingLaneId?: string) {
+    const lane = bookingLaneId
+      ? await this.repository.findBookingLane(bookingLaneId)
+      : await this.repository.findFirstActiveLane(serviceCenterId);
+    if (!lane || !lane.isActive || lane.serviceCenterId !== serviceCenterId) {
+      throw new BadRequestException('Select an active booking lane for this service center');
+    }
+    return lane;
   }
 }

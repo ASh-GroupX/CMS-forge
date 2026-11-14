@@ -6,6 +6,7 @@ import { ServiceBookingProvider } from '../../src/app/(staff)/service-booking/se
 import { TimelineDayView } from '../../src/app/(staff)/service-booking/timeline-day-view';
 import { TimelineWeekView } from '../../src/app/(staff)/service-booking/timeline-week-view';
 import { TimelineMonthView } from '../../src/app/(staff)/service-booking/timeline-month-view';
+import { TimelineTopbar } from '../../src/app/(staff)/service-booking/timeline-topbar';
 import { useServiceBooking } from '../../src/app/(staff)/service-booking/service-booking-context';
 import type { ServiceAppointment } from '../../src/lib/staff-service-bookings-api';
 import { getTodayDateString } from '../../src/app/(staff)/service-booking/service-booking-utils';
@@ -14,8 +15,14 @@ const date = new Date(Date.parse(`${getTodayDateString()}T00:00:00Z`) + 86400000
 const historyDate = new Date(Date.parse(`${getTodayDateString()}T00:00:00Z`) - 86400000).toISOString().slice(0, 10);
 const branch = { id: 'center_main', code: 'MAIN', nameEn: 'Main Service Center', nameAr: 'مركز الصيانة الرئيسي' };
 const north = { id: 'center_north', code: 'NORTH', nameEn: 'North Service Center', nameAr: 'مركز الصيانة الشمالي' };
+const bookingLanes = [
+  { id: 'lane_notes', serviceCenterId: branch.id, code: 'NOTES', nameEn: 'Notes', nameAr: 'نوتس', maxDailyAppointments: 80, maxPerHour: 9, maxPerSlot: 3, position: 0, isActive: true, updatedAt: `${date}T00:00:00.000Z` },
+  { id: 'lane_other', serviceCenterId: branch.id, code: 'OTHER', nameEn: 'Other services', nameAr: 'الخدمات الأخرى', maxDailyAppointments: 50, maxPerHour: 5, maxPerSlot: 2, position: 1, isActive: true, updatedAt: `${date}T00:00:00.000Z` },
+  { id: 'lane_north', serviceCenterId: north.id, code: 'GENERAL', nameEn: 'General', nameAr: 'عام', maxDailyAppointments: 40, maxPerHour: 4, maxPerSlot: 2, position: 0, isActive: true, updatedAt: `${date}T00:00:00.000Z` },
+];
 const appointments: ServiceAppointment[] = ['Customer One', 'Customer Two'].map((customerName, index) => ({
   id: `appointment-${index + 1}`, referenceNumber: `REF-${index + 1}`, branchId: branch.id,
+  bookingLaneId: 'lane_notes', bookingLaneNameEn: 'Notes', bookingLaneNameAr: 'نوتس',
   customerName, customerPhone: '+962790000001', carModelId: 'model-1', carModelName: 'Tiggo 8',
   maintenanceTypeId: 'service-1', maintenanceTypeName: 'A/C System Service', notes: '', date,
   startTime: '12:00', endTime: '12:15', durationMinutes: 15, status: 'BOOKED',
@@ -38,9 +45,9 @@ export function TimelineCapacityFixture({ locale, history = false }: { locale: '
   const fixtureAppointments = history ? [{ ...appointments[0], date: historyDate, customerName: 'Historical Customer' }] : appointments;
   return (
     <div className="min-h-screen bg-surface-canvas p-4" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
-      <ServiceBookingProvider initialAppointments={fixtureAppointments} initialBranches={[branch, north]} initialCarModels={[]}
+      <ServiceBookingProvider initialAppointments={fixtureAppointments} initialBookingLanes={bookingLanes} initialBranches={[branch, north]} initialCarModels={[]}
         initialDate={history ? historyDate : date} initialMaintenanceTypes={[]} locale={locale}>
-        {history ? <HistoryControls /> : <TimelineDayView />}
+        {history ? <HistoryControls /> : <><TimelineTopbar /><TimelineDayView /></>}
       </ServiceBookingProvider>
     </div>
   );

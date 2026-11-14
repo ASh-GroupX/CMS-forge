@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
-import { SessionAuthGuard } from '../../core/auth.guard.js';
+import { RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { ServiceBookingsService } from './service-bookings.service.js';
@@ -14,6 +14,8 @@ import { parseUpdateBranchBookingRulesBody } from './dto/service-booking-rules.d
 import { UserBookingRulesService } from './user-booking-rules.service.js';
 import { ServiceBookingSmsSettingsService } from './service-booking-sms-settings.service.js';
 import { ServiceBookingNextAvailableService } from './service-booking-next-available.service.js';
+import { parseUpsertServiceBookingLaneBody } from './dto/service-booking-lane.dto.js';
+import { ServiceBookingLanesService } from './service-booking-lanes.service.js';
 
 @Controller('service-bookings')
 export class ServiceBookingsController {
@@ -22,7 +24,23 @@ export class ServiceBookingsController {
     private readonly userRulesService?: UserBookingRulesService,
     private readonly smsSettingsService?: ServiceBookingSmsSettingsService,
     private readonly nextAvailableService?: ServiceBookingNextAvailableService,
+    private readonly lanesService?: ServiceBookingLanesService,
   ) {}
+
+  @Get('centers/:centerId/lanes')
+  @UseGuards(SessionAuthGuard)
+  async listBookingLanes(@Req() req: AuthenticatedRequest, @Param('centerId') centerId: string, @Query('all') all?: string) {
+    if (!this.lanesService || !req.principal) throw new Error('Booking lanes service is unavailable');
+    return this.lanesService.list(centerId, all === 'true', req.principal);
+  }
+
+  @Post('centers/:centerId/lanes')
+  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
+  @Roles('ADMIN')
+  async upsertBookingLane(@Req() req: AuthenticatedRequest, @Param('centerId') centerId: string, @Body() body: unknown) {
+    if (!this.lanesService || !req.principal) throw new Error('Booking lanes service is unavailable');
+    return this.lanesService.upsert(parseUpsertServiceBookingLaneBody({ ...(body as object), serviceCenterId: centerId }), req.principal);
+  }
 
   // ── Service Centers ───────────────────────────────────────────────────────
   @Get('centers')
@@ -125,11 +143,12 @@ export class ServiceBookingsController {
   async getSlotAvailability(
     @Query('branchId') branchId: string,
     @Query('date') date: string,
+    @Query('bookingLaneId') bookingLaneId?: string,
   ) {
     if (!branchId || !date) {
       return { error: 'branchId and date are required' };
     }
-    return this.service.getSlotAvailability(branchId, date);
+    return this.service.getSlotAvailability(branchId, date, bookingLaneId);
   }
 
   // ── Appointments ──────────────────────────────────────────────────────────

@@ -8,7 +8,7 @@ import { fetchNextAvailableSlots, type NextAvailableSlot } from '../../../lib/st
 import { useServiceBooking } from './service-booking-context';
 
 export function NextAvailableCard() {
-  const { appointments, locale, openNewModalWithSlot, selectedBranchId, setSelectedDate, t, userRules } = useServiceBooking();
+  const { appointments, locale, openNewModalWithSlot, selectedBranchIds, setSelectedDate, t, userRules } = useServiceBooking();
   const [slots, setSlots] = useState<NextAvailableSlot[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [revision, setRevision] = useState(0);
@@ -23,12 +23,17 @@ export function NextAvailableCard() {
   useEffect(() => {
     const controller = new AbortController();
     setState('loading');
-    void fetchNextAvailableSlots(selectedBranchId, controller.signal).then((next) => {
+    void Promise.all(selectedBranchIds.map((branchId) =>
+      fetchNextAvailableSlots(branchId, controller.signal),
+    )).then((results) => {
+      const next = results.flat().sort((left, right) =>
+        left.date.localeCompare(right.date) || left.time.localeCompare(right.time),
+      ).slice(0, 3);
       setSlots(next);
       setState('ready');
     }).catch(() => { if (!controller.signal.aborted) setState('error'); });
     return () => controller.abort();
-  }, [selectedBranchId, appointments, revision]);
+  }, [selectedBranchIds, appointments, revision]);
 
   const isAr = locale === 'ar';
   return (
@@ -56,15 +61,17 @@ export function NextAvailableCard() {
         {slots.map((slot) => {
           const dateLabel = new Date(`${slot.date}T00:00:00Z`).toLocaleDateString(isAr ? 'ar-JO' : 'en-US',
             { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
-          return <li className="flex items-center gap-2 rounded-xl border border-line-subtle bg-surface-canvas/40 p-2.5 transition-colors hover:border-brand/40" key={`${slot.branchId}-${slot.date}-${slot.time}`}>
+          return <li className="flex items-center gap-2 rounded-xl border border-line-subtle bg-surface-canvas/40 p-2.5 transition-colors hover:border-brand/40" key={`${slot.bookingLaneId ?? slot.branchId}-${slot.date}-${slot.time}`}>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold tabular-nums text-content-strong" dir="ltr">{slot.time} <span className="text-xs font-medium text-content-muted">· {dateLabel}</span></p>
               <p className="mt-0.5 truncate text-[11px] text-content-muted">{isAr ? slot.branchNameAr : slot.branchNameEn}</p>
+              {slot.bookingLaneId && <p className="truncate text-[11px] font-semibold text-content-strong">{isAr ? slot.bookingLaneNameAr : slot.bookingLaneNameEn}</p>}
               <p className="text-[11px] font-semibold text-content-strong">{t.nextAvailable.places.replace('{count}', String(slot.remainingInSlot))}</p>
             </div>
             {userRules.canCreateBookings && <Button aria-label={`${t.nextAvailable.book} ${dateLabel} ${slot.time}`} className="shrink-0" onClick={() => {
               setSelectedDate(slot.date);
-              openNewModalWithSlot({ branchId: slot.branchId, date: slot.date, time: slot.time });
+              if (!slot.bookingLaneId) return;
+              openNewModalWithSlot({ branchId: slot.branchId, bookingLaneId: slot.bookingLaneId, date: slot.date, time: slot.time });
             }} size="sm" type="button" variant="outline">{t.nextAvailable.book}<ArrowUpRight className="size-3.5" /></Button>}
           </li>;
         })}

@@ -2,6 +2,9 @@ export type NextAvailableSlot = {
   branchId: string;
   branchNameEn: string;
   branchNameAr: string;
+  bookingLaneId?: string;
+  bookingLaneNameEn?: string;
+  bookingLaneNameAr?: string;
   date: string;
   time: string;
   bookedCount: number;

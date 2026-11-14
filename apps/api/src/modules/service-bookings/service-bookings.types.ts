@@ -5,6 +5,7 @@ export const appointmentSelect = {
   referenceNumber: true,
   branchId: true,
   serviceCenterId: true,
+  bookingLaneId: true,
   customerName: true,
   customerPhone: true,
   vin: true,
@@ -28,6 +29,9 @@ export const appointmentSelect = {
   serviceCenter: {
     select: { id: true, code: true, nameEn: true, nameAr: true },
   },
+  bookingLane: {
+    select: { id: true, code: true, nameEn: true, nameAr: true, maxDailyAppointments: true, maxPerHour: true, maxPerSlot: true, position: true, isActive: true },
+  },
   branch: {
     select: { id: true, code: true, nameEn: true, nameAr: true },
   },
@@ -36,5 +40,5 @@ export const appointmentSelect = {
 export type AppointmentRecord = Prisma.ServiceAppointmentGetPayload<{ select: typeof appointmentSelect }>;
 export type ServiceBookingClient = Pick<
   Prisma.TransactionClient,
-  'serviceAppointment' | 'serviceBookingRule' | 'serviceCarModel' | 'serviceMaintenanceType' | 'serviceCenter'
+  'serviceAppointment' | 'serviceBookingRule' | 'serviceCarModel' | 'serviceMaintenanceType' | 'serviceCenter' | 'serviceBookingLane'
 >;

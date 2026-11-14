@@ -19,9 +19,14 @@ test('booking parser never substitutes a default vehicle', () => {
   assert.throws(() => parseCreateServiceAppointmentBody({ customerName: 'Test', customerPhone: '0790000000' }), /vehicle model.*required/i);
 });
 
+test('booking parser requires an explicit booking lane', () => {
+  assert.throws(() => parseCreateServiceAppointmentBody({ customerName: 'Test', customerPhone: '0790000000',
+    carModelId: 'c1', maintenanceTypeId: 'm1', date: '2026-11-02', startTime: '11:15' }), /booking lane.*required/i);
+});
+
 test('periodic mileage accepts the offered values and rejects invalid values', () => {
   const base = { customerName: 'Test', customerPhone: '0790000000', carModelId: 'c1',
-    maintenanceTypeId: 'maint_periodic_10k', date: '2026-11-02', startTime: '11:15' };
+    maintenanceTypeId: 'maint_periodic_10k', bookingLaneId: 'lane-1', date: '2026-11-02', startTime: '11:15' };
   for (const value of [1000, 5000, 10000, 150000]) {
     assert.equal(parseCreateServiceAppointmentBody({ ...base, periodicMileageKm: value }).periodicMileageKm, value);
   }
@@ -43,6 +48,10 @@ function createMockRepository(overrides: Partial<Record<keyof ServiceBookingsRep
     countInHourWindow: async () => 0,
     findCarModelById: async () => ({ id: 'c1', nameEn: 'Patrol', brand: 'Nissan' }),
     findMaintenanceTypeById: async () => ({ id: 'm1', nameEn: 'Periodic 10k', estimatedDurationMinutes: 30 }),
+    findFirstActiveLane: async (serviceCenterId: string) => ({ id: 'lane-1', serviceCenterId, nameEn: 'General', nameAr: 'عام', isActive: true,
+      maxDailyAppointments: 24, maxPerHour: 3, maxPerSlot: 1 }),
+    findBookingLane: async (id: string) => ({ id, serviceCenterId: 'b_main', nameEn: 'General', nameAr: 'عام', isActive: true,
+      maxDailyAppointments: 24, maxPerHour: 3, maxPerSlot: 1 }),
     generateReferenceNumber: async () => 'APT-20261026-0001',
     createAppointment: async (data: any) => ({
       status: 'BOOKED',
@@ -51,6 +60,7 @@ function createMockRepository(overrides: Partial<Record<keyof ServiceBookingsRep
       createdAt: new Date(),
       updatedAt: new Date(),
       branch: { nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي' },
+      bookingLane: { nameEn: 'General', nameAr: 'عام' },
     }),
     findAppointmentsForDate: async () => [],
     ...overrides,
@@ -153,6 +163,8 @@ test('createAppointment rejects when daily limit is reached', async () => {
       slotDurationMinutes: 15,
     }),
     countDailyActive: async () => 5, // already reached 5
+    findFirstActiveLane: async (serviceCenterId: string) => ({ id: 'lane-1', serviceCenterId, nameEn: 'Notes', nameAr: 'نوتس', isActive: true,
+      maxDailyAppointments: 5, maxPerHour: 3, maxPerSlot: 1 }),
   });
   const service = new ServiceBookingsService(repo);
 
@@ -304,7 +316,7 @@ test('rescheduling replaces the reminder using the updated appointment revision'
   };
   const repo = createMockRepository({
     findAppointmentById: async () => existing,
-    updateAppointment: async (_id: string, data: any) => ({ ...existing, ...data, updatedAt: new Date('2026-10-01T12:00:00.000Z') }),
+    updateAppointmentWithAudits: async (_id: string, data: any) => ({ ...existing, ...data, updatedAt: new Date('2026-10-01T12:00:00.000Z') }),
     findAppointmentHistory: async () => [],
     recordAppointmentAudit: async () => undefined,
     countInSlot: async () => 0,

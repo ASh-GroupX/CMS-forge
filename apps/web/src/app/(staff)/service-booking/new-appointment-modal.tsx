@@ -4,13 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '../../../components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
 import { useServiceBooking } from './service-booking-context';
 import { createAppointmentAction } from './actions';
 import { BookingCustomerFields } from './booking-customer-fields';
@@ -19,23 +13,19 @@ import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api
 import { getNowTimeParts, getTodayDateString } from './service-booking-utils';
 import { useBookingTimeOptions } from './use-booking-time-options';
 
-const TIME_SLOTS: string[] = [];
-for (let h = 8; h < 18; h++) {
-  for (const m of ['00', '15', '30', '45']) {
-    TIME_SLOTS.push(`${String(h).padStart(2, '0')}:${m}`);
-  }
-}
+const TIME_SLOTS = Array.from({ length: 40 }, (_, index) => `${String(8 + Math.floor(index / 4)).padStart(2, '0')}:${['00', '15', '30', '45'][index % 4]}`);
 
 export function NewAppointmentModal() {
   const {
     appointments,
     branches,
+    bookingLanes,
     carModels,
     isNewModalOpen,
     locale,
     maintenanceTypes,
     prefillSlot,
-    selectedBranchId,
+    selectedBranchIds,
     selectedDate,
     setAppointments,
     setIsNewModalOpen,
@@ -45,13 +35,13 @@ export function NewAppointmentModal() {
   const isAr = locale === 'ar';
   const defaultBranch =
     prefillSlot?.branchId ||
-    (selectedBranchId !== 'ALL' ? selectedBranchId : branches[0]?.id || '');
+    (selectedBranchIds[0] ?? branches[0]?.id ?? '');
+  const defaultLane = prefillSlot?.bookingLaneId || bookingLanes.find((lane) => lane.serviceCenterId === defaultBranch && lane.isActive)?.id || '';
 
   const todayStr = getTodayDateString();
   const nowParts = getNowTimeParts();
   const nowTime = `${String(nowParts.hour).padStart(2, '0')}:${String(nowParts.minute).padStart(2, '0')}`;
 
-  // Form State
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [vin, setVin] = useState('');
@@ -59,24 +49,28 @@ export function NewAppointmentModal() {
   const [maintenanceTypeId, setMaintenanceTypeId] = useState('');
   const [periodicMileageKm, setPeriodicMileageKm] = useState<number | null>(null);
   const [branchId, setBranchId] = useState(defaultBranch);
+  const [bookingLaneId, setBookingLaneId] = useState(defaultLane);
   const [date, setDate] = useState(prefillSlot?.date || (selectedDate < todayStr ? todayStr : selectedDate));
   const initialSlot = prefillSlot?.time || (date === todayStr ? (TIME_SLOTS.find((s) => s >= nowTime) || '09:00') : '09:00');
   const [startTime, setStartTime] = useState(initialSlot);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const timeOptions = useBookingTimeOptions(isNewModalOpen, branchId, date, startTime, todayStr, nowTime);
+  const timeOptions = useBookingTimeOptions(isNewModalOpen, branchId, bookingLaneId, date, startTime, todayStr, nowTime);
 
   useEffect(() => {
     if (prefillSlot) {
       if (prefillSlot.branchId) setBranchId(prefillSlot.branchId);
+      if (prefillSlot.bookingLaneId) setBookingLaneId(prefillSlot.bookingLaneId);
       if (prefillSlot.date) setDate(prefillSlot.date);
       if (prefillSlot.time) setStartTime(prefillSlot.time);
     } else {
-      setBranchId(selectedBranchId !== 'ALL' ? selectedBranchId : branches[0]?.id || '');
+      const nextBranch = selectedBranchIds[0] ?? branches[0]?.id ?? '';
+      setBranchId(nextBranch);
+      setBookingLaneId(bookingLanes.find((lane) => lane.serviceCenterId === nextBranch && lane.isActive)?.id ?? '');
       setDate(selectedDate < todayStr ? todayStr : selectedDate);
     }
-  }, [prefillSlot, selectedBranchId, selectedDate, branches, todayStr]);
+  }, [prefillSlot, selectedBranchIds, selectedDate, branches, bookingLanes, todayStr]);
 
   useEffect(() => {
     if (date === todayStr && startTime < nowTime) {
@@ -90,7 +84,6 @@ export function NewAppointmentModal() {
   }, [maintenanceTypes, maintenanceTypeId]);
 
   const isHourAtLimit = timeOptions.find((slot) => slot.time === startTime)?.full ?? false;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -100,6 +93,10 @@ export function NewAppointmentModal() {
     }
     if (!carModels.some(car => car.id === carModelId && car.isActive)) {
       setErrorMsg(t.modal.vehicleRequired);
+      return;
+    }
+    if (!bookingLanes.some((lane) => lane.id === bookingLaneId && lane.serviceCenterId === branchId && lane.isActive)) {
+      setErrorMsg(t.modal.bookingLaneRequired);
       return;
     }
     const isPeriodic = maintenanceTypes.some((type) => type.id === maintenanceTypeId && type.isActive && isPeriodicMaintenanceType(type));
@@ -120,6 +117,7 @@ export function NewAppointmentModal() {
     const selectedMaint = matchedPeriodic ?? maintenanceTypes.find((m) => m.id === effectiveMaintId);
     const res = await createAppointmentAction({
       branchId: branchId || branches[0]?.id || 'center_main',
+      bookingLaneId,
       carModelId: effectiveCarModelId,
       customerName: customerName.trim(),
       customerPhone: customerPhone.trim(),
@@ -203,7 +201,7 @@ export function NewAppointmentModal() {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <label className="block text-xs font-bold text-content-strong mb-1" htmlFor="booking-branch">
                 {t.modal.branch}
@@ -211,12 +209,27 @@ export function NewAppointmentModal() {
               <select
                 id="booking-branch"
                 className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm focus:border-brand focus:outline-none"
-                onChange={(e) => setBranchId(e.target.value)}
+                onChange={(e) => {
+                  const nextBranch = e.target.value;
+                  setBranchId(nextBranch);
+                  setBookingLaneId(bookingLanes.find((lane) => lane.serviceCenterId === nextBranch && lane.isActive)?.id ?? '');
+                }}
                 value={branchId}
               >
                 {branches.map((b) => (
                   <option key={b.id} value={b.id}>{isAr ? b.nameAr : b.nameEn}</option>
                 ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-content-strong mb-1" htmlFor="booking-lane">
+                {t.modal.bookingLane}
+              </label>
+              <select id="booking-lane" className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm focus:border-brand focus:outline-none"
+                onChange={(event) => setBookingLaneId(event.target.value)} required value={bookingLaneId}>
+                {bookingLanes.filter((lane) => lane.serviceCenterId === branchId && lane.isActive).map((lane) =>
+                  <option key={lane.id} value={lane.id}>{isAr ? lane.nameAr : lane.nameEn}</option>)}
               </select>
             </div>
 

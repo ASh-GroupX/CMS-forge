@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Building2, Car, Clock, MessageSquareText, ShieldCheck, Wrench } from 'lucide-react';
+import { Building2, Car, Clock, Layers3, MessageSquareText, ShieldCheck, Wrench } from 'lucide-react';
 import { BranchHoursTab } from './branch-hours-tab';
 import { CarModelsTab } from './car-models-tab';
 import { MaintenanceTypesTab } from './maintenance-types-tab';
 import { ServiceCentersTab } from './service-centers-tab';
 import { UserRulesTab } from './user-rules-tab';
 import { SmsReminderTab } from './sms-reminder-tab';
+import { BookingLanesTab } from './booking-lanes-tab';
 import type { CarModel, DayRule, MaintenanceType, ServiceCenter } from '../../../../lib/staff-service-bookings-api';
 import type { Locale } from '../../../../i18n/staff-shell';
 import type { ServiceBookingCopy } from '../../../../i18n/staff-service-booking';
@@ -28,7 +29,7 @@ export function BookingSettingsView({
   t: ServiceBookingCopy;
 }) {
   const isAr = locale === 'ar';
-  const [activeTab, setActiveTab] = useState<'hours' | 'cars' | 'maintenance' | 'centers' | 'user-rules' | 'sms-reminder'>('hours');
+  const [activeTab, setActiveTab] = useState<'hours' | 'lanes' | 'cars' | 'maintenance' | 'centers' | 'user-rules' | 'sms-reminder'>('hours');
   const [centersList, setCentersList] = useState(centers);
   const [carList, setCarList] = useState(carModels);
   const [typesList, setTypesList] = useState(maintenanceTypes);
@@ -81,6 +82,15 @@ export function BookingSettingsView({
 
         {/* Tab Pills */}
         <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-line-subtle/80 pt-4">
+          <button
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'lanes' ? 'bg-brand text-primary-foreground shadow-sm' : 'border border-line-subtle bg-surface text-content-muted hover:text-content-strong'}`}
+            onClick={() => setActiveTab('lanes')}
+            type="button"
+          >
+            <Layers3 className="size-4" />
+            <span>{t.adminSettings.tabLanes}</span>
+          </button>
+
           <button
             className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
               activeTab === 'hours'
@@ -174,6 +184,9 @@ export function BookingSettingsView({
             onCarModelsChange={setCarList}
             t={t}
           />
+        </div>
+        <div style={{ display: activeTab === 'lanes' ? undefined : 'none' }}>
+          <BookingLanesTab centers={centersList} locale={locale} t={t} />
         </div>
         <div style={{ display: activeTab === 'maintenance' ? undefined : 'none' }}>
           <MaintenanceTypesTab

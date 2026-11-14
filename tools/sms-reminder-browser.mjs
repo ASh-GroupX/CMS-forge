@@ -16,7 +16,7 @@ mkdirSync(output, { recursive: true });
 compileTailwind(output);
 const { build } = createRequire(realpathSync('node_modules/tsx/package.json'))('esbuild');
 await build({ entryPoints: ['apps/web/test/browser/sms-reminder.fixture.tsx'], bundle: true, platform: 'browser',
-  outfile: `${output}/fixture.js`, jsx: 'automatic', define: { 'process.env.NODE_ENV': '"development"' }, tsconfig: 'apps/web/tsconfig.json',
+  outfile: `${output}/fixture.js`, jsx: 'automatic', define: { 'process.env.NODE_ENV': '"development"', 'process.env.NEXT_PUBLIC_API_URL': '""' }, tsconfig: 'apps/web/tsconfig.json',
   plugins: [{ name: 'server-action-test-double', setup(builder) {
     builder.onResolve({ filter: /service-booking\/actions$/ }, args => ({ path: args.path, namespace: 'booking-actions' }));
     builder.onLoad({ filter: /.*/, namespace: 'booking-actions' }, () => ({ contents: `
@@ -36,6 +36,10 @@ await build({ entryPoints: ['apps/web/test/browser/sms-reminder.fixture.tsx'], b
       export async function updateUserBookingRulesAction() { return {success:true}; }
       export async function getSmsReminderSettingsAction() { return {success:true,settings:{enabled:true,leadHours:24,senderNumber:'+962790000000',messageTemplate:'Hello {{customerName}}',providerMode:'test',providerReady:false,deliveries:[{id:'d1',status:'SENT',sentAt:'2026-11-09T08:00:00.000Z',scheduledAt:'2026-11-09T08:00:00.000Z',serviceAppointment:{referenceNumber:'APT-001'}}]}}; }
       export async function updateSmsReminderSettingsAction(data) { window.savedReminderSettings=data; return {success:true,settings:{...data,deliveries:[{id:'d1',status:'SENT',sentAt:'2026-11-09T08:00:00.000Z',scheduledAt:'2026-11-09T08:00:00.000Z',serviceAppointment:{referenceNumber:'APT-001'}}]}}; }
+    `, loader: 'js' }));
+    builder.onResolve({ filter: /booking-lane-actions$/ }, args => ({ path: args.path, namespace: 'lane-actions' }));
+    builder.onLoad({ filter: /.*/, namespace: 'lane-actions' }, () => ({ contents: `
+      export async function saveBookingLaneAction(data) { window.savedBookingLane=data; return {success:true,lane:{id:'lane-notes',...data}}; }
     `, loader: 'js' }));
   } }] });
 
@@ -58,7 +62,22 @@ try {
     page.on('pageerror', error => errors.push(error.message));
     const copy = serviceBookingText[locale].adminSettings.smsReminder;
     const admin = serviceBookingText[locale].adminSettings;
+    await page.route('**/service-bookings/centers/*/lanes*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+      { id: 'lane-other', serviceCenterId: 'center-main', code: 'OTHER', nameEn: 'Other services', nameAr: 'الخدمات الأخرى', maxDailyAppointments: 50, maxPerHour: 5, maxPerSlot: 2, position: 1, isActive: true, updatedAt: '2026-11-14T10:00:00.000Z' },
+    ]) }));
     await page.goto(`http://127.0.0.1:${server.address().port}/?${locale}`);
+    const laneCopy = admin.lanes;
+    await page.getByRole('button', { name: admin.tabLanes }).click();
+    await page.getByText(locale === 'ar' ? 'الخدمات الأخرى' : 'Other services', { exact: true }).waitFor();
+    await page.getByRole('button', { name: laneCopy.add }).click();
+    await page.getByLabel(laneCopy.nameEn).fill('Notes');
+    await page.getByLabel(laneCopy.nameAr).fill('نوتس');
+    await page.getByLabel(laneCopy.code).fill('NOTES');
+    await page.getByLabel(laneCopy.hourly).fill('9');
+    await page.screenshot({ path: `${output}/${locale}-booking-lanes.png`, fullPage: true });
+    await page.getByRole('button', { name: laneCopy.save }).click();
+    await page.getByText(laneCopy.saved, { exact: true }).waitFor();
+    assert.equal((await page.evaluate(() => window.savedBookingLane)).maxPerHour, 9);
     await page.getByRole('button', { name: admin.tabSmsReminder }).click();
     await page.getByRole('heading', { name: copy.title }).waitFor();
     await page.getByLabel(copy.leadHours).fill('48');

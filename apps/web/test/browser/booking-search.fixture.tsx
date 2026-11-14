@@ -17,8 +17,8 @@ const appointments: ServiceAppointment[] = [
 ];
 
 function SelectionProbe() {
-  const { isDetailModalOpen, selectedAppointment, selectedBranchId, selectedDate, view } = useServiceBooking();
-  return <div data-branch={selectedBranchId} data-date={selectedDate} data-detail-open={isDetailModalOpen} data-selected-id={selectedAppointment?.id ?? ''} data-view={view} id="selection-probe" />;
+  const { isDetailModalOpen, selectedAppointment, selectedBranchIds, selectedDate, view } = useServiceBooking();
+  return <div data-branch={selectedBranchIds.join(',')} data-date={selectedDate} data-detail-open={isDetailModalOpen} data-selected-id={selectedAppointment?.id ?? ''} data-view={view} id="selection-probe" />;
 }
 
 export function BookingSearchFixture({ locale, loadError = false }: { locale: 'en' | 'ar'; loadError?: boolean }) {

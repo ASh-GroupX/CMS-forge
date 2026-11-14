@@ -1199,6 +1199,36 @@ commands:
 - npm run test:api -- portal.tracking
 - npm run test:e2e -- customer-portal-track
 
+### REQ-BOOK-LANE-001: Service-center booking lanes
+type: functional
+lane: T2_STANDARD
+risk: high
+priority: must
+status: active
+source: approved user change request, 2026-11-14
+
+A service center can contain multiple independently capacity-limited booking
+lanes. Lanes are not branches: they share the service center, calendar, and
+staff scope while appearing as adjacent operational columns. Admin configures
+bilingual lane names, display order, active state, and daily, hourly, and slot
+limits. Every appointment belongs to one active lane and the backend enforces
+that lane's capacity for create and reschedule operations.
+
+#### Acceptance Criteria
+- AC1 [must] Admin can create and update lanes within a service center, including English/Arabic name, order, active state, max per day, max per hour, and max per slot.
+- AC2 [must] Lane configuration writes an append-only CONFIG audit in the same transaction and rejects non-Admin writes.
+- AC3 [must] Booking and rescheduling require an active lane owned by the selected service center; lane daily/hourly/slot limits are enforced by the backend.
+- AC4 [must] The day timeline renders active lanes next to each other within their service center and shows lane-specific capacity and appointments.
+- AC5 [must] Existing appointments migrate without loss to an active General lane for their service center.
+- AC6 [must] Admin and booking UI support English LTR, Arabic RTL, keyboard access, and responsive layouts.
+
+#### Proof Requirements
+minimum: L3
+commands:
+- npm run test:api -- service-bookings
+- npm run test:booking-timeline:browser
+- npm run openapi:check
+
 ### REQ-BOOK-SMS-001: Service appointment SMS reminders
 type: integration-contract
 lane: T2_STANDARD

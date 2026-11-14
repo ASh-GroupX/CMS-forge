@@ -1,7 +1,7 @@
 # Current State
 
 Date: 2026-11-14
-Status: Complete — QR intake destination and customer navigation deployed and verified
+Status: Complete locally — awaiting user review before push
 Risk: High
 
 - Current production revision: 1714138ce612a6cdd595a8be9f1134eed57ec68f; GitHub run 43566832522 completed success in Validate and Test and Deploy to VPS. Live health, portal options, EN/AR portal and protected Admin API smoke passed with matching deployment revision. The earlier named complaint still requires authenticated staff inspection.
@@ -9,3 +9,8 @@ Risk: High
 - Admin settings now store a versioned, audited suggested redirect branch/department and show each eligible intake member's department. Claimed intake editor preselects the suggestion. Saving corrections retains source-branch queue scope; final redirect can transfer to an active different branch/department with the dedicated assignment command and atomic status history/audit.
 - Passed locally: Prisma validation/generation, typecheck, lint, OpenAPI, security, build, root 78/78, portal API 30/30, assignments 8/8, settings 3/3, shell 232/232, customer portal submit smoke, visual 96 previews, accessibility 24 previews, web perf 5 previews, fresh isolated PostgreSQL 64 migrations/indexes and real HTTP/Admin→claim→cross-branch redirect/rollback proof. Real local QR, authenticated Admin settings, and claimed editor browser proof passed EN/AR 390/1440 with zero serious/critical axe findings; screenshots inspected. Independent GPT-6.1 Sol review accepted after OpenAPI gap repair; preferred policy model unavailable. Production public QR EN/AR 390/1440 and protected Admin denial checks passed. No live complaint was submitted in production; Admin must configure actual destination/team values. SMS remains deferred.
 - Preserve user tmp/ and uploads/. SMS remains deferred.
+- Completed local task: selectable service-center checkboxes now drive day/week/month, capacity, suggestions, booking defaults, and search navigation; at least one center remains selected. Brand changes defer model clearing until the dropdown closes, so vehicle search/selection keeps the appointment dialog open. No backend write path or production data changed.
+- Passed: booking brand/model, timeline, suggestions, and search browser proofs EN/AR; changed selector Axe scope; shell 232/232; typecheck; lint. Desktop/mobile screenshots inspected. The attempted nonexistent `test:web -- service-booking` alias failed; the correct shell suite passed.
+- Completed locally: replaced the fake-branch workaround with Admin-configurable booking lanes inside each service center. Notes and other services can have independent daily/hourly/slot capacities and render as adjacent columns; booking, rescheduling, availability, and suggestions retain the lane. Existing appointments migrate to a generated General lane.
+- Passed: Prisma validate/generate and migration SQL sanity; service-bookings API 40/40; shell 232/232; typecheck; lint; OpenAPI; diff check; EN/AR lane timeline, Admin settings, vehicle picker, and booking-search browser proofs. Desktop/mobile screenshots inspected. Security proof covers Admin allowed/non-Admin denied, CSRF/RBAC guards, optimistic conflicts, metadata-only CONFIG audit in the same transaction, and appointment reschedule+audit atomicity.
+- No commit, push, deployment, production migration, or production data change. Await the user's requested explanation and approval before any push. Preserve `tmp/` and `uploads/`.

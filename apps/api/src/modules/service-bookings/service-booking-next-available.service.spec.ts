@@ -10,6 +10,7 @@ test('next three slots skip past, full, closed and daily-capacity dates in time 
       { id: 'main', nameEn: 'Main', nameAr: 'الرئيسي' },
       { id: 'north', nameEn: 'North', nameAr: 'الشمالي' },
     ],
+    getActiveBookingLanes: async (branchId: string) => [{ id: `${branchId}-general`, nameEn: 'General', nameAr: 'عام' }],
     getSlotAvailability: async (branchId: string, date: string) => {
       calls.push(`${branchId}:${date}`);
       const firstDay = date === '2026-11-10';
@@ -34,7 +35,8 @@ test('next three slots skip past, full, closed and daily-capacity dates in time 
 });
 
 test('next available checks booking permission and rejects inactive center', async () => {
-  const bookings = { getServiceCenters: async () => [{ id: 'main', nameEn: 'Main', nameAr: 'الرئيسي' }] };
+  const bookings = { getServiceCenters: async () => [{ id: 'main', nameEn: 'Main', nameAr: 'الرئيسي' }],
+    getActiveBookingLanes: async () => [] };
   const denied = new ServiceBookingNextAvailableService(bookings as never,
     { checkPermission: async () => { throw new Error('denied'); } } as never);
   await assert.rejects(denied.nextThree('main', 'staff-1'), /denied/);

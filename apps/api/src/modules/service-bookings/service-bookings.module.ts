@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditService } from '../../core/audit.service.js';
-import { PermissionGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../core/auth.guard.js';
+import { PermissionGuard, RbacGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { PrismaService } from '../../core/http-kernel.js';
 import { AuthModule } from '../auth/auth.module.js';
@@ -17,6 +17,8 @@ import { ServiceBookingSmsReminderRepository } from './service-booking-sms-remin
 import { ServiceBookingsExportRepository } from './service-bookings.export.repository.js';
 import { ServiceBookingsExportService } from './service-bookings.export.service.js';
 import { ServiceBookingNextAvailableService } from './service-booking-next-available.service.js';
+import { ServiceBookingLanesRepository } from './service-booking-lanes.repository.js';
+import { ServiceBookingLanesService } from './service-booking-lanes.service.js';
 
 @Module({
   imports: [AuthModule, NotificationsModule],
@@ -34,12 +36,15 @@ import { ServiceBookingNextAvailableService } from './service-booking-next-avail
     ServiceBookingsExportRepository,
     ServiceBookingsExportService,
     ServiceBookingNextAvailableService,
+    ServiceBookingLanesRepository,
+    ServiceBookingLanesService,
     {
       provide: SESSION_AUTH_SERVICE,
       inject: [AuthService],
       useFactory: (authService: AuthService) => authService,
     },
     SessionAuthGuard,
+    RbacGuard,
     PermissionGuard,
     CsrfGuard,
   ],

@@ -4,13 +4,15 @@ import React from 'react';
 import { Calendar as CalendarIcon, CheckCircle2, ChevronLeft, ChevronRight, Clock, Info } from 'lucide-react';
 import { useServiceBooking } from './service-booking-context';
 import { NextAvailableCard } from './next-available-card';
+import { matchesBranch } from './service-booking-utils';
 
 export function TimelineSidebar() {
   const {
     appointments,
+    bookingLanes,
     branches,
     locale,
-    selectedBranchId,
+    selectedBranchIds,
     selectedDate,
     setSelectedDate,
     slotAvailability,
@@ -41,24 +43,20 @@ export function TimelineSidebar() {
     setSelectedDate(next.toISOString().slice(0, 10));
   };
 
+  const selectedBranches = branches.filter((branch) => selectedBranchIds.includes(branch.id));
+
   // Compute daily booked count with flexible branch and date matching
   const dailyBooked = appointments.filter((a) => {
     if (a.status === 'CANCELLED') return false;
     const aDate = typeof a.date === 'string' ? a.date.slice(0, 10) : new Date(a.date).toISOString().slice(0, 10);
     if (aDate !== selectedDate) return false;
-    if (selectedBranchId === 'ALL') return true;
-    const target = a.branchId || a.serviceCenterId || '';
-    if (target === selectedBranchId) return true;
-    const selectedBranch = branches.find((b) => b.id === selectedBranchId);
-    if (selectedBranch?.code && target === selectedBranch.code) return true;
-    if ((selectedBranchId === 'center_main' || selectedBranch?.code === 'MAIN_CENTER') && (target === 'center_main' || target === 'MAIN_CENTER')) return true;
-    if ((selectedBranchId === 'center_north' || selectedBranch?.code === 'NORTH_CENTER') && (target === 'center_north' || target === 'NORTH_CENTER')) return true;
-    return false;
+    return selectedBranches.some((branch) => matchesBranch(a, branch));
   }).length;
 
-  const capacityDays = selectedBranchId === 'ALL'
-    ? branches.map((branch) => slotAvailability[branch.id])
-    : [slotAvailability[selectedBranchId]];
+  const selectedLaneIds = bookingLanes
+    .filter((lane) => lane.isActive && selectedBranchIds.includes(lane.serviceCenterId))
+    .map((lane) => lane.id);
+  const capacityDays = selectedLaneIds.map((laneId) => slotAvailability[laneId]);
   const isLoadingCapacity = capacityDays.some((day) => !day);
   const isClosed = !isLoadingCapacity && capacityDays.every((day) => !day?.isOpen);
   const isFull = !isLoadingCapacity && !isClosed && capacityDays.every((day) =>
@@ -115,7 +113,7 @@ export function TimelineSidebar() {
             const hasApts = appointments.some(
               (a) =>
                 a.date === dateStr &&
-                (selectedBranchId === 'ALL' || a.branchId === selectedBranchId),
+                selectedBranches.some((branch) => matchesBranch(a, branch)),
             );
 
             return (

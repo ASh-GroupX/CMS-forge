@@ -6,12 +6,13 @@ import {
   type AppointmentRecord,
   type ServiceBookingClient,
 } from './service-bookings.types.js';
+import { ServiceBookingsCatalogRepository } from './service-bookings-catalog.repository.js';
 
 export { appointmentSelect, type AppointmentRecord, type ServiceBookingClient };
 
 @Injectable()
-export class ServiceBookingsRepository {
-  constructor(private readonly prisma: PrismaService) {}
+export class ServiceBookingsRepository extends ServiceBookingsCatalogRepository {
+  constructor(prisma: PrismaService) { super(prisma); }
 
   async transaction<T>(work: (client: Prisma.TransactionClient) => Promise<T>): Promise<T> {
     return this.prisma.$transaction(work);
@@ -108,17 +109,34 @@ export class ServiceBookingsRepository {
     });
   }
 
+  async findBookingLane(id: string) {
+    return this.prisma.serviceBookingLane.findUnique({ where: { id } });
+  }
+
+  async findFirstActiveLane(serviceCenterId: string) {
+    return this.prisma.serviceBookingLane.findFirst({
+      where: { serviceCenterId, isActive: true }, orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async listActiveBookingLanes(serviceCenterId: string) {
+    return this.prisma.serviceBookingLane.findMany({
+      where: { serviceCenterId, isActive: true }, orderBy: [{ position: 'asc' }, { nameEn: 'asc' }],
+    });
+  }
+
   async recordAppointmentAudit(data: { action: string; actorId?: string | null | undefined; targetId: string; metadata: Prisma.InputJsonValue }) {
     return this.prisma.auditLog.create({
       data: { eventType: 'WORKFLOW', action: data.action, actorId: data.actorId ?? null, targetType: 'ServiceAppointment', targetId: data.targetId, metadata: data.metadata },
     });
   }
 
-  async findAppointmentsForDate(branchId: string, date: Date): Promise<AppointmentRecord[]> {
+  async findAppointmentsForDate(branchId: string, date: Date, bookingLaneId?: string): Promise<AppointmentRecord[]> {
     return this.prisma.serviceAppointment.findMany({
       where: {
         OR: [{ serviceCenterId: branchId }, { branchId }],
         date,
+        ...(bookingLaneId ? { bookingLaneId } : {}),
         status: { notIn: ['CANCELLED', 'NO_SHOW'] },
       },
       orderBy: { startTime: 'asc' },
@@ -126,35 +144,38 @@ export class ServiceBookingsRepository {
     });
   }
 
-  async countDailyActive(branchId: string, date: Date, excludeId?: string): Promise<number> {
+  async countDailyActive(branchId: string, date: Date, bookingLaneId?: string, excludeId?: string): Promise<number> {
     return this.prisma.serviceAppointment.count({
       where: {
         OR: [{ serviceCenterId: branchId }, { branchId }],
         date,
+        ...(bookingLaneId ? { bookingLaneId } : {}),
         status: { notIn: ['CANCELLED', 'NO_SHOW'] },
         ...(excludeId ? { id: { not: excludeId } } : {}),
       },
     });
   }
 
-  async countInHourWindow(branchId: string, date: Date, hourPrefix: string, excludeId?: string): Promise<number> {
+  async countInHourWindow(branchId: string, date: Date, hourPrefix: string, bookingLaneId?: string, excludeId?: string): Promise<number> {
     return this.prisma.serviceAppointment.count({
       where: {
         OR: [{ serviceCenterId: branchId }, { branchId }],
         date,
         startTime: { startsWith: hourPrefix },
+        ...(bookingLaneId ? { bookingLaneId } : {}),
         status: { notIn: ['CANCELLED', 'NO_SHOW'] },
         ...(excludeId ? { id: { not: excludeId } } : {}),
       },
     });
   }
 
-  async countInSlot(branchId: string, date: Date, startTime: string, excludeId?: string): Promise<number> {
+  async countInSlot(branchId: string, date: Date, startTime: string, bookingLaneId?: string, excludeId?: string): Promise<number> {
     return this.prisma.serviceAppointment.count({
       where: {
         OR: [{ serviceCenterId: branchId }, { branchId }],
         date,
         startTime,
+        ...(bookingLaneId ? { bookingLaneId } : {}),
         status: { notIn: ['CANCELLED', 'NO_SHOW'] },
         ...(excludeId ? { id: { not: excludeId } } : {}),
       },
@@ -183,6 +204,23 @@ export class ServiceBookingsRepository {
       where: { id },
       data,
       select: appointmentSelect,
+    });
+  }
+
+  async updateAppointmentWithAudits(
+    id: string,
+    data: Prisma.ServiceAppointmentUncheckedUpdateInput,
+    audits: Array<{ action: string; actorId?: string | null; metadata: Prisma.InputJsonValue }>,
+  ): Promise<AppointmentRecord> {
+    return this.prisma.$transaction(async (client) => {
+      const updated = await this.updateAppointment(id, data, client);
+      for (const audit of audits) {
+        await client.auditLog.create({ data: {
+          eventType: 'WORKFLOW', action: audit.action, actorId: audit.actorId ?? null,
+          targetType: 'ServiceAppointment', targetId: id, metadata: audit.metadata,
+        } });
+      }
+      return updated;
     });
   }
 
@@ -242,56 +280,4 @@ export class ServiceBookingsRepository {
     });
   }
 
-  // ── Master Data ───────────────────────────────────────────────────────────
-  async listCarModels(activeOnly = true) {
-    return this.prisma.serviceCarModel.findMany({ where: activeOnly ? { isActive: true } : {}, orderBy: { nameEn: 'asc' } });
-  }
-
-  async findCarModelById(id: string) {
-    return this.prisma.serviceCarModel.findUnique({ where: { id } });
-  }
-
-  async upsertCarModel(data: { id?: string | undefined; nameEn: string; nameAr: string; brand?: string | undefined; isActive?: boolean | undefined }) {
-    if (data.id) {
-      return this.prisma.serviceCarModel.upsert({
-        where: { id: data.id },
-        update: { nameEn: data.nameEn, nameAr: data.nameAr, ...(data.brand ? { brand: data.brand } : {}), ...(data.isActive !== undefined ? { isActive: data.isActive } : {}) },
-        create: { id: data.id, nameEn: data.nameEn, nameAr: data.nameAr, brand: data.brand || 'Nissan', isActive: data.isActive ?? true },
-      });
-    }
-    return this.prisma.serviceCarModel.create({
-      data: { nameEn: data.nameEn, nameAr: data.nameAr, brand: data.brand || 'Nissan', isActive: data.isActive ?? true },
-    });
-  }
-
-  async listMaintenanceTypes(activeOnly = true) {
-    return this.prisma.serviceMaintenanceType.findMany({ where: activeOnly ? { isActive: true } : {}, orderBy: { nameEn: 'asc' } });
-  }
-
-  async findMaintenanceTypeById(id: string) {
-    return this.prisma.serviceMaintenanceType.findUnique({ where: { id } });
-  }
-
-  async upsertMaintenanceType(data: { id?: string | undefined; nameEn: string; nameAr: string; estimatedDurationMinutes?: number | undefined; isActive?: boolean | undefined }) {
-    if (data.id) {
-      return this.prisma.serviceMaintenanceType.upsert({
-        where: { id: data.id },
-        update: { nameEn: data.nameEn, nameAr: data.nameAr, ...(data.estimatedDurationMinutes !== undefined ? { estimatedDurationMinutes: data.estimatedDurationMinutes } : {}), ...(data.isActive !== undefined ? { isActive: data.isActive } : {}) },
-        create: { id: data.id, nameEn: data.nameEn, nameAr: data.nameAr, estimatedDurationMinutes: data.estimatedDurationMinutes || 60, isActive: data.isActive ?? true },
-      });
-    }
-    return this.prisma.serviceMaintenanceType.create({
-      data: { nameEn: data.nameEn, nameAr: data.nameAr, estimatedDurationMinutes: data.estimatedDurationMinutes || 60, isActive: data.isActive ?? true },
-    });
-  }
-
-  async deleteCarModel(id: string) {
-    await this.prisma.serviceAppointment.updateMany({ where: { carModelId: id }, data: { carModelId: null } });
-    return this.prisma.serviceCarModel.delete({ where: { id } });
-  }
-
-  async deleteMaintenanceType(id: string) {
-    await this.prisma.serviceAppointment.updateMany({ where: { maintenanceTypeId: id }, data: { maintenanceTypeId: null } });
-    return this.prisma.serviceMaintenanceType.delete({ where: { id } });
-  }
 }

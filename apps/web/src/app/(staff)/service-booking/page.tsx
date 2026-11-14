@@ -6,6 +6,7 @@ import {
   fetchMaintenanceTypes,
   fetchMyBookingRules,
   fetchServiceAppointments,
+  fetchServiceBookingLanes,
   fetchServiceCenters,
   type CarModel,
   type MaintenanceType,
@@ -64,6 +65,9 @@ export default async function ServiceBookingPage({
     ...fetchedBranches,
     ...defaultBranches.filter((def) => !fetchedBranches.some((b) => b.id === def.id || b.code === def.code)),
   ];
+  const bookingLanes = (await Promise.all(
+    branches.map((branch) => fetchServiceBookingLanes(branch.id, false, cookieHeader).catch(() => [])),
+  )).flat();
 
   const defaultCarModels: CarModel[] = [
     { id: 'car_tiggo8_pro', nameEn: 'Chery Tiggo 8 Pro', nameAr: 'شيري تيجو 8 برو', brand: 'Chery', isActive: true },
@@ -96,6 +100,7 @@ export default async function ServiceBookingPage({
       <ServiceBookingProvider
         initialAppointments={appointmentsResult.items}
         initialBranches={branches}
+        initialBookingLanes={bookingLanes}
         initialCarModels={effectiveCarModels}
         initialDate={todayStr}
         initialMaintenanceTypes={effectiveMaintenanceTypes}

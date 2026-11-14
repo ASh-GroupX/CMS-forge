@@ -22,6 +22,9 @@ export type ServiceAppointment = {
   referenceNumber: string;
   branchId: string;
   serviceCenterId?: string;
+  bookingLaneId?: string;
+  bookingLaneNameEn?: string;
+  bookingLaneNameAr?: string;
   branchNameEn?: string;
   branchNameAr?: string;
   customerName: string;
@@ -62,6 +65,9 @@ export type DayAvailability = {
   date: string;
   dayOfWeek: number;
   branchId: string;
+  bookingLaneId?: string;
+  bookingLaneNameEn?: string;
+  bookingLaneNameAr?: string;
   isOpen: boolean;
   startTime: string;
   endTime: string;
@@ -75,6 +81,8 @@ export type CarModel = { id: string; nameEn: string; nameAr: string; brand: stri
 export type MaintenanceType = { id: string; nameEn: string; nameAr: string; estimatedDurationMinutes: number; isActive: boolean };
 
 export type ServiceCenter = { id: string; code: string; nameEn: string; nameAr: string; address?: string | null; phone?: string | null; isActive: boolean };
+
+export { fetchServiceBookingLanes, type ServiceBookingLane } from './staff-service-booking-lanes-api';
 
 export type DayRule = {
   id?: string;
@@ -101,6 +109,7 @@ export type UserBookingRule = {
 
 export type CreateAppointmentInput = {
   branchId: string;
+  bookingLaneId: string;
   customerName: string;
   customerPhone: string;
   vin?: string | null;
@@ -167,8 +176,10 @@ export async function fetchServiceAppointments(params: {
   throw new Error('Invalid service appointments response');
 }
 
-export async function fetchSlotAvailability(branchId: string, date: string, cookieHeader?: string): Promise<DayAvailability | null> {
-  const url = `${getApiBaseUrl()}/service-bookings/slots-availability?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`;
+export async function fetchSlotAvailability(branchId: string, date: string, bookingLaneId?: string, cookieHeader?: string): Promise<DayAvailability | null> {
+  const query = new URLSearchParams({ branchId, date });
+  if (bookingLaneId) query.set('bookingLaneId', bookingLaneId);
+  const url = `${getApiBaseUrl()}/service-bookings/slots-availability?${query}`;
   const res = await fetch(url, { headers: await getAuthHeaders(cookieHeader), cache: 'no-store' });
   if (!res.ok) return null;
   return res.json().catch(() => null);

@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '../../../components/ui/button';
 import { rescheduleAppointmentAction } from './actions';
 import type { BranchOption } from './service-booking-context';
-import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api';
+import type { ServiceAppointment, ServiceBookingLane } from '../../../lib/staff-service-bookings-api';
 import type { ServiceBookingCopy } from '../../../i18n/staff-service-booking';
 
 const TIME_SLOTS: string[] = [];
@@ -17,12 +17,14 @@ for (let h = 8; h < 18; h++) {
 
 export function AppointmentRescheduleForm({
   appointment,
+  bookingLanes,
   branches,
   isAr,
   onSuccess,
   t,
 }: {
   appointment: ServiceAppointment;
+  bookingLanes: ServiceBookingLane[];
   branches: BranchOption[];
   isAr: boolean;
   onSuccess: (updated: ServiceAppointment) => void;
@@ -30,6 +32,8 @@ export function AppointmentRescheduleForm({
 }) {
   const initialCenter = appointment.serviceCenterId || appointment.branchId || branches[0]?.id || '';
   const [branchId, setBranchId] = useState(initialCenter);
+  const [bookingLaneId, setBookingLaneId] = useState(appointment.bookingLaneId
+    || bookingLanes.find((lane) => lane.serviceCenterId === initialCenter && lane.isActive)?.id || '');
   const [date, setDate] = useState(appointment.date);
   const [time, setTime] = useState(appointment.startTime);
   const [loading, setLoading] = useState(false);
@@ -44,9 +48,13 @@ export function AppointmentRescheduleForm({
       setErrorMsg(t.modal.pastSlotError);
       return;
     }
+    if (!bookingLanes.some((lane) => lane.id === bookingLaneId && lane.serviceCenterId === branchId && lane.isActive)) {
+      setErrorMsg(t.modal.bookingLaneRequired);
+      return;
+    }
     setLoading(true);
     setErrorMsg(null);
-    const res = await rescheduleAppointmentAction(appointment.id, branchId, date, time);
+    const res = await rescheduleAppointmentAction(appointment.id, branchId, bookingLaneId, date, time);
     setLoading(false);
     if (!res.success) {
       setErrorMsg(res.error || 'Failed to reschedule');
@@ -70,13 +78,33 @@ export function AppointmentRescheduleForm({
         </label>
         <select
           className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm"
-          onChange={(e) => setBranchId(e.target.value)}
+          onChange={(e) => {
+            const nextBranchId = e.target.value;
+            setBranchId(nextBranchId);
+            setBookingLaneId(bookingLanes.find((lane) => lane.serviceCenterId === nextBranchId && lane.isActive)?.id ?? '');
+          }}
           value={branchId}
         >
           {branches.map((b) => (
             <option key={b.id} value={b.id}>
               {isAr ? b.nameAr : b.nameEn}
             </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-xs font-bold text-content-strong mb-1">
+          {t.modal.bookingLane}
+        </label>
+        <select
+          className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm"
+          onChange={(e) => setBookingLaneId(e.target.value)}
+          required
+          value={bookingLaneId}
+        >
+          {bookingLanes.filter((lane) => lane.serviceCenterId === branchId && lane.isActive).map((lane) => (
+            <option key={lane.id} value={lane.id}>{isAr ? lane.nameAr : lane.nameEn}</option>
           ))}
         </select>
       </div>

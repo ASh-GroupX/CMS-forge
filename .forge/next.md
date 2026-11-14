@@ -1,10 +1,10 @@
-# QR complaint intake destination and customer navigation
+# Service-center booking lanes
 
-Status: Complete
+Status: Complete locally — awaiting user review before any commit or push
 Date: 2026-11-14
 Risk: High
-SRS: REQ-PORTAL-001, REQ-WORKFLOW-002, REQ-ADMIN-001, PORTAL-SEC-001, WORKFLOW-MATRIX-001, UI-DESIGN-001
+SRS: REQ-BOOK-LANE-001, SR-BOOK-001, SR-BOOK-002, SR-BOOK-004, UI-DESIGN-001, METHOD-AUDIT-001, REQ-RBAC-001
 
-Scope: Sequential slices: (1) remove Track and Survey entry points from the public QR complaint page and success state while preserving verified tracking and survey backend workflows; (2) add Admin-configured suggested destination branch and department, validate active targets and write versioned audit; (3) preselect the suggestion in the claimed intake editor and permit only the configured, claimed intake redirect command to transfer a complaint to another branch, with the existing atomic history, audit, and assignment behavior. Preserve source-branch queue scope until redirect and hide routing from customers. The preceding subject/vehicle repair deployed successfully as d407fcd.
+Scope: Sequential slices: (1) add service-center-owned booking lanes, appointment lane identity, Admin-only audited configuration, and lane-level server capacity validation; (2) add bilingual Booking Settings management for lane name/order/active state and daily/hourly/slot limits; (3) require/select a valid lane when booking or rescheduling, return lane availability, and render selected service centers with their lanes side-by-side. Existing appointments migrate to a generated General lane. Do not use fake branches for lanes or move capacity authority into React.
 
-Proof: Passed focused portal/redirect API tests, fresh 64-migration isolated PostgreSQL and real HTTP cross-branch workflow, typecheck, lint, OpenAPI, visual/accessibility/performance, authenticated local browser at phone/desktop, production deployment 43566832522, live health/options/portal smoke, and read-only production portal EN/AR at 390/1440. Preserve tmp/ and uploads/. SMS remains deferred. Configuring real destination/team values is an Admin operation; no production complaint was submitted for proof.
+Proof: Passed Prisma validate/generate and migration SQL sanity, focused service-bookings API 40/40, shell 232/232, OpenAPI, typecheck, lint, diff check, and booking timeline/Admin/brand/search browser proofs in EN/AR. Inspected desktop/mobile lane timeline and Admin screenshots. No commit, push, deployment, or production data change; preserve `tmp/` and `uploads/`.

@@ -11,6 +11,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
+import { Checkbox } from '../../../components/ui/checkbox';
 import { useServiceBooking } from './service-booking-context';
 import { getTodayDateString } from './service-booking-utils';
 
@@ -18,13 +19,13 @@ export function TimelineTopbar() {
   const {
     branches,
     locale,
-    selectedBranchId,
+    selectedBranchIds,
     selectedDate,
     setIsNewModalOpen,
-    setSelectedBranchId,
     setSelectedDate,
     setView,
     t,
+    toggleBranch,
     userRules,
     view,
   } = useServiceBooking();
@@ -113,34 +114,29 @@ export function TimelineTopbar() {
       {/* Center & Right: Branch filter, View toggles, and New Appointment */}
       <div className="flex flex-wrap items-center gap-3">
         {/* Branch Filter */}
-        <div className="flex items-center rounded-xl border border-line-subtle bg-surface-canvas/60 p-1 text-xs">
-          <button
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-all ${
-              selectedBranchId === 'ALL'
-                ? 'bg-brand text-primary-foreground shadow-sm'
-                : 'text-content-muted hover:text-content-strong'
-            }`}
-            onClick={() => setSelectedBranchId('ALL')}
-            type="button"
-          >
+        <fieldset className="flex flex-wrap items-center gap-1 rounded-xl border border-line-subtle bg-surface-canvas/60 p-1 text-xs">
+          <legend className="sr-only">{t.allBranches}</legend>
+          <span className="flex items-center gap-1.5 px-2 text-content-muted" aria-hidden="true">
             <GitCompare className="size-3.5" />
-            <span>{t.allBranches}</span>
-          </button>
+          </span>
           {branches.map((b) => (
-            <button
-              className={`rounded-lg px-3 py-1.5 font-medium transition-all ${
-                selectedBranchId === b.id
-                  ? 'bg-brand text-primary-foreground shadow-sm'
-                  : 'text-content-muted hover:text-content-strong'
+            <label
+              className={`flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 font-medium transition-all ${
+                selectedBranchIds.includes(b.id)
+                  ? 'bg-brand/10 text-content-strong'
+                  : 'text-content-muted hover:bg-surface hover:text-content-strong'
               }`}
               key={b.id}
-              onClick={() => setSelectedBranchId(b.id)}
-              type="button"
             >
+              <Checkbox
+                aria-label={isAr ? b.nameAr : b.nameEn}
+                checked={selectedBranchIds.includes(b.id)}
+                onCheckedChange={() => toggleBranch(b.id)}
+              />
               {isAr ? b.nameAr : b.nameEn}
-            </button>
+            </label>
           ))}
-        </div>
+        </fieldset>
 
         {/* View Switcher */}
         <div className="flex items-center rounded-xl border border-line-subtle bg-surface-canvas/60 p-1 text-xs">
