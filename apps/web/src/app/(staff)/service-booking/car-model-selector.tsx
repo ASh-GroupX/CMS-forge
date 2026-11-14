@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { Input } from '../../../components/ui/input';
+import { Button } from '../../../components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
 import { serviceBookingText } from '../../../i18n/staff-service-booking';
 import type { CarModel } from '../../../lib/staff-service-bookings-api';
 
@@ -15,6 +17,8 @@ export function CarModelSelector({ carModelId, carModels, isAr, noCarFoundText, 
   const current = active.find(car => car.id === carModelId);
   const [chosenBrand, setChosenBrand] = useState(current?.brand ?? '');
   const [search, setSearch] = useState('');
+  const [modelOpen, setModelOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
   const brand = current?.brand ?? chosenBrand;
   const brands = [...new Set(active.map(car => car.brand))].sort((a, b) => a.localeCompare(b));
   const searchTerm = search.trim().toLocaleLowerCase();
@@ -42,19 +46,28 @@ export function CarModelSelector({ carModelId, carModels, isAr, noCarFoundText, 
     <div className="space-y-1">
       <label className="text-xs font-semibold">{copy.carModel}</label>
       <p className="text-[11px] leading-4 text-content-muted">{copy.modelSearchHint}</p>
-      <Input aria-label={searchPlaceholder} placeholder={searchPlaceholder} disabled={!active.length} value={search} onChange={event => setSearch(event.target.value)} />
-      <Select value={current?.id ?? ''} disabled={!active.length} onValueChange={id => {
-        const selected = active.find(car => car.id === id);
-        if (selected) setChosenBrand(selected.brand);
-        setSearch('');
-        onSelect(id);
-      }}>
-        <SelectTrigger aria-label={copy.carModel}><SelectValue placeholder={selectPlaceholder} /></SelectTrigger>
-        <SelectContent>{models.map(car => <SelectItem key={car.id} value={car.id}>
-          {brand ? (isAr ? car.nameAr : car.nameEn) : `${car.brand} · ${isAr ? car.nameAr : car.nameEn}`}
-        </SelectItem>)}</SelectContent>
-      </Select>
-      {active.length > 0 && !models.length && <p role="status" className="text-xs text-muted-foreground">{noCarFoundText}</p>}
+      <Popover open={modelOpen} onOpenChange={open => { setModelOpen(open); if (!open) setSearch(''); }}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" aria-label={copy.carModel} aria-expanded={modelOpen} disabled={!active.length}
+            className="w-full justify-between font-normal">
+            <span className="truncate">{current ? `${current.brand} · ${isAr ? current.nameAr : current.nameEn}` : selectPlaceholder}</span>
+            <span aria-hidden="true">⌄</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent portalled={false} align="start" dir={isAr ? 'rtl' : 'ltr'} className="w-[var(--radix-popover-trigger-width)] p-1"
+          onOpenAutoFocus={event => { event.preventDefault(); searchRef.current?.focus(); }}>
+          <Input ref={searchRef} aria-label={searchPlaceholder} placeholder={searchPlaceholder} value={search}
+            onChange={event => setSearch(event.target.value)} className="mb-1" />
+          <div role="listbox" aria-label={copy.carModel} className="max-h-56 overflow-y-auto">
+            {models.map(car => <Button key={car.id} variant="ghost" role="option" aria-selected={car.id === carModelId}
+              className="h-auto min-h-9 w-full justify-start whitespace-normal text-start font-normal"
+              onClick={() => { setChosenBrand(car.brand); onSelect(car.id); setModelOpen(false); setSearch(''); }}>
+              {brand ? (isAr ? car.nameAr : car.nameEn) : `${car.brand} · ${isAr ? car.nameAr : car.nameEn}`}
+            </Button>)}
+            {!models.length && <p role="status" className="p-2 text-xs text-muted-foreground">{noCarFoundText}</p>}
+          </div>
+        </PopoverContent>
+      </Popover>
       {!active.length && <p role="status" className="text-xs text-muted-foreground">{copy.noBrands}</p>}
     </div>
   </div>;

@@ -43,11 +43,10 @@ try {
     const copy = serviceBookingText[locale].modal;
     await page.goto(`http://127.0.0.1:${server.address().port}/?${locale}`);
     const brand = page.getByRole('combobox', { name: copy.brand, exact: true });
-    const model = page.getByRole('combobox', { name: copy.carModel, exact: true });
-    const search = page.getByRole('textbox', { name: copy.searchCarModel, exact: true }).first();
+    const model = page.getByRole('button', { name: copy.carModel, exact: true }).first();
     assert.equal(await model.isDisabled(), false, `${locale}: model search works before choosing a make`);
-    await search.fill(locale === 'ar' ? 'بي جي ٣٠' : 'BJ30');
     await model.click();
+    await page.locator(`input[aria-label="${copy.searchCarModel}"]`).fill(locale === 'ar' ? 'بي جي ٣٠' : 'BJ30');
     const modelFirstLabel = `BAIC · ${locale === 'ar' ? 'بي جي ٣٠' : 'BJ30'}`;
     assert.equal(await page.getByRole('option').count(), 1);
     await page.screenshot({ path: `${output}/${locale}-model-first-search.png`, fullPage: true });
@@ -70,8 +69,10 @@ try {
     await page.getByRole('option', { name: locale === 'en' ? 'BJ30' : 'بي جي ٣٠', exact: true }).click();
     assert.equal(await page.getByTestId('selected').textContent(), 'baic-1');
     await page.screenshot({ path: `${output}/${locale}-brand-model.png`, fullPage: true });
-    await page.locator('input[aria-label]').first().fill('unmatched');
+    await model.click();
+    await page.locator(`input[aria-label="${copy.searchCarModel}"]`).fill('unmatched');
     assert.ok(await page.getByText(copy.noCarFound, { exact: true }).isVisible());
+    await model.click();
     await page.getByRole('button', { name: 'Open appointment vehicle' }).click();
     const appointmentDialog = page.getByRole('dialog');
     const dialogBrand = appointmentDialog.getByRole('combobox', { name: copy.brand, exact: true });
@@ -80,9 +81,9 @@ try {
     await dialogBrand.click();
     await page.getByRole('option', { name: 'BYD', exact: true }).click();
     assert.ok(await appointmentDialog.isVisible(), `${locale}: changing brand keeps appointment dialog open`);
-    await appointmentDialog.getByRole('textbox', { name: copy.searchCarModel }).fill(locale === 'ar' ? 'هان' : 'HAN');
-    const dialogModel = appointmentDialog.getByRole('combobox', { name: copy.carModel, exact: true });
+    const dialogModel = appointmentDialog.getByRole('button', { name: copy.carModel, exact: true });
     await dialogModel.click();
+    await page.locator(`input[aria-label="${copy.searchCarModel}"]`).fill(locale === 'ar' ? 'هان' : 'HAN');
     assert.equal(await page.getByRole('option').count(), 1, `${locale}: car search filters the model list`);
     await page.getByRole('option').click();
     assert.equal(await page.getByTestId('selected').textContent(), 'byd-1');
