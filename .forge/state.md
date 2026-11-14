@@ -1,7 +1,7 @@
 # Current State
 
 Date: 2026-11-14
-Status: Complete locally — awaiting user review before push
+Status: Released to repository branches — deployment verification pending
 Risk: High
 
 - Current production revision: 1714138ce612a6cdd595a8be9f1134eed57ec68f; GitHub run 43566832522 completed success in Validate and Test and Deploy to VPS. Live health, portal options, EN/AR portal and protected Admin API smoke passed with matching deployment revision. The earlier named complaint still requires authenticated staff inspection.
@@ -13,4 +13,4 @@ Risk: High
 - Passed: booking brand/model, timeline, suggestions, and search browser proofs EN/AR; changed selector Axe scope; shell 232/232; typecheck; lint. Desktop/mobile screenshots inspected. The attempted nonexistent `test:web -- service-booking` alias failed; the correct shell suite passed.
 - Completed locally: replaced the fake-branch workaround with Admin-configurable booking lanes inside each service center. Notes and other services can have independent daily/hourly/slot capacities and render as adjacent columns; booking, rescheduling, availability, and suggestions retain the lane. Existing appointments migrate to a generated General lane.
 - Passed: Prisma validate/generate and migration SQL sanity; service-bookings API 40/40; shell 232/232; typecheck; lint; OpenAPI; diff check; EN/AR lane timeline, Admin settings, vehicle picker, and booking-search browser proofs. Desktop/mobile screenshots inspected. Security proof covers Admin allowed/non-Admin denied, CSRF/RBAC guards, optimistic conflicts, metadata-only CONFIG audit in the same transaction, and appointment reschedule+audit atomicity.
-- No commit, push, deployment, production migration, or production data change. Await the user's requested explanation and approval before any push. Preserve `tmp/` and `uploads/`.
+- Commit d9338cb was pushed to `codex/system-data-read-api` and fast-forward merged/pushed to `waleed` and `production`; all three remote refs match. GitHub CLI was not authenticated, so workflow/deployment and production migration verification remain pending. No manual production data change was made. Preserve `tmp/` and `uploads/`.
