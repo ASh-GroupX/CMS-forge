@@ -1,6 +1,6 @@
 # Model-first vehicle search
 
-Status: Complete locally — not pushed
+Status: Complete — pushed and merged
 Date: 2026-11-14
 Risk: Medium
 SRS: UI-DESIGN-001
