@@ -177,16 +177,7 @@ export function NewAppointmentModal() {
             customerName={customerName}
             customerPhone={customerPhone}
             isAr={isAr}
-            onCarSelect={(id) => setCarModelId(id)}
-            onNameChange={(val) => setCustomerName(val)}
-            onPhoneChange={(val) => setCustomerPhone(val)}
-            onVinChange={(val) => setVin(val)}
-            t={t}
-            vin={vin}
-          />
-
-          <div>
-            <MaintenanceTypeSelector
+            maintenanceField={<MaintenanceTypeSelector
               maintenanceTypeLabel={t.modal.maintenanceType}
               isAr={isAr}
               maintenanceTypeId={maintenanceTypeId}
@@ -198,8 +189,14 @@ export function NewAppointmentModal() {
               periodicLabel={t.modal.periodicMaintenance}
               mileageLabel={t.modal.periodicMileage}
               selectMileageLabel={t.modal.selectMileage}
-            />
-          </div>
+            />}
+            onCarSelect={(id) => setCarModelId(id)}
+            onNameChange={(val) => setCustomerName(val)}
+            onPhoneChange={(val) => setCustomerPhone(val)}
+            onVinChange={(val) => setVin(val)}
+            t={t}
+            vin={vin}
+          />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>

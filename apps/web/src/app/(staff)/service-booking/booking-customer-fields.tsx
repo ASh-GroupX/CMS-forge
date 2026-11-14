@@ -12,6 +12,7 @@ export function BookingCustomerFields({
   customerName,
   customerPhone,
   isAr,
+  maintenanceField,
   onCarSelect,
   onNameChange,
   onPhoneChange,
@@ -24,6 +25,7 @@ export function BookingCustomerFields({
   customerName: string;
   customerPhone: string;
   isAr: boolean;
+  maintenanceField: React.ReactNode;
   onCarSelect: (id: string) => void;
   onNameChange: (val: string) => void;
   onPhoneChange: (val: string) => void;
@@ -71,8 +73,7 @@ export function BookingCustomerFields({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
+      <div>
           <label className="block text-xs font-bold text-content-strong mb-1">
             {t.modal.carModel} <span className="text-status-error">*</span>
           </label>
@@ -85,8 +86,9 @@ export function BookingCustomerFields({
             searchPlaceholder={t.modal.searchCarModel}
             selectPlaceholder={t.modal.selectCarModel}
           />
-        </div>
+      </div>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className="block text-xs font-bold text-content-strong mb-1">
             {t.modal.vin}
@@ -99,6 +101,7 @@ export function BookingCustomerFields({
             value={vin}
           />
         </div>
+        {maintenanceField}
       </div>
     </>
   );

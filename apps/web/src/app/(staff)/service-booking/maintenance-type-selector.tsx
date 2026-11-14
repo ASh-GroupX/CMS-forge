@@ -27,7 +27,7 @@ export function MaintenanceTypeSelector({
   const periodic = maintenanceTypes.find((type) => type.isActive && isPeriodicMaintenanceType(type));
   const selectedPeriodic = maintenanceTypes.some((type) => type.id === maintenanceTypeId && type.isActive && isPeriodicMaintenanceType(type));
   const choices = maintenanceTypes.filter((type) => type.isActive && !isPeriodicMaintenanceType(type));
-  return <div className="grid gap-3 sm:grid-cols-2">
+  return <div className="grid gap-3">
     <div>
       <label className="mb-1 block text-xs font-bold text-content-strong" htmlFor="booking-maintenance-type">{maintenanceTypeLabel} <span className="text-status-error">*</span></label>
       <Select onValueChange={(value) => { onSelect(value); onMileageChange(null); }} value={selectedPeriodic ? periodic?.id ?? '' : maintenanceTypeId}>

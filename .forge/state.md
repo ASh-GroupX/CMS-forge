@@ -1,7 +1,7 @@
 # Current State
 
 Date: 2026-11-14
-Status: Complete — unified searchable vehicle dropdown repository merge
+Status: Complete — booking form field alignment repository merge
 Risk: Medium
 
 - Current production revision: 1714138ce612a6cdd595a8be9f1134eed57ec68f; GitHub run 43566832522 completed success in Validate and Test and Deploy to VPS. Live health, portal options, EN/AR portal and protected Admin API smoke passed with matching deployment revision. The earlier named complaint still requires authenticated staff inspection.
@@ -17,3 +17,4 @@ Risk: Medium
 - Completed local task: booking staff can search all active car models without first selecting a make. Global results include the make to disambiguate similarly named models; choosing a model automatically fills its make. The existing make-first flow remains available, and changing make still keeps the appointment dialog open.
 - Passed: focused model-first/make-first Playwright proof in EN desktop and AR mobile, screenshot inspection, scoped Axe scan with no serious/critical findings, shell 232/232, typecheck, lint, and diff check. The first Axe attempt required an explicit Playwright context; the corrected harness passed. No API, database, authority, booking record, or production data changed. Implementation commit `efabfa4` was pushed and fast-forward merged into `waleed` and `production`; `tmp/` and `uploads/` were preserved.
 - Current task: the car model button opens a dropdown with search above the options. Focused browser proof passes EN/AR, including the nested appointment dialog and automatic make selection; screenshots inspected, scoped Axe no serious/critical findings, typecheck, lint, diff check passed. Initial nested popover was intercepted by the dialog overlay, fixed by rendering the popover in its dialog context. Repository merge requested; `tmp/` and `uploads/` preserved.
+- Current task: make and model share a desktop row; VIN and Maintenance Type share the following row. Periodic mileage stays below its maintenance selector, and fields stack on mobile. EN desktop/AR mobile booking browser passed with screenshot inspection and no serious/critical Axe findings; typecheck and lint passed. The existing suggestion fixture lacked a booking lane after lane support was added, so the fixture now supplies it and uses the searchable model button. Repository merge requested; no API, database, or production data change. `tmp/` and `uploads/` preserved.

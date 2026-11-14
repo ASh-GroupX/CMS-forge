@@ -31,7 +31,7 @@ export function CarModelSelector({ carModelId, carModels, isAr, noCarFoundText, 
     if (current?.brand) setChosenBrand(current.brand);
   }, [current?.brand]);
 
-  return <div className="space-y-3">
+  return <div className="grid gap-4 sm:grid-cols-2">
     <div className="space-y-1">
       <label className="text-xs font-semibold">{copy.brand}</label>
       <Select value={brand} onValueChange={value => {
@@ -45,7 +45,6 @@ export function CarModelSelector({ carModelId, carModels, isAr, noCarFoundText, 
     </div>
     <div className="space-y-1">
       <label className="text-xs font-semibold">{copy.carModel}</label>
-      <p className="text-[11px] leading-4 text-content-muted">{copy.modelSearchHint}</p>
       <Popover open={modelOpen} onOpenChange={open => { setModelOpen(open); if (!open) setSearch(''); }}>
         <PopoverTrigger asChild>
           <Button variant="outline" aria-label={copy.carModel} aria-expanded={modelOpen} disabled={!active.length}
@@ -68,6 +67,7 @@ export function CarModelSelector({ carModelId, carModels, isAr, noCarFoundText, 
           </div>
         </PopoverContent>
       </Popover>
+      <p className="text-[11px] leading-4 text-content-muted">{copy.modelSearchHint}</p>
       {!active.length && <p role="status" className="text-xs text-muted-foreground">{copy.noBrands}</p>}
     </div>
   </div>;

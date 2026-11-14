@@ -43,11 +43,11 @@ try {
     page.on('pageerror', (error) => errors.push(error.message));
     if (locale === 'en') await page.clock.install();
     await page.route('**/service-bookings/next-available**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
-      { branchId: proofBranch.id, branchNameEn: proofBranch.nameEn, branchNameAr: proofBranch.nameAr,
+      { branchId: proofBranch.id, bookingLaneId: `lane_${proofBranch.id}`, branchNameEn: proofBranch.nameEn, branchNameAr: proofBranch.nameAr,
         date: proofDate, time: '12:15', bookedCount: 1, maxPerSlot: 3, remainingInSlot: 2 },
-      { branchId: proofBranch.id, branchNameEn: proofBranch.nameEn, branchNameAr: proofBranch.nameAr,
+      { branchId: proofBranch.id, bookingLaneId: `lane_${proofBranch.id}`, branchNameEn: proofBranch.nameEn, branchNameAr: proofBranch.nameAr,
         date: proofDate, time: '12:30', bookedCount: 0, maxPerSlot: 3, remainingInSlot: 3 },
-      { branchId: proofBranch.id, branchNameEn: proofBranch.nameEn, branchNameAr: proofBranch.nameAr,
+      { branchId: proofBranch.id, bookingLaneId: `lane_${proofBranch.id}`, branchNameEn: proofBranch.nameEn, branchNameAr: proofBranch.nameAr,
         date: proofDate, time: '12:45', bookedCount: 0, maxPerSlot: 3, remainingInSlot: 3 },
     ]) }));
     await page.route('**/service-bookings/slots-availability**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ isOpen: true, bookedDailyCount: 0, maxDailyAppointments: 24,
@@ -81,7 +81,7 @@ try {
     if (locale === 'en') {
       await dialog.getByRole('combobox', { name: copy.modal.brand }).click();
       await page.getByRole('option', { name: 'BYD' }).click();
-      await dialog.getByRole('combobox', { name: copy.modal.carModel }).click();
+      await dialog.getByRole('button', { name: copy.modal.carModel, exact: true }).click();
       await page.getByRole('option', { name: 'Song L' }).click();
       await dialog.getByRole('textbox', { name: /Customer Name/ }).fill('Test Customer');
       await dialog.getByRole('textbox', { name: /Phone Number/ }).fill('0790000000');
@@ -95,7 +95,7 @@ try {
         assert.equal(submitted.periodicMileageKm, Number(mileage.replace(/\D/g, '')));
       }
       const late = (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
-        { branchId: proofBranch.id, branchNameEn: proofBranch.nameEn, branchNameAr: proofBranch.nameAr,
+        { branchId: proofBranch.id, bookingLaneId: `lane_${proofBranch.id}`, branchNameEn: proofBranch.nameEn, branchNameAr: proofBranch.nameAr,
           date: proofDate, time: '19:15', bookedCount: 0, maxPerSlot: 3, remainingInSlot: 3 },
       ]) });
       await page.route('**/service-bookings/next-available**', late);
