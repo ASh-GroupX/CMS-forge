@@ -1,8 +1,8 @@
 # Current State
 
 Date: 2026-11-14
-Status: Released to repository branches — deployment verification pending
-Risk: High
+Status: Complete locally — model-first vehicle search; not pushed
+Risk: Medium
 
 - Current production revision: 1714138ce612a6cdd595a8be9f1134eed57ec68f; GitHub run 43566832522 completed success in Validate and Test and Deploy to VPS. Live health, portal options, EN/AR portal and protected Admin API smoke passed with matching deployment revision. The earlier named complaint still requires authenticated staff inspection.
 - Public QR page now shows Submit Complaint only; success keeps the reference and copy action without a Track action. Verified tracking and surveys remain available to the existing workflow through their dedicated routes.
@@ -14,3 +14,5 @@ Risk: High
 - Completed locally: replaced the fake-branch workaround with Admin-configurable booking lanes inside each service center. Notes and other services can have independent daily/hourly/slot capacities and render as adjacent columns; booking, rescheduling, availability, and suggestions retain the lane. Existing appointments migrate to a generated General lane.
 - Passed: Prisma validate/generate and migration SQL sanity; service-bookings API 40/40; shell 232/232; typecheck; lint; OpenAPI; diff check; EN/AR lane timeline, Admin settings, vehicle picker, and booking-search browser proofs. Desktop/mobile screenshots inspected. Security proof covers Admin allowed/non-Admin denied, CSRF/RBAC guards, optimistic conflicts, metadata-only CONFIG audit in the same transaction, and appointment reschedule+audit atomicity.
 - Commit d9338cb was pushed to `codex/system-data-read-api` and fast-forward merged/pushed to `waleed` and `production`; all three remote refs match. GitHub CLI was not authenticated, so workflow/deployment and production migration verification remain pending. No manual production data change was made. Preserve `tmp/` and `uploads/`.
+- Completed local task: booking staff can search all active car models without first selecting a make. Global results include the make to disambiguate similarly named models; choosing a model automatically fills its make. The existing make-first flow remains available, and changing make still keeps the appointment dialog open.
+- Passed: focused model-first/make-first Playwright proof in EN desktop and AR mobile, screenshot inspection, scoped Axe scan with no serious/critical findings, shell 232/232, typecheck, lint, and diff check. The first Axe attempt required an explicit Playwright context; the corrected harness passed. No API, database, authority, booking record, production data, commit, or push change. `tmp/` and `uploads/` preserved.

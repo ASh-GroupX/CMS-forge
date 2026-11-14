@@ -17,7 +17,11 @@ export function CarModelSelector({ carModelId, carModels, isAr, noCarFoundText, 
   const [search, setSearch] = useState('');
   const brand = current?.brand ?? chosenBrand;
   const brands = [...new Set(active.map(car => car.brand))].sort((a, b) => a.localeCompare(b));
-  const models = active.filter(car => car.brand === brand && `${car.nameEn} ${car.nameAr}`.toLowerCase().includes(search.trim().toLowerCase()));
+  const searchTerm = search.trim().toLocaleLowerCase();
+  const models = active
+    .filter(car => !brand || car.brand === brand)
+    .filter(car => `${car.brand} ${car.nameEn} ${car.nameAr}`.toLocaleLowerCase().includes(searchTerm))
+    .sort((left, right) => left.brand.localeCompare(right.brand) || left.nameEn.localeCompare(right.nameEn));
 
   useEffect(() => {
     if (current?.brand) setChosenBrand(current.brand);
@@ -37,12 +41,20 @@ export function CarModelSelector({ carModelId, carModels, isAr, noCarFoundText, 
     </div>
     <div className="space-y-1">
       <label className="text-xs font-semibold">{copy.carModel}</label>
-      <Input aria-label={searchPlaceholder} placeholder={searchPlaceholder} disabled={!brand} value={search} onChange={event => setSearch(event.target.value)} />
-      <Select value={current?.id ?? ''} disabled={!brand} onValueChange={onSelect}>
-        <SelectTrigger aria-label={copy.carModel}><SelectValue placeholder={brand ? selectPlaceholder : copy.selectBrandFirst} /></SelectTrigger>
-        <SelectContent>{models.map(car => <SelectItem key={car.id} value={car.id}>{isAr ? car.nameAr : car.nameEn}</SelectItem>)}</SelectContent>
+      <p className="text-[11px] leading-4 text-content-muted">{copy.modelSearchHint}</p>
+      <Input aria-label={searchPlaceholder} placeholder={searchPlaceholder} disabled={!active.length} value={search} onChange={event => setSearch(event.target.value)} />
+      <Select value={current?.id ?? ''} disabled={!active.length} onValueChange={id => {
+        const selected = active.find(car => car.id === id);
+        if (selected) setChosenBrand(selected.brand);
+        setSearch('');
+        onSelect(id);
+      }}>
+        <SelectTrigger aria-label={copy.carModel}><SelectValue placeholder={selectPlaceholder} /></SelectTrigger>
+        <SelectContent>{models.map(car => <SelectItem key={car.id} value={car.id}>
+          {brand ? (isAr ? car.nameAr : car.nameEn) : `${car.brand} · ${isAr ? car.nameAr : car.nameEn}`}
+        </SelectItem>)}</SelectContent>
       </Select>
-      {brand && !models.length && <p role="status" className="text-xs text-muted-foreground">{noCarFoundText}</p>}
+      {active.length > 0 && !models.length && <p role="status" className="text-xs text-muted-foreground">{noCarFoundText}</p>}
       {!active.length && <p role="status" className="text-xs text-muted-foreground">{copy.noBrands}</p>}
     </div>
   </div>;
