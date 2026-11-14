@@ -49,7 +49,7 @@ export function PortalShell({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <nav aria-label={t.navLabel} className="flex flex-wrap gap-1">
-              {(Object.keys(portalRoutes) as PortalShellPage[]).map((key) => (
+              {([current] as PortalShellPage[]).map((key) => (
                 <a
                   aria-current={current === key ? 'page' : undefined}
                   className={`inline-flex min-h-11 items-center rounded-sm px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand ${

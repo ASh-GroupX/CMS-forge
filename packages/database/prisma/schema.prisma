@@ -319,11 +319,13 @@ model Branch {
   serviceBookingRules         ServiceBookingRule[]
   serviceAppointments         ServiceAppointment[]
   portalIntakeSettings        PortalIntakeSetting[]
+  portalRedirectDefaults      PortalIntakeSetting[] @relation("PortalRedirectBranch")
 
   @@map("branches")
 }
 
 model Department {
+  portalRedirectDefaults PortalIntakeSetting[] @relation("PortalRedirectDepartment")
   complaintTemplates DepartmentComplaintTemplate[]
 
   internalTickets         InternalTicket[]         @relation("InternalTicketTargetDepartment")
@@ -687,12 +689,16 @@ model PortalIntakeSetting {
   id               String   @id @default("default")
   branchId         String   @map("branch_id")
   categoryId       String   @map("category_id")
+  redirectBranchId String?  @map("redirect_branch_id")
+  redirectDepartmentId String? @map("redirect_department_id")
   phoneCountryCode String   @default("+962") @map("phone_country_code")
   version          Int      @default(1)
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
   branch           Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
   category         Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  redirectBranch   Branch? @relation("PortalRedirectBranch", fields: [redirectBranchId], references: [id], onDelete: Restrict)
+  redirectDepartment Department? @relation("PortalRedirectDepartment", fields: [redirectDepartmentId], references: [id], onDelete: Restrict)
   members          PortalIntakeMember[]
 
   @@map("portal_intake_settings")

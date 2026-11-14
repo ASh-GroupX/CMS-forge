@@ -1,12 +1,11 @@
 # Current State
 
-Date: 2026-11-12
-Status: In progress — redirected portal subject and vehicle repair locally verified; production release pending
+Date: 2026-11-14
+Status: In progress — QR intake destination and customer navigation verified locally; production release pending
 Risk: High
 
-- Current production revision: e23804d4847035df109e2605a85c544f974a70d0. Non-SMS QR intake, Admin field configuration, redirect workflow, and scoped customer export were deployed previously.
-- The user's screenshots of CMS-2026-KHALDA-000004 show the car make/model as subject and a blank Vehicle Data card after redirect. New public submissions and intake redirects now use the customer name as subject. Existing redirected portal rows with the exact generated car subject receive a filtered, audited correction; rows missing both car snapshots recover a unique booking catalog match first. Staff-edited and unrelated subjects are excluded.
-- The staff API mapper now retains submitted vehicle snapshots and current added-field answers. The receiving page shows submitted make/model/VIN with the unverified identity reason. Phone layout and detail-page definition-list accessibility were repaired.
-- Passed locally: production build, typecheck, lint, OpenAPI, security, portal API 29/29, web API client 112/112, shell 232/232, root 78/78 (89.36% line coverage), migration sanity/index checks, real isolated PostgreSQL application of 63 migrations, 13 audited subject repairs plus one synthetic legacy snapshot recovery, and EN/AR browser proof at 390/1440 with zero serious/critical axe findings. Screenshots inspected. Independent GPT-6.1 Sol review: Accept with proof conditions met by builder. Preferred policy reviewer model unavailable.
-- Production record cannot be read directly without an authenticated staff session. The supplied screenshot and public booking catalog confirm the legacy car string is a unique catalog match. The release migration and live read-only smoke remain.
+- Current production revision: d407fcdf3a2e69b149d900d70d8a392ca5c566ab; its Validate and Test and Deploy to VPS jobs completed successfully and public health returned 200 with matching revision. The specific complaint remains unverified by authenticated staff.
+- Public QR page now shows Submit Complaint only; success keeps the reference and copy action without a Track action. Verified tracking and surveys remain available to the existing workflow through their dedicated routes.
+- Admin settings now store a versioned, audited suggested redirect branch/department and show each eligible intake member's department. Claimed intake editor preselects the suggestion. Saving corrections retains source-branch queue scope; final redirect can transfer to an active different branch/department with the dedicated assignment command and atomic status history/audit.
+- Passed locally: Prisma validation/generation, typecheck, lint, OpenAPI, security, build, root 78/78, portal API 30/30, assignments 8/8, settings 3/3, shell 232/232, customer portal submit smoke, visual 96 previews, accessibility 24 previews, web perf 5 previews, fresh isolated PostgreSQL 64 migrations/indexes and real HTTP/Admin→claim→cross-branch redirect/rollback proof. Real local QR, authenticated Admin settings, and claimed editor browser proof passed EN/AR 390/1440 with zero serious/critical axe findings; screenshots inspected. Independent GPT-6.1 Sol review accepted after OpenAPI gap repair; preferred policy model unavailable. Push and production smoke remain.
 - Preserve user tmp/ and uploads/. SMS remains deferred.

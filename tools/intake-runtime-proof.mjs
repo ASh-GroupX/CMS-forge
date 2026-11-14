@@ -21,16 +21,21 @@ try {
   await prisma.branch.upsert({ where: { id: 'intake_branch' }, update: {}, create: { id: 'intake_branch', code: 'INTAKE_PROOF', nameEn: 'Intake proof branch', nameAr: 'فرع اختبار الاستقبال', timezone: 'Asia/Amman' } });
   await prisma.department.upsert({ where: { id: 'intake_department' }, update: {}, create: { id: 'intake_department', code: 'INTAKE_PROOF', nameEn: 'Intake proof department', nameAr: 'قسم اختبار الاستقبال', branchId: 'intake_branch' } });
   await prisma.category.upsert({ where: { id: 'intake_category' }, update: {}, create: { id: 'intake_category', code: 'INTAKE_PROOF', nameEn: 'Intake proof category', nameAr: 'تصنيف اختبار الاستقبال', branchId: 'intake_branch', departmentId: 'intake_department' } });
+  await prisma.branch.upsert({ where: { id: 'intake_destination_branch' }, update: {}, create: { id: 'intake_destination_branch', code: 'DEST_PROOF', nameEn: 'Destination proof branch', nameAr: 'فرع الوجهة', timezone: 'Asia/Amman' } });
+  await prisma.department.upsert({ where: { id: 'intake_destination_department' }, update: {}, create: { id: 'intake_destination_department', code: 'DEST_PROOF', nameEn: 'Destination proof department', nameAr: 'قسم الوجهة', branchId: 'intake_destination_branch' } });
+  await prisma.category.upsert({ where: { id: 'intake_destination_category' }, update: {}, create: { id: 'intake_destination_category', code: 'DEST_PROOF', nameEn: 'Destination proof category', nameAr: 'تصنيف الوجهة', branchId: 'intake_destination_branch', departmentId: 'intake_destination_department' } });
   await prisma.serviceCarModel.upsert({ where: { id: 'intake_patrol' }, update: { isActive: true }, create: { id: 'intake_patrol', brand: 'Nissan', nameEn: 'Patrol', nameAr: 'باترول', isActive: true } });
   const hash = await argon.hash(password);
   for (const [id, roleCode] of [['intake_admin', 'ADMIN'], ['intake_one', 'CR_MANAGER'], ['intake_two', 'CR_MANAGER'], ['intake_denied', 'CR_MANAGER']]) {
     const role = await prisma.role.findUniqueOrThrow({ where: { code: roleCode } });
     await prisma.user.upsert({ where: { id }, update: { passwordHash: hash, lockedAt: null }, create: { id, username: id, nameEn: id.replaceAll('_', ' '), nameAr: id === 'intake_one' ? 'موظف الاستقبال الأول' : 'موظف الاختبار', roleId: role.id, branchId: 'intake_branch', departmentId: 'intake_department', passwordHash: hash } });
   }
+  const destinationRole = await prisma.role.findUniqueOrThrow({ where: { code: 'CR_MANAGER' } });
+  await prisma.user.upsert({ where: { id: 'intake_destination_owner' }, update: { branchId: 'intake_destination_branch', departmentId: 'intake_destination_department', lockedAt: null }, create: { id: 'intake_destination_owner', username: 'intake_destination_owner', nameEn: 'Destination owner', nameAr: 'موظف الوجهة', roleId: destinationRole.id, branchId: 'intake_destination_branch', departmentId: 'intake_destination_department', passwordHash: hash } });
   const [admin, one, two, denied] = await Promise.all(['intake_admin', 'intake_one', 'intake_two', 'intake_denied'].map(login));
   const current = await call('/admin/portal-intake-settings', admin);
   await call('/admin/portal-intake-settings', one, 'GET', undefined, 403);
-  const settings = { branchId: 'intake_branch', categoryId: 'intake_category', phoneCountryCode: '+962', memberIds: ['intake_one', 'intake_two'], expectedVersion: current?.version ?? null };
+  const settings = { branchId: 'intake_branch', categoryId: 'intake_category', redirectBranchId: 'intake_destination_branch', redirectDepartmentId: 'intake_destination_department', phoneCountryCode: '+962', memberIds: ['intake_one', 'intake_two'], expectedVersion: current?.version ?? null };
   await call('/admin/portal-intake-settings', admin, 'PUT', settings);
   await call('/admin/portal-intake-settings', admin, 'PUT', settings, 409);
   const freshSettings = await call('/admin/portal-intake-settings', admin);
@@ -67,6 +72,17 @@ try {
   const direct = await call(`/complaints/${second.id}/intake-redirect`, one, 'POST', { ...changes, ownerId: 'intake_two', expectedVersion: owned.expectedVersion }, 201);
   assert.equal(direct.status, 'IN_PROGRESS');
   assert.equal((await prisma.assignment.findUniqueOrThrow({ where: { entityType_entityId: { entityType: 'COMPLAINT', entityId: second.id } } })).assignedUserId, 'intake_two');
+  const crossBranch = await submit(4);
+  const crossDetail = await call(`/complaints/${crossBranch.id}/intake`, one);
+  const suggested = await call('/complaints/intake-options', one);
+  assert.deepEqual(suggested.suggestedDestination, { branchId: 'intake_destination_branch', departmentId: 'intake_destination_department' });
+  const crossClaim = await call(`/complaints/${crossBranch.id}/intake-claim`, one, 'POST', { expectedVersion: crossDetail.expectedVersion }, 201);
+  const destination = { ...changes, branchId: 'intake_destination_branch', categoryId: 'intake_destination_category', departmentId: 'intake_destination_department', ownerId: 'intake_destination_owner' };
+  const prepared = await call(`/complaints/${crossBranch.id}/intake`, one, 'PATCH', { ...destination, expectedVersion: crossClaim.expectedVersion });
+  assert.equal(prepared.branchId, 'intake_branch'); assert.equal(prepared.status, 'SUBMITTED');
+  const moved = await call(`/complaints/${crossBranch.id}/intake-redirect`, one, 'POST', { ...destination, expectedVersion: prepared.expectedVersion }, 201);
+  assert.equal(moved.branchId, 'intake_destination_branch'); assert.equal(moved.departmentId, 'intake_destination_department'); assert.equal(moved.status, 'IN_PROGRESS');
+  assert.equal((await prisma.assignment.findUniqueOrThrow({ where: { entityType_entityId: { entityType: 'COMPLAINT', entityId: crossBranch.id } } })).assignedUserId, 'intake_destination_owner');
   const audits = await prisma.auditLog.findMany({ where: { targetId: first.id }, select: { metadata: true } });
   assert.doesNotMatch(JSON.stringify(audits), /Corrected synthetic proof|Corrected proof customer|96278/);
   const browserComplaint = await submit(3);
@@ -94,5 +110,5 @@ try {
   assert.equal(scheduled, false);
   await call(`/complaints/${browserComplaint.id}/intake-claim`, one, 'DELETE', { expectedVersion: pendingClaim.expectedVersion });
   writeFileSync('coverage/intake-browser-fixture.json', JSON.stringify({ browserComplaintId: browserComplaint.id, firstId: first.id, secondId: second.id }));
-  console.log('Passed isolated PostgreSQL + HTTP: settings RBAC/conflict, private options, submission, two team notifications, no SMS, denied nonmember, simultaneous claims (201/409), stale and unclaimed edits, release denial/release, correction, department/owner redirect, ordered histories, assignment, PII-free audit and real rollback of complaint/customer/history on forced audit failure.');
+  console.log('Passed isolated PostgreSQL + HTTP: settings RBAC/conflict, private destination options, submission, two team notifications, no SMS, denied nonmember, simultaneous claims (201/409), stale and unclaimed edits, release denial/release, correction, same-branch and cross-branch department/owner redirect, ordered histories, assignment, PII-free audit and real rollback of complaint/customer/history on forced audit failure.');
 } finally { await prisma.$disconnect(); }

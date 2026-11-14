@@ -5,7 +5,7 @@ export const portalSubmissionText = {
     lang: 'en',
     dir: 'ltr',
     title: 'Customer complaint portal',
-    subtitle: 'Tell us what happened. After you submit, keep the reference number to track the complaint.',
+    subtitle: 'Tell us what happened. Our team will review your complaint and keep your reference number for follow-up.',
     switchLabel: 'Switch language',
     switchTarget: 'العربية',
     sections: {
@@ -49,7 +49,7 @@ export const portalSubmissionText = {
     },
     rules: ['PDF, PNG, or JPG only', 'Maximum size follows the portal policy', 'Scan status is checked before review'],
     attachmentDeferred: 'Add photos, invoices, or PDFs when they help explain the complaint.',
-    next: { title: 'What happens next?', items: ['Staff review the complaint details.', 'Keep the reference number to track updates.', 'Use Track complaint to check the public status.'] },
+    next: { title: 'What happens next?', items: ['Staff review the complaint details.', 'Keep the reference number if you contact our team.'] },
     actions: {
       copied: 'Reference copied',
       copyReference: 'Copy reference',
@@ -82,7 +82,7 @@ export const portalSubmissionText = {
     lang: 'ar',
     dir: 'rtl',
     title: 'بوابة شكاوى العملاء',
-    subtitle: 'يُرجى توضيح تفاصيل ملاحظتك أو شكواك، والاحتفاظ برقم المرجع لمتابعة حالتها لاحقاً.',
+    subtitle: 'يُرجى توضيح تفاصيل الشكوى. سيراجعها فريقنا، واحتفظ برقم المرجع عند التواصل معنا.',
     switchLabel: 'تغيير اللغة',
     switchTarget: 'English',
     sections: {
@@ -126,7 +126,7 @@ export const portalSubmissionText = {
     },
     rules: ['صيغ الملفات المسموحة: PDF أو PNG أو JPG فقط', 'الحد الأقصى لحجم الملف يخضع للسياسة المعتمدة', 'يتم فحص الملفات أمنياً قبل مراجعتها من قبل الفريق'],
     attachmentDeferred: 'يمكنك إضافة صور أو فواتير أو مستندات داعمة لتوضيح الشكوى.',
-    next: { title: 'ماذا يحدث بعد ذلك؟', items: ['يقوم فريق علاقات العملاء بمراجعة تفاصيل الشكوى والبدء في معالجتها.', 'يُرجى الاحتفاظ برقم المرجع لمتابعة آخر المستجدات.', 'يمكنك استخدام خيار متابعة الشكوى للاطلاع على الحالة في أي وقت.'] },
+    next: { title: 'ماذا يحدث بعد ذلك؟', items: ['يقوم فريق علاقات العملاء بمراجعة تفاصيل الشكوى والبدء في معالجتها.', 'احتفظ برقم المرجع عند التواصل مع فريقنا.'] },
     actions: {
       copied: 'تم نسخ رقم المرجع',
       copyReference: 'نسخ رقم المرجع',

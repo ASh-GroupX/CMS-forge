@@ -16,8 +16,9 @@ import type { IntakeComplaint, IntakeChoices, Option } from '../../lib/redirect-
 import { intakeClaimAction, intakeCorrectionAction, loadRedirectDetail } from '../../app/(staff)/redirect-complaints/actions';
 export function RedirectComplaintEditor({ initial, choices, actorId, admin, locale }: { initial: IntakeComplaint; choices: IntakeChoices; actorId: string; admin: boolean; locale: Locale }) {
   const t = redirectComplaintsText[locale];
+  const suggested = suggestedRoute(initial, choices);
   const [item, setItem] = useState(initial); const [busy, setBusy] = useState(false); const [message, setMessage] = useState(''); const [stale, setStale] = useState(false); const [sent, setSent] = useState(false); const [revision, setRevision] = useState(0);
-  const [branch, setBranch] = useState(initial.branchId); const [department, setDepartment] = useState(initial.departmentId ?? ''); const [category, setCategory] = useState(initial.categoryId); const [owner, setOwner] = useState(initial.ownerId ?? '');
+  const [branch, setBranch] = useState(suggested.branchId); const [department, setDepartment] = useState(suggested.departmentId); const [category, setCategory] = useState(suggested.categoryId); const [owner, setOwner] = useState(initial.ownerId ?? '');
   const mine = item.claim?.assignedUserId === actorId;
   const label = (option: Option) => locale === 'ar' ? option.nameAr : option.nameEn;
   async function claim(release = false) {
@@ -28,7 +29,7 @@ export function RedirectComplaintEditor({ initial, choices, actorId, admin, loca
   }
   async function reload() {
     setBusy(true); const result = await loadRedirectDetail(item.id).catch(() => ({ status: 'error' as const }));
-    if (result.status === 'ok') { setItem(result.data); setBranch(result.data.branchId); setDepartment(result.data.departmentId ?? ''); setCategory(result.data.categoryId); setOwner(result.data.ownerId ?? ''); setStale(false); setMessage(''); setRevision((value) => value + 1); }
+    if (result.status === 'ok') { const route = suggestedRoute(result.data, choices); setItem(result.data); setBranch(route.branchId); setDepartment(route.departmentId); setCategory(route.categoryId); setOwner(result.data.ownerId ?? ''); setStale(false); setMessage(''); setRevision((value) => value + 1); }
     else setMessage(t[result.status]); setBusy(false);
   }
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -42,7 +43,7 @@ export function RedirectComplaintEditor({ initial, choices, actorId, admin, loca
     else { setMessage(t[result.status]); if (result.status === 'conflict') setStale(true); }
     setBusy(false);
   }
-  const select = (key: 'branchId' | 'categoryId' | 'departmentId' | 'ownerId', value: string, options: Option[], change: (value: string) => void, required = false) => <div className="grid gap-2"><Label htmlFor={key}>{t.fields[key]}</Label><FormSelect id={key} name={key} value={value} onValueChange={change} placeholder={t.choose} required={required} options={[...(!required ? [{ value: '', label: t.none }] : []), ...options.map((option) => ({ value: option.id, label: label(option) }))]} /></div>;
+  const select = (key: 'branchId' | 'categoryId' | 'departmentId' | 'ownerId', value: string, options: Option[], change: (value: string) => void, required = false) => <div className="grid gap-2"><Label htmlFor={key}>{t.fields[key]}</Label><FormSelect aria-label={t.fields[key]} id={key} name={key} value={value} onValueChange={change} placeholder={t.choose} required={required} options={[...(!required ? [{ value: '', label: t.none }] : []), ...options.map((option) => ({ value: option.id, label: label(option) }))]} /></div>;
   return <section dir={locale === 'ar' ? 'rtl' : 'ltr'} className="mx-auto grid max-w-5xl gap-5">
     <a className="text-sm text-brand underline" href={`/redirect-complaints?locale=${locale}`}>{t.back}</a>
     <header className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-semibold">{t.title}</h1><p className="mt-1 tabular-nums text-content-muted">{item.referenceNumber}</p></div>{!sent && <div className="flex flex-wrap gap-2">{!item.claim?.assignedUserId && <Button disabled={busy || stale} onClick={() => claim()}>{t.claim}</Button>}{(mine || admin && item.claim?.assignedUserId) && <Button variant="outline" disabled={busy || stale} onClick={() => claim(true)}>{t.release}</Button>}<Button variant="outline" disabled={busy} onClick={reload}>{t.reload}</Button></div>}</header>
@@ -56,14 +57,22 @@ export function RedirectComplaintEditor({ initial, choices, actorId, admin, loca
       </CardContent></Card>
       {item.portalData?.fields.some((field) => field.enabled && field.key.startsWith('custom_')) && <Card><CardHeader><CardTitle className="text-base">{locale === 'ar' ? 'حقول العميل الإضافية' : 'Additional customer fields'}</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2"><PortalCustomFields fields={item.portalData.fields} values={item.portalData.values} locale={locale} error={() => undefined} /></CardContent></Card>}
       <Card><CardContent className="grid gap-4 p-5 sm:grid-cols-2">
+        <p className="text-sm text-content-muted sm:col-span-2">{t.routeHelp}</p>
         {select('branchId', branch, choices.branches, (value) => { setBranch(value); setCategory(''); setDepartment(''); setOwner(''); }, true)}
         {select('categoryId', category, choices.categories.filter((option) => !option.branchId || option.branchId === branch), setCategory, true)}
         <div className="grid gap-2"><Label htmlFor="severity">{t.fields.severity}</Label><FormSelect id="severity" name="severity" defaultValue={item.severity} options={choices.severities.map((value) => ({ value, label: severityLabel(locale, value) }))} /></div>
-        {select('departmentId', department, choices.departments.filter((option) => !option.branchId || option.branchId === branch), (value) => { setDepartment(value); setOwner(''); })}
+        {select('departmentId', department, choices.departments.filter((option) => !option.branchId || option.branchId === branch), (value) => { setDepartment(value); setOwner(''); setCategory((current) => choices.categories.some((option) => option.id === current && (!option.departmentId || option.departmentId === value)) ? current : ''); })}
         {select('ownerId', owner, choices.users.filter((option) => option.branchId === branch && option.departmentId === department), setOwner)}
         <div className="grid gap-2 sm:col-span-2"><Label htmlFor="reason">{t.reason}</Label><Textarea id="reason" name="reason" required maxLength={500} rows={2} /></div>
       </CardContent></Card>
       <div className="flex flex-wrap gap-3"><Button type="submit" name="action" value="save" variant="outline">{busy ? t.busy : t.save}</Button><Button type="submit" name="action" value="redirect" disabled={!department}>{busy ? t.busy : t.redirect}</Button></div>
     </fieldset></form></>}
   </section>;
+}
+function suggestedRoute(item: IntakeComplaint, choices: IntakeChoices) {
+  const branchId = choices.suggestedDestination?.branchId && choices.branches.some((branch) => branch.id === choices.suggestedDestination?.branchId) ? choices.suggestedDestination.branchId : item.branchId;
+  const departmentId = choices.suggestedDestination?.departmentId && choices.departments.some((department) => department.id === choices.suggestedDestination?.departmentId && (!department.branchId || department.branchId === branchId)) ? choices.suggestedDestination.departmentId : item.departmentId ?? '';
+  const valid = (category: Option) => (!category.branchId || category.branchId === branchId) && (!category.departmentId || category.departmentId === departmentId);
+  const categoryId = choices.categories.find((category) => category.id === item.categoryId && valid(category))?.id ?? choices.categories.find((category) => valid(category) && category.branchId === branchId && category.departmentId === departmentId)?.id ?? choices.categories.find((category) => valid(category) && category.departmentId === departmentId)?.id ?? choices.categories.find(valid)?.id ?? '';
+  return { branchId, departmentId, categoryId };
 }

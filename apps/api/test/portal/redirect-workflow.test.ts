@@ -10,9 +10,9 @@ function fixture() {
   let row = structuredClone(original); let owner: string | null = null; let member = true; let failAudit = false; let committed = false;
   const histories: any[] = [], audits: any[] = [], effects: string[] = [];
   const repository = { transaction: async (work: (tx: any) => Promise<any>) => { const before = structuredClone(row), beforeOwner = owner, h = histories.length, a = audits.length; committed = false; try { const result = await work({}); committed = true; return result; } catch (error) { row = before; owner = beforeOwner; histories.splice(h); audits.splice(a); throw error; } }, find: async () => row, bump: async (_row: any, data: any) => { row = { ...row, ...data, updatedAt: new Date(row.updatedAt.getTime() + 1) }; return row; }, history: async (data: any) => { histories.push(data); }, queue: async () => [row] };
-  const assignments = { getInTransaction: async () => owner ? { assignedUserId: owner } : null, setInTransaction: async (input: any) => { if (input.entityType === 'COMPLAINT_INTAKE') owner = input.assignedUserId; effects.push(`assign:${input.entityType}`); }, releaseInTransaction: async () => { owner = null; }, claimedIds: async () => [], get: async () => owner ? { assignedUserId: owner } : null, notifyAfterCommit: async () => { assert.equal(committed, true); effects.push('notify'); } };
+  const assignments = { getInTransaction: async () => owner ? { assignedUserId: owner } : null, setInTransaction: async (input: any) => { if (input.entityType === 'COMPLAINT_INTAKE') owner = input.assignedUserId; effects.push(`assign:${input.entityType}`); }, setIntakeRedirectInTransaction: async (input: any) => { effects.push(`assign:${input.entityType}`); }, releaseInTransaction: async () => { owner = null; }, claimedIds: async () => [], get: async () => owner ? { assignedUserId: owner } : null, notifyAfterCommit: async () => { assert.equal(committed, true); effects.push('notify'); } };
   const audit = { record: async (data: any) => { if (failAudit) throw Error('audit unavailable'); audits.push(data); } };
-  const catalog = { list: async () => ({ branches: [{ id: 'b1' }], categories: [{ id: 'cat', branchId: 'b1' }], departments: [{ id: 'dep', branchId: 'b1' }], users: [{ id: 'employee', branchId: 'b1', departmentId: 'dep' }] }) };
+  const catalog = { list: async () => ({ branches: [{ id: 'b1' }, { id: 'b2' }], categories: [{ id: 'cat', branchId: 'b1' }, { id: 'cat2', branchId: 'b2' }], departments: [{ id: 'dep', branchId: 'b1' }, { id: 'dep2', branchId: 'b2' }], users: [{ id: 'employee', branchId: 'b1', departmentId: 'dep' }, { id: 'employee2', branchId: 'b2', departmentId: 'dep2' }] }) };
   const service = new ComplaintIntakeService(repository as never, audit as never, assignments as never, { resolveIntake: async () => ({ id: 'resolved-customer' }) } as never, catalog as never, { recordDeadlineEvent: async () => { assert.equal(committed, true); effects.push('sla'); } } as never, { isMember: async () => member } as never);
   return { service, histories, audits, effects, row: () => row, owner: (value: string | null) => { owner = value; }, membership: (value: boolean) => { member = value; }, fail: () => { failAudit = true; } };
 }
@@ -43,6 +43,14 @@ test('specific owner enters investigation; audit failure rolls back writes and s
   const failed = fixture(); failed.owner('u1'); failed.fail();
   await assert.rejects(failed.service.correct('c1', original.updatedAt.toISOString(), correction(), actor, true));
   assert.equal(failed.row().status, 'SUBMITTED'); assert.deepEqual(failed.histories, []); assert.ok(!failed.effects.includes('notify'));
+});
+test('claimed intake can be corrected before a cross-branch redirect; destination owner receives investigation', async () => {
+  const f = fixture(); f.owner('u1'); const changes = correction(); changes.branchId = 'b2'; changes.categoryId = 'cat2'; changes.departmentId = 'dep2'; changes.ownerId = 'employee2';
+  const saved = await f.service.correct('c1', original.updatedAt.toISOString(), changes, actor, false);
+  assert.equal(saved.branchId, 'b1'); assert.equal(saved.status, 'SUBMITTED'); assert.equal(f.row().branchId, 'b1');
+  const redirected = await f.service.correct('c1', saved.expectedVersion, changes, actor, true);
+  assert.equal(redirected.branchId, 'b2'); assert.equal(redirected.departmentId, 'dep2'); assert.equal(redirected.status, 'IN_PROGRESS');
+  assert.deepEqual(f.histories.map((event) => event.toStatus), ['MANAGER_REVIEW', 'IN_PROGRESS']);
 });
 test('queue filter is applied in persistence before page limit', async () => {
   let query: any;

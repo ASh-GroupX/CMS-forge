@@ -28,9 +28,18 @@ export class AssignmentsService {
     audit: AssignmentAuditContext,
     client: Prisma.TransactionClient,
   ): Promise<AssignmentResponseDto> {
+    return this.writeInTransaction(input, actor, audit, client, false);
+  }
+
+  setIntakeRedirectInTransaction(input: SetAssignmentInput, actor: AssignmentActor, client: Prisma.TransactionClient): Promise<AssignmentResponseDto> {
+    if (input.entityType !== 'COMPLAINT') throw invalidTarget('entityType');
+    return this.writeInTransaction(input, actor, {}, client, true);
+  }
+
+  private async writeInTransaction(input: SetAssignmentInput, actor: AssignmentActor, audit: AssignmentAuditContext, client: Prisma.TransactionClient, intakeRedirect: boolean): Promise<AssignmentResponseDto> {
     const data = normalize(input);
-    assertActorScope(actor, data.scopeBranchId);
-    await this.assertTargets(data, actor, client);
+    if (!intakeRedirect) assertActorScope(actor, data.scopeBranchId);
+    await this.assertTargets(data, actor, client, intakeRedirect);
     const current = await this.assignmentsRepository.findCurrent(data.entityType, data.entityId, client);
     if (sameTargets(current, data)) return response(current!);
     const action = current ? 'FORWARDED' : 'ASSIGNED';
@@ -128,6 +137,7 @@ export class AssignmentsService {
     input: ReturnType<typeof normalize>,
     actor: AssignmentActor,
     client: AssignmentClient,
+    intakeRedirect = false,
   ): Promise<void> {
     const user = input.assignedUserId
       ? await this.assignmentsRepository.findActiveUser(input.assignedUserId, client)
@@ -137,7 +147,7 @@ export class AssignmentsService {
       : null;
     if (input.assignedUserId && !user) throw invalidTarget('assignedUserId');
     if (input.assignedDepartmentId && !department) throw invalidTarget('assignedDepartmentId');
-    if (actor.roleCode === RoleCode.ADMIN) return;
+    if (actor.roleCode === RoleCode.ADMIN || intakeRedirect) return;
     const branchId = requiredBranch(actor);
     if ((user && user.branchId !== branchId) || (department?.branchId && department.branchId !== branchId)) {
       throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);

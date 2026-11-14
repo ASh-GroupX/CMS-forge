@@ -424,7 +424,7 @@ test('portal submission renders English responsive complaint form', async () => 
   assert.match(html, /Customer complaint portal/);
   assert.match(html, /aria-current="page"/);
   assert.match(html, /href="\/portal\?locale=ar"/);
-  assert.match(html, /href="\/portal\/track\?locale=en"/);
+  assert.doesNotMatch(html, /href="\/portal\/(track|survey)\?locale=en"/);
   assert.match(html, /Customer name/);
   assert.match(html, /Customer phone/);
   assert.doesNotMatch(html, /name="branchId"|name="categoryId"|name="departmentId"|name="severity"|name="subject"/);
@@ -458,7 +458,7 @@ test('portal submission keeps Arabic RTL localized labels', async () => {
   const success = renderToStaticMarkup(React.createElement(PortalSubmissionScreen, { locale: 'ar', state: 'success' }));
   assert.ok(success.includes(portalSubmissionText.ar.next.title));
   assert.ok(success.includes(portalSubmissionText.ar.actions.copyReference));
-  assert.ok(success.includes(portalSubmissionText.ar.actions.track));
+  assert.ok(!success.includes(portalSubmissionText.ar.actions.track));
   assert.equal(success.includes(portalSubmissionText.ar.fields.customerName), false);
   assert.equal(success.includes(portalSubmissionText.ar.fields.description), false);
 });
@@ -471,7 +471,7 @@ test('portal submission renders safe success reference result', async () => {
   assert.match(html, /Complaint submitted/);
   assert.match(html, /CMP-PORTAL-001/);
   assert.match(html, /What happens next\?/);
-  assert.match(html, /Keep the reference number to track updates\./);
+  assert.match(html, /Keep the reference number if you contact our team\./);
   assert.match(html, /role="status"/);
   assert.doesNotMatch(html, /name="customerName"|name="description"|Submit complaint/);
   assert.doesNotMatch(html, /\+966500000001|SEEDDEMO00001|audit|DMS|staff PII/i);

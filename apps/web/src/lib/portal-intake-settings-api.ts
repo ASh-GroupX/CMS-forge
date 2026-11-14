@@ -1,6 +1,6 @@
-export type IntakeSetting = { branchId: string; categoryId: string; phoneCountryCode: string; version: number | null; memberIds: string[] };
-export type IntakeOption = { id: string; nameEn: string; nameAr: string; branchId?: string | null; roleCode?: string };
-export type IntakeOptions = { branches: IntakeOption[]; categories: IntakeOption[]; members: IntakeOption[] };
+export type IntakeSetting = { branchId: string; categoryId: string; redirectBranchId: string | null; redirectDepartmentId: string | null; phoneCountryCode: string; version: number | null; memberIds: string[] };
+export type IntakeOption = { id: string; nameEn: string; nameAr: string; branchId?: string | null; departmentId?: string | null; roleCode?: string };
+export type IntakeOptions = { branches: IntakeOption[]; categories: IntakeOption[]; departments: IntakeOption[]; members: IntakeOption[] };
 export type IntakeResult<T> = { status: 'ok'; data: T } | { status: 'error' | 'forbidden' | 'conflict' | 'validation' };
 export async function intakeRequest<T>(cookie: string, path = '', input?: unknown, csrf?: string): Promise<IntakeResult<T>> {
   try {

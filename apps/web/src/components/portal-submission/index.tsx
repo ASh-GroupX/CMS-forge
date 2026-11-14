@@ -20,7 +20,7 @@ import {
 } from '../../lib/portal-submission-api';
 export type PortalSubmissionFixtureState = 'loading' | 'validation' | 'success' | 'error';
 type SubmitState = { kind: 'idle' | 'loading' | 'options' }
-  | { kind: 'success'; referenceNumber: string; attachmentCount: number; trackingAvailable: boolean; attachmentWarning?: PortalAttachmentWarning }
+  | { kind: 'success'; referenceNumber: string; attachmentCount: number; attachmentWarning?: PortalAttachmentWarning }
   | { kind: 'validation'; fieldErrors: PortalFieldError[] }
   | { kind: 'error'; network: boolean };
 
@@ -75,7 +75,6 @@ export function PortalSubmissionScreen({
         kind: 'success',
         referenceNumber: result.data.complaint.referenceNumber,
         attachmentCount: result.data.complaint.attachments?.length ?? 0,
-        trackingAvailable: Boolean(complaint.customerPhone),
         ...(result.data.complaint.attachmentWarning ? { attachmentWarning: result.data.complaint.attachmentWarning } : {}),
       });
       return;
@@ -165,22 +164,21 @@ function PortalSubmissionMessage({ locale, state }: { locale: PortalLocale; stat
   const t = portalSubmissionText[locale];
   if (state.kind === 'idle') return null;
   if (state.kind === 'success') {
-    return <ReferenceSuccess attachmentCount={state.attachmentCount} attachmentWarning={state.attachmentWarning} locale={locale} referenceNumber={state.referenceNumber} trackingAvailable={state.trackingAvailable} />;
+    return <ReferenceSuccess attachmentCount={state.attachmentCount} attachmentWarning={state.attachmentWarning} locale={locale} referenceNumber={state.referenceNumber} />;
   }
   const message = state.kind === 'loading' ? t.states.loading : state.kind === 'validation' ? t.states.validation : state.kind === 'options' ? t.states.options : t.states.error;
   return <StateBlock message={message} tone={state.kind === 'loading' ? 'neutral' : state.kind === 'options' ? 'warning' : 'error'} />;
 }
 
-function ReferenceSuccess({ attachmentCount, attachmentWarning, locale, referenceNumber, trackingAvailable }: { attachmentCount: number; attachmentWarning?: PortalAttachmentWarning | undefined; locale: PortalLocale; referenceNumber: string; trackingAvailable: boolean }) {
+function ReferenceSuccess({ attachmentCount, attachmentWarning, locale, referenceNumber }: { attachmentCount: number; attachmentWarning?: PortalAttachmentWarning | undefined; locale: PortalLocale; referenceNumber: string }) {
   const t = portalSubmissionText[locale];
   const [copied, setCopied] = useState(false);
-  const trackHref = `/portal/track?locale=${locale}&reference=${encodeURIComponent(referenceNumber)}`;
   const submitHref = `/portal?locale=${locale}`;
   return (
     <section className="grid gap-3 rounded-md border border-status-success bg-status-success/10 p-3" aria-label={t.states.success} role="status">
       <div className="grid gap-1 text-sm">
         <h2 className="text-base font-semibold text-content-strong">{t.states.success}</h2>
-        <p className="text-content-muted">{trackingAvailable ? t.next.items[1] : t.states.trackingUnavailable}</p>
+        <p className="text-content-muted">{t.next.items[1]}</p>
         {attachmentCount ? <p className="text-content-muted">{t.states.attachmentsUploaded}: {attachmentCount}</p> : null}
       </div>
       {attachmentWarning ? <StateBlock message={`${t.states.attachmentWarning}: ${attachmentWarning.failedCount}.`} tone="warning" /> : null}
@@ -188,7 +186,7 @@ function ReferenceSuccess({ attachmentCount, attachmentWarning, locale, referenc
         {t.states.reference}
         <Input className="min-h-11 font-mono" readOnly value={referenceNumber} />
       </Label>
-      <div className="rounded-sm border border-line-subtle bg-surface px-3 py-2 text-sm text-content-muted"><h2 className="font-semibold text-content-strong">{t.next.title}</h2><ul className="mt-1 grid gap-1">{t.next.items.filter((_, index) => trackingAvailable || index !== 2).map((item) => <li key={item}>{item}</li>)}</ul></div>
+      <div className="rounded-sm border border-line-subtle bg-surface px-3 py-2 text-sm text-content-muted"><h2 className="font-semibold text-content-strong">{t.next.title}</h2><p className="mt-1">{t.next.items[0]}</p></div>
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
@@ -199,9 +197,6 @@ function ReferenceSuccess({ attachmentCount, attachmentWarning, locale, referenc
         >
           {copied ? actionText(t, 'copied', t.states.reference) : actionText(t, 'copyReference', t.states.reference)}
         </Button>
-        {trackingAvailable && <Button asChild type="button">
-          <a href={trackHref}>{actionText(t, 'track', t.subtitle)}</a>
-        </Button>}
         <Button asChild type="button" variant="outline">
           <a href={submitHref}>{actionText(t, 'submitAnother', t.actions.submit)}</a>
         </Button>
@@ -244,7 +239,7 @@ function fieldError(errors: PortalFieldError[], field: string, locale: PortalLoc
 }
 
 function previewState(state: PortalSubmissionFixtureState | undefined, reference: string | undefined, locale: PortalLocale, attachmentWarning?: PortalAttachmentWarning): SubmitState {
-  if (state === 'success') return { kind: 'success', referenceNumber: reference ?? 'CMP-PORTAL-001', attachmentCount: 0, trackingAvailable: true, ...(attachmentWarning ? { attachmentWarning } : {}) };
+  if (state === 'success') return { kind: 'success', referenceNumber: reference ?? 'CMP-PORTAL-001', attachmentCount: 0, ...(attachmentWarning ? { attachmentWarning } : {}) };
   if (state === 'validation') return { kind: 'validation', fieldErrors: [{ field: 'customerName', code: 'REQUIRED', message: portalSubmissionText[locale].validation.required }] };
   if (state === 'loading') return { kind: 'loading' };
   if (state === 'error') return { kind: 'error', network: false };

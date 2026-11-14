@@ -55,8 +55,8 @@ export class ComplaintFormOptionsService {
     return { branches, departments, categories, severities: Object.values(ComplaintSeverity), types: Object.values(ComplaintType) };
   }
 
-  async list(principal: StaffPrincipal): Promise<ComplaintFormOptions> {
-    const isGlobal = hasGlobalView(principal);
+  async list(principal: StaffPrincipal, intakeRouting = false): Promise<ComplaintFormOptions> {
+    const isGlobal = intakeRouting || hasGlobalView(principal);
     const branchScope = isGlobal ? {} : { id: principal.branchId ?? '' };
     const [branches, categories, departments, rootCauses, salesAdvisors, users] = await Promise.all([
       this.prisma.branch.findMany({

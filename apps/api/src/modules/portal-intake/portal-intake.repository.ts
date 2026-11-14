@@ -13,7 +13,7 @@ export class PortalIntakeRepository {
   }
   transaction<T>(work: (tx: Prisma.TransactionClient) => Promise<T>) { return this.prisma.$transaction(work); }
   get(tx: Prisma.TransactionClient | PrismaService = this.prisma) { return tx.portalIntakeSetting.findUnique({ where: { id: 'default' }, include: { members: { where: { removedAt: null }, select: { id: true, userId: true } } } }); }
-  async advance(input: { branchId: string; categoryId: string; phoneCountryCode: string }, expectedVersion: number | null, tx: Prisma.TransactionClient) {
+  async advance(input: { branchId: string; categoryId: string; redirectBranchId: string; redirectDepartmentId: string; phoneCountryCode: string }, expectedVersion: number | null, tx: Prisma.TransactionClient) {
     if (expectedVersion === null) return tx.portalIntakeSetting.create({ data: { id: 'default', ...input } });
     const update = await tx.portalIntakeSetting.updateMany({ where: { id: 'default', version: expectedVersion }, data: { ...input, version: { increment: 1 } } });
     return update.count === 1 ? tx.portalIntakeSetting.findUniqueOrThrow({ where: { id: 'default' } }) : null;

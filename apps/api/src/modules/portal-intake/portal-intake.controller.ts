@@ -27,11 +27,13 @@ export class PortalIntakeController {
 }
 
 function parseSettings(body: unknown): PortalIntakeSettingsInput {
-  if (!body || typeof body !== 'object' || Array.isArray(body)) return { branchId: '', categoryId: '', phoneCountryCode: '', memberIds: [], expectedVersion: null };
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return { branchId: '', categoryId: '', redirectBranchId: '', redirectDepartmentId: '', phoneCountryCode: '', memberIds: [], expectedVersion: null };
   const value = body as Record<string, unknown>;
   return {
     branchId: typeof value.branchId === 'string' ? value.branchId.trim() : '',
     categoryId: typeof value.categoryId === 'string' ? value.categoryId.trim() : '',
+    redirectBranchId: typeof value.redirectBranchId === 'string' ? value.redirectBranchId.trim() : '',
+    redirectDepartmentId: typeof value.redirectDepartmentId === 'string' ? value.redirectDepartmentId.trim() : '',
     phoneCountryCode: typeof value.phoneCountryCode === 'string' ? value.phoneCountryCode.trim() : '',
     memberIds: Array.isArray(value.memberIds) && value.memberIds.every((id) => typeof id === 'string') ? value.memberIds as string[] : [],
     expectedVersion: value.expectedVersion === null ? null : typeof value.expectedVersion === 'number' ? value.expectedVersion : 0,

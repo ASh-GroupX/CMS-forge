@@ -103,6 +103,14 @@ test('rejects an out-of-branch target from the server-session scope', async () =
     (error: unknown) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
   );
 });
+test('dedicated intake redirect accepts an active destination branch without widening general assignments', async () => {
+  const repository = repositoryFor({ user: { id: 'user_2', branchId: 'branch_2', departmentId: 'dept_2' }, department: { id: 'dept_2', branchId: 'branch_2' } });
+  const service = new AssignmentsService(repository, auditStub());
+  const input = { entityType: 'COMPLAINT', entityId: 'complaint_1', assignedUserId: 'user_2', assignedDepartmentId: 'dept_2', scopeBranchId: 'branch_2' };
+  const actor = { userId: 'user_1', roleCode: RoleCode.CR_MANAGER, branchId: 'branch_1' };
+  assert.equal((await service.setIntakeRedirectInTransaction(input, actor, transactionClient)).assignedUserId, 'user_2');
+  assert.throws(() => service.setIntakeRedirectInTransaction({ ...input, entityType: 'TASK' }, actor, transactionClient), { code: 'VALIDATION_FAILED' });
+});
 
 test('rejects an empty assignment', async () => {
   const service = new AssignmentsService(repositoryFor({ user: null, department: null }), auditStub());

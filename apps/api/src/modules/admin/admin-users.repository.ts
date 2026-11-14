@@ -38,12 +38,13 @@ export class AdminUsersRepository {
   }
 
   async intakeOptions(tx: Prisma.TransactionClient | PrismaService = this.prisma) {
-    const [branches, categories, members] = await Promise.all([
+    const [branches, categories, departments, members] = await Promise.all([
       tx.branch.findMany({ where: { isActive: true }, select: { id: true, nameEn: true, nameAr: true }, orderBy: { nameEn: 'asc' } }),
       tx.category.findMany({ where: { isActive: true }, select: { id: true, branchId: true, nameEn: true, nameAr: true }, orderBy: { nameEn: 'asc' } }),
-      tx.user.findMany({ where: { isActive: true, lockedAt: null, role: { OR: [{ code: { in: ['ADMIN', 'CR_MANAGER'] } }, { permissions: { some: { permission: { code: 'COMPLAINT_MANAGE', isActive: true } } } }] } }, select: { id: true, nameEn: true, nameAr: true, branchId: true, role: { select: { code: true } } }, orderBy: { nameEn: 'asc' } }),
+        tx.department.findMany({ where: { isActive: true }, select: { id: true, branchId: true, nameEn: true, nameAr: true }, orderBy: { nameEn: 'asc' } }),
+        tx.user.findMany({ where: { isActive: true, lockedAt: null, role: { OR: [{ code: { in: ['ADMIN', 'CR_MANAGER'] } }, { permissions: { some: { permission: { code: 'COMPLAINT_MANAGE', isActive: true } } } }] } }, select: { id: true, nameEn: true, nameAr: true, branchId: true, departmentId: true, role: { select: { code: true } } }, orderBy: { nameEn: 'asc' } }),
     ]);
-    return { branches, categories, members: members.map(({ role, ...member }) => ({ ...member, roleCode: role.code })) };
+      return { branches, categories, departments, members: members.map(({ role, ...member }) => ({ ...member, roleCode: role.code })) };
   }
 
   async listAssignableStaff(branchId: string | null): Promise<AssignableStaffRecord[]> {

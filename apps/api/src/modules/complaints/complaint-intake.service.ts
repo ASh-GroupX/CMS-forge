@@ -43,9 +43,8 @@ export class ComplaintIntakeService {
   }
   async options(actor: StaffPrincipal) {
     await this.access(actor);
-    const options = await this.catalog.list(actor);
-    const global = actor.roleCode === 'ADMIN';
-    return { branches: options.branches.filter((item) => global || item.id === actor.branchId), categories: options.categories.filter((item) => global || !item.branchId || item.branchId === actor.branchId), departments: options.departments.filter((item) => global || !item.branchId || item.branchId === actor.branchId), severities: options.severities, users: options.users.filter((item) => global || item.branchId === actor.branchId).map(({ id, nameEn, nameAr, departmentId, branchId }) => ({ id, nameEn, nameAr, departmentId, branchId })), carModels: options.carModels ?? [] };
+    const options = await this.catalog.list(actor, true);
+    return { branches: options.branches, categories: options.categories, departments: options.departments, severities: options.severities, users: options.users.map(({ id, nameEn, nameAr, departmentId, branchId }) => ({ id, nameEn, nameAr, departmentId, branchId })), carModels: options.carModels ?? [], suggestedDestination: await this.configuration.redirectDefaults() };
   }
   async claim(id: string, expectedVersion: string, actor: StaffPrincipal, release = false) {
     await this.access(actor);
@@ -65,12 +64,11 @@ export class ComplaintIntakeService {
   async correct(id: string, expectedVersion: string, changes: IntakeCorrection, actor: StaffPrincipal, redirect: boolean) {
     await this.access(actor);
     await this.configuration.assertVehicle?.(changes.vehicleMake, changes.vehicleModel, true);
-    const options = await this.catalog.list(actor);
+    const options = await this.catalog.list(actor, true);
     const branch = options.branches.find((item) => item.id === changes.branchId);
     const category = options.categories.find((item) => item.id === changes.categoryId && (!item.branchId || item.branchId === changes.branchId));
     const department = options.departments.find((item) => item.id === changes.departmentId && (!item.branchId || item.branchId === changes.branchId));
     if (!branch || !category || (changes.departmentId && !department) || redirect && !department || category?.departmentId && changes.departmentId && category.departmentId !== changes.departmentId) invalidIntake('routing');
-    if (actor.roleCode !== 'ADMIN' && changes.branchId !== actor.branchId) throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
     if (changes.ownerId && !options.users.some((user) => user.id === changes.ownerId && user.departmentId === changes.departmentId && user.branchId === changes.branchId)) invalidIntake('ownerId');
     const result = await this.repository.transaction(async (tx) => {
       const row = await this.subject(id, actor, tx); checkVersion(row, expectedVersion);
@@ -78,16 +76,16 @@ export class ComplaintIntakeService {
       if (claim?.assignedUserId !== actor.userId) conflict();
       const customer = await this.customers.resolveIntake(changes.customerName, changes.customerPhone, tx);
       const portalData = updatePortalAnswers(row.portalData, { customerName: changes.customerName, customerPhone: changes.customerPhone, vehicleBrand: changes.vehicleMake, vehicleModel: changes.vehicleModel, vehicleVin: changes.vehicleVin, odometer: changes.odometer, incidentAt: changes.incidentAt.toISOString(), description: changes.description }, changes.customFields);
-      const data = { customerId: customer.id, customerNameSnapshot: changes.customerName, vehicleId: null, vehicleVinSnapshot: changes.vehicleVin, vehicleMakeSnapshot: changes.vehicleMake, vehicleModelSnapshot: changes.vehicleModel, vehicleDataUnavailableReason: changes.vehicleVin ? 'Vehicle identity requires staff verification' : 'VIN not provided at intake', subject: changes.customerName, descriptionEn: changes.description, incidentAt: changes.incidentAt, odometer: changes.odometer, branchId: changes.branchId, categoryId: changes.categoryId, departmentId: changes.departmentId, severity: changes.severity, ownerId: changes.ownerId, ...(portalData ? { portalData } : {}) };
+      const data = { customerId: customer.id, customerNameSnapshot: changes.customerName, vehicleId: null, vehicleVinSnapshot: changes.vehicleVin, vehicleMakeSnapshot: changes.vehicleMake, vehicleModelSnapshot: changes.vehicleModel, vehicleDataUnavailableReason: changes.vehicleVin ? 'Vehicle identity requires staff verification' : 'VIN not provided at intake', subject: changes.customerName, descriptionEn: changes.description, incidentAt: changes.incidentAt, odometer: changes.odometer, branchId: redirect ? changes.branchId : row.branchId, categoryId: redirect ? changes.categoryId : row.categoryId, departmentId: redirect ? changes.departmentId : row.departmentId, severity: changes.severity, ownerId: redirect ? changes.ownerId : row.ownerId, ...(portalData ? { portalData } : {}) };
       let updated = await this.repository.bump(row, data, tx);
-      await this.audit.record({ eventType: 'COMPLAINT', action: 'intake_corrected', actorId: actor.userId, branchId: changes.branchId, targetType: 'complaint', targetId: id, metadata: { changedFields: Object.keys(data), reasonCode: 'INTAKE_CORRECTION' } }, tx);
+      await this.audit.record({ eventType: 'COMPLAINT', action: 'intake_corrected', actorId: actor.userId, branchId: row.branchId, targetType: 'complaint', targetId: id, metadata: { changedFields: Object.keys(data), reasonCode: 'INTAKE_CORRECTION' } }, tx);
       if (redirect) {
         for (const step of [{ from: 'SUBMITTED', to: 'MANAGER_REVIEW', action: 'ACCEPT_INTAKE' }, { from: 'MANAGER_REVIEW', to: changes.ownerId ? 'IN_PROGRESS' : 'BRANCH_REVIEW', action: 'APPROVE_AND_ROUTE' }] as const) {
           await this.repository.history({ complaintId: id, fromStatus: step.from, toStatus: step.to, action: step.action, actorId: actor.userId, actorRole: actor.roleCode, requestSource: 'STAFF_API', reason: changes.reason }, tx);
           await this.audit.record({ eventType: 'WORKFLOW', action: step.action, actorId: actor.userId, branchId: changes.branchId, targetType: 'complaint', targetId: id, metadata: { fromStatus: step.from, toStatus: step.to, reasonCode: 'INTAKE_REDIRECT' } }, tx);
         }
         updated = await this.repository.bump(updated, { status: changes.ownerId ? 'IN_PROGRESS' : 'BRANCH_REVIEW' }, tx);
-        await this.assignments.setInTransaction({ entityType: 'COMPLAINT', entityId: id, assignedUserId: changes.ownerId, assignedDepartmentId: changes.departmentId, scopeBranchId: changes.branchId }, actor, {}, tx);
+        await this.assignments.setIntakeRedirectInTransaction({ entityType: 'COMPLAINT', entityId: id, assignedUserId: changes.ownerId, assignedDepartmentId: changes.departmentId, scopeBranchId: changes.branchId }, actor, tx);
         await this.assignments.releaseInTransaction(claimType, id, actor, tx);
       }
       return this.result(updated, redirect ? null : claim);
