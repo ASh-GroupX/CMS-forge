@@ -1,6 +1,6 @@
 # Booking cards follow lane colors
 
-Status: Complete locally — not pushed
+Status: Complete — pushed and merged
 Date: 2026-11-15
 Risk: Medium
 SRS: UI-DESIGN-001
