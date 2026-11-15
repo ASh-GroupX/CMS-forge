@@ -1,10 +1,10 @@
-# Booking detail editing and lane colors
+# Booking cards follow lane colors
 
-Status: Complete — pushed and merged
+Status: Complete locally — not pushed
 Date: 2026-11-15
-Risk: High
-SRS: UI-DESIGN-001, REQ-RBAC-001, REQ-AUDIT-001
+Risk: Medium
+SRS: UI-DESIGN-001
 
-Scope: In scoped slices, add a validated and persisted color choice to each service-center booking lane through the Admin-only audited configuration, render it in the timeline, and allow authorized staff to edit booking customer/vehicle/maintenance/notes details. The user confirmed that existing per-user `canRescheduleBookings` controls detail edit access; Admin can set it in booking permissions. Keep server authority and metadata-only audits.
+Scope: Apply each Admin-configured booking lane color to appointment cards in the day timeline, including visible fill and border. Preserve status information and cancelled/no-show distinction, EN/AR, accessibility, and mobile layout. No API, database, Admin setting, or booking authority change.
 
-Proof: Passed Prisma schema validation/client generation, booking API 43/43, OpenAPI check, typecheck, lint, web 232/232, EN/AR edit and lane-color browser with scoped Axe, EN/AR timeline browser and screenshot inspection, diff check. Migration SQL inspected; live PostgreSQL migration Not Run. Preserve `tmp/` and `uploads/`.
+Proof: Passed EN/AR timeline browser card-color assertions, cancelled status regression, scoped accessibility scan, screenshot inspection, typecheck, lint, and diff check. Preserve `tmp/` and `uploads/`.

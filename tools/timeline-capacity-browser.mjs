@@ -89,6 +89,13 @@ try {
       const northSlot = page.locator('[data-booking-lane-id="lane_north"][data-slot-time="12:00"]');
       const region = mainSlot.getByRole('region', { name: `12:00 ${serviceBookingText[locale].timeline.appointment}` });
       await region.waitFor({ state: 'visible' });
+      const notesCard = region.getByRole('button', { name: /Customer One/ });
+      const otherCard = page.locator('[data-booking-lane-id="lane_other"][data-slot-time="12:30"]').getByRole('button', { name: /Other Customer/ });
+      assert.equal(await notesCard.getAttribute('data-lane-color'), 'amber');
+      assert.equal(await otherCard.getAttribute('data-lane-color'), 'green');
+      assert.ok((await notesCard.evaluate((element) => getComputedStyle(element).backgroundColor)) !==
+        (await otherCard.evaluate((element) => getComputedStyle(element).backgroundColor)), `${locale}: card fills follow their lane colors`);
+      assert.match(await otherCard.getAttribute('aria-label'), new RegExp(serviceBookingText[locale].status.CONFIRMED));
       await page.getByText(new RegExp(`${serviceBookingText[locale].timeline.slotOccupancy}: 2/3`)).first().waitFor({ state: 'visible', timeoutMs: 2000 });
       const add = mainSlot.getByRole('button', { name: `${serviceBookingText[locale].timeline.addAppointment} 12:00` });
       assert.equal(await add.count(), full ? 0 : 1, `${locale} full=${full}: Add capacity state; ${JSON.stringify(errors)}`);
@@ -151,6 +158,8 @@ try {
     await page.getByRole('button', { name: 'Cancel booking' }).click();
     assert.equal(await page.locator('[data-appointment-status="CANCELLED"]').count(), 1);
     const slot = page.locator('[data-booking-lane-id="lane_notes"][data-slot-time="12:00"]');
+    assert.ok(await slot.getByRole('button', { name: /Historical Customer/ }).evaluate((element) => element.classList.contains('border-s-amber-500')),
+      `${locale}: cancelled cards retain the lane stripe`);
     await slot.getByText(serviceBookingText[locale].status.CANCELLED, { exact: true }).waitFor({ state: 'visible' });
     await slot.getByText(new RegExp(`${serviceBookingText[locale].timeline.slotOccupancy}: 0/3`)).waitFor({ state: 'visible' });
     await page.screenshot({ path: `${output}/${locale}-cancelled-day.png`, fullPage: true });

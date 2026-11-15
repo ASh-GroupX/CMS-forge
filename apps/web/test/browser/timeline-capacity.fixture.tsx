@@ -28,6 +28,9 @@ const appointments: ServiceAppointment[] = ['Customer One', 'Customer Two'].map(
   startTime: '12:00', endTime: '12:15', durationMinutes: 15, status: 'BOOKED',
   createdAt: `${date}T08:00:00.000Z`, updatedAt: `${date}T08:00:00.000Z`,
 }));
+appointments.push({ ...appointments[0]!, id: 'appointment-other', bookingLaneId: 'lane_other',
+  bookingLaneNameEn: 'Other services', bookingLaneNameAr: 'الخدمات الأخرى', customerName: 'Other Customer',
+  startTime: '12:30', endTime: '12:45', status: 'CONFIRMED' });
 
 function HistoryControls() {
   const { appointments, setAppointments, setView, view } = useServiceBooking();

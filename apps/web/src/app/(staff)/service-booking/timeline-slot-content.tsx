@@ -5,6 +5,7 @@ import { Plus, Wrench } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import type { ServiceBookingCopy } from '../../../i18n/staff-service-booking';
 import type { ServiceAppointment, SlotAvailability } from '../../../lib/staff-service-bookings-api';
+import { laneColor, laneColors } from '../../../lib/booking-lane-colors';
 import { appointmentStatusStyle, maintenanceLabel } from './service-booking-utils';
 
 export function TimelineSlotContent({
@@ -19,6 +20,8 @@ export function TimelineSlotContent({
   locale,
   periodicName,
   cancelledLabel,
+  laneColor: configuredLaneColor,
+  statusLabels,
 }: {
   appointments: ServiceAppointment[];
   blockedReason: string | undefined;
@@ -31,7 +34,12 @@ export function TimelineSlotContent({
   locale: 'en' | 'ar';
   periodicName: string;
   cancelledLabel: string;
+  laneColor: string;
+  statusLabels: ServiceBookingCopy['status'];
 }) {
+  const color = laneColor(configuredLaneColor);
+  const statusDots = { BOOKED: 'bg-sky-500', CONFIRMED: 'bg-sky-600', IN_SERVICE: 'bg-status-warning',
+    COMPLETED: 'bg-status-success', CANCELLED: 'bg-status-error', NO_SHOW: 'bg-violet-600' } as const;
   return (
     <div className="min-w-0 space-y-1">
       <div className="flex h-6 min-w-0 items-center justify-between gap-2 text-[11px]">
@@ -65,15 +73,16 @@ export function TimelineSlotContent({
         <div aria-label={`${slotTime} ${timeline.appointment}`} className="flex h-[4.5rem] min-w-0 flex-1 items-start gap-2 overflow-x-auto pb-2 [scrollbar-width:thin]" role="region" tabIndex={0}>
           {appointments.map((appointment, index) => (
             <button
-              aria-label={`${timeline.appointment} ${index + 1}: ${appointment.customerName}, ${appointment.startTime}${appointment.status === 'CANCELLED' ? `, ${cancelledLabel}` : ''}`}
-              className={`h-[4rem] min-w-44 max-w-52 shrink-0 rounded-lg border p-2 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${appointmentStatusStyle(appointment.status)}`}
+              aria-label={`${timeline.appointment} ${index + 1}: ${appointment.customerName}, ${appointment.startTime}, ${statusLabels[appointment.status]}`}
+              className={`h-[4rem] min-w-44 max-w-52 shrink-0 rounded-lg border border-s-4 p-2 text-start text-content-strong transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${laneColors[color].stripe} ${appointment.status === 'CANCELLED' || appointment.status === 'NO_SHOW' ? appointmentStatusStyle(appointment.status) : laneColors[color].card}`}
+              data-lane-color={color}
               dir="auto"
               key={appointment.id}
               onClick={() => onSelect(appointment)}
               type="button"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-xs font-semibold">{appointment.customerName}</span>
+                <span className="flex min-w-0 items-center gap-1.5"><span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full ${statusDots[appointment.status]}`} title={statusLabels[appointment.status]} /><span className="truncate text-xs font-semibold">{appointment.customerName}</span></span>
                 <span className="shrink-0 text-[10px] font-medium tabular-nums">{appointment.startTime}</span>
               </div>
               <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-content-muted">

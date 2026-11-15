@@ -282,7 +282,7 @@ export function TimelineDayView() {
                               timeline={t.timeline}
                               locale={locale}
                               periodicName={t.modal.periodicMaintenance}
-                              cancelledLabel={t.status.CANCELLED}
+                              cancelledLabel={t.status.CANCELLED} laneColor={lane.color} statusLabels={t.status}
                             />
                           </div>
                         );

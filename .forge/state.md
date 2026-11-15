@@ -1,8 +1,8 @@
 # Current State
 
 Date: 2026-11-15
-Status: Complete — booking detail editing and lane colors pushed and merged
-Risk: High
+Status: Complete locally — booking cards use lane colors; not pushed
+Risk: Medium
 
 - Current production revision: 1714138ce612a6cdd595a8be9f1134eed57ec68f; GitHub run 43566832522 completed success in Validate and Test and Deploy to VPS. Live health, portal options, EN/AR portal and protected Admin API smoke passed with matching deployment revision. The earlier named complaint still requires authenticated staff inspection.
 - Public QR page now shows Submit Complaint only; success keeps the reference and copy action without a Track action. Verified tracking and surveys remain available to the existing workflow through their dedicated routes.
@@ -20,3 +20,4 @@ Risk: High
 - Current task: make and model share a desktop row; VIN and Maintenance Type share the following row. Periodic mileage stays below its maintenance selector, and fields stack on mobile. EN desktop/AR mobile booking browser passed with screenshot inspection and no serious/critical Axe findings; typecheck and lint passed. The existing suggestion fixture lacked a booking lane after lane support was added, so the fixture now supplies it and uses the searchable model button. Repository merge requested; no API, database, or production data change. `tmp/` and `uploads/` preserved.
 - Current local task: The user confirmed Staff with the Admin-configurable `canRescheduleBookings` permission can edit booking name, phone, VIN, car model, maintenance type/mileage, and notes. The backend revalidates catalog selections, recalculates duration/end time, enforces permission and CSRF, and commits a metadata-only audit with the update. Admin can set a lane to one of six localized colors; the persisted color appears in the Admin list and timeline header. The database migration adds a default blue color for existing lanes.
 - Passed: Prisma validation/client generation, booking API 43/43, OpenAPI check, typecheck, lint, web 232/232, EN desktop/AR mobile edit/Admin color Playwright and scoped Axe with no serious/critical findings, EN/AR timeline Playwright, screenshot inspection, diff check. Implementation commit `3d69f88` was pushed to the feature branch and fast-forward merged/pushed to `waleed` and `production`. Live PostgreSQL migration, production deployment, authenticated production staff UAT Not Verified. `tmp/` and `uploads/` preserved.
+- Current local fix: day-timeline booking cards now use the Admin-configured lane color for visible fill, border, and leading edge. A status dot and accessible label keep status distinct; cancelled/no-show cards keep their status surfaces and a lane-colored edge. Passed EN/AR timeline browser with amber Notes and green Other services cards, cancelled regression, scoped Axe, typecheck, lint, diff check; desktop/Arabic screenshots inspected. No API, database, authority, production data, commit, or push change. `tmp/` and `uploads/` preserved.
