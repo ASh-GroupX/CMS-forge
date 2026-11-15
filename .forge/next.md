@@ -1,6 +1,6 @@
 # Delegated QR settings access
 
-Status: Complete locally — not pushed
+Status: Complete — pushed and merged
 Date: 2026-11-15
 Risk: High
 SRS: REQ-RBAC-001, REQ-ADMIN-001, UI-DESIGN-001
