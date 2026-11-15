@@ -56,13 +56,16 @@ export function UserNavRulesForm({
   const formRef = useRef<HTMLFormElement>(null);
 
   const initialMode: ViewMode = (user.viewMode as ViewMode) || 'BOTH';
+  const presetAdminKeys = ADMIN_WORKSPACES.filter((w) => user.roleCode === 'ADMIN' || w.key !== 'admin:portal-intake').map((w) => w.key);
   const initialKeys = user.allowedNavKeys && user.allowedNavKeys.length > 0
-    ? user.allowedNavKeys
+    ? user.roleCode === 'ADMIN' || initialMode === 'CUSTOM'
+      ? user.allowedNavKeys
+      : user.allowedNavKeys.filter((key) => key !== 'admin:portal-intake')
     : initialMode === 'CRM'
-      ? [...CRM_KEYS, 'admin', ...ADMIN_WORKSPACES.map((w) => w.key)]
+      ? [...CRM_KEYS, 'admin', ...presetAdminKeys]
       : initialMode === 'INTERNAL_TICKETS'
-        ? [...INTERNAL_KEYS, 'admin', ...ADMIN_WORKSPACES.map((w) => w.key)]
-        : [...MAIN_NAV_KEYS.map((n) => n.key), 'admin', ...ADMIN_WORKSPACES.map((w) => w.key)];
+        ? [...INTERNAL_KEYS, 'admin', ...presetAdminKeys]
+        : [...MAIN_NAV_KEYS.map((n) => n.key), 'admin', ...presetAdminKeys];
 
   const [viewMode, setViewMode] = useState<ViewMode>(initialMode);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(initialKeys);
@@ -70,11 +73,11 @@ export function UserNavRulesForm({
   const handleModeChange = (mode: ViewMode) => {
     setViewMode(mode);
     if (mode === 'BOTH') {
-      setSelectedKeys([...MAIN_NAV_KEYS.map((n) => n.key), 'admin', ...ADMIN_WORKSPACES.map((w) => w.key)]);
+      setSelectedKeys([...MAIN_NAV_KEYS.map((n) => n.key), 'admin', ...presetAdminKeys]);
     } else if (mode === 'CRM') {
-      setSelectedKeys([...CRM_KEYS, 'admin', ...ADMIN_WORKSPACES.map((w) => w.key)]);
+      setSelectedKeys([...CRM_KEYS, 'admin', ...presetAdminKeys]);
     } else if (mode === 'INTERNAL_TICKETS') {
-      setSelectedKeys([...INTERNAL_KEYS, 'admin', ...ADMIN_WORKSPACES.map((w) => w.key)]);
+      setSelectedKeys([...INTERNAL_KEYS, 'admin', ...presetAdminKeys]);
     }
   };
 
@@ -149,7 +152,7 @@ export function UserNavRulesForm({
             <button
               type="button"
               className={`rounded border p-2 text-start font-medium transition-colors ${
-                viewMode === 'BOTH' ? 'border-brand bg-brand/10 text-brand' : 'border-line-subtle hover:bg-muted/40'
+                viewMode === 'BOTH' ? 'border-brand bg-brand/10 text-content-strong' : 'border-line-subtle hover:bg-muted/40'
               }`}
               onClick={() => handleModeChange('BOTH')}
             >
@@ -159,7 +162,7 @@ export function UserNavRulesForm({
             <button
               type="button"
               className={`rounded border p-2 text-start font-medium transition-colors ${
-                viewMode === 'CRM' ? 'border-brand bg-brand/10 text-brand' : 'border-line-subtle hover:bg-muted/40'
+                viewMode === 'CRM' ? 'border-brand bg-brand/10 text-content-strong' : 'border-line-subtle hover:bg-muted/40'
               }`}
               onClick={() => handleModeChange('CRM')}
             >
@@ -169,7 +172,7 @@ export function UserNavRulesForm({
             <button
               type="button"
               className={`rounded border p-2 text-start font-medium transition-colors ${
-                viewMode === 'INTERNAL_TICKETS' ? 'border-brand bg-brand/10 text-brand' : 'border-line-subtle hover:bg-muted/40'
+                viewMode === 'INTERNAL_TICKETS' ? 'border-brand bg-brand/10 text-content-strong' : 'border-line-subtle hover:bg-muted/40'
               }`}
               onClick={() => handleModeChange('INTERNAL_TICKETS')}
             >
@@ -179,7 +182,7 @@ export function UserNavRulesForm({
             <button
               type="button"
               className={`rounded border p-2 text-start font-medium transition-colors ${
-                viewMode === 'CUSTOM' ? 'border-brand bg-brand/10 text-brand' : 'border-line-subtle hover:bg-muted/40'
+                viewMode === 'CUSTOM' ? 'border-brand bg-brand/10 text-content-strong' : 'border-line-subtle hover:bg-muted/40'
               }`}
               onClick={() => setViewMode('CUSTOM')}
             >

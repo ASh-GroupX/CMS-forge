@@ -42,13 +42,25 @@ export const ADMIN_SECTIONS = [
   { key: 'admin:api-keys', path: '/admin/api-keys', labelEn: 'External Data API', labelAr: 'واجهة بيانات النظام', requiredPerm: 'INTEGRATIONS_MANAGE' },
 ] as const;
 
+export function canManagePortalIntake(
+  roleCode?: string,
+  viewMode?: string | null,
+  allowedNavKeys?: readonly string[] | null,
+): boolean {
+  return roleCode === 'ADMIN' ||
+    (viewMode === 'CUSTOM' && Boolean(allowedNavKeys?.includes('admin') && allowedNavKeys.includes('admin:portal-intake')));
+}
+
 export function canAccessAdminSection(
   sectionKey: string,
   allowedNavKeys?: readonly string[] | null | undefined,
   permissions?: readonly string[],
   roleCode?: string,
+  viewMode?: string | null,
 ): boolean {
-  if (sectionKey === 'admin:portal-intake' && roleCode !== 'ADMIN') return false;
+  if (sectionKey === 'admin:portal-intake') {
+    return canManagePortalIntake(roleCode, viewMode, allowedNavKeys);
+  }
   if (sectionKey === 'admin:api-keys' && !permissions?.includes('INTEGRATIONS_MANAGE')) return false;
   if (!roleCode && !permissions && (!allowedNavKeys || allowedNavKeys.length === 0)) {
     return true;
