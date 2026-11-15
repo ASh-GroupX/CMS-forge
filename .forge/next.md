@@ -1,6 +1,6 @@
 # Booking detail editing and lane colors
 
-Status: Complete locally — not pushed
+Status: Complete — pushed and merged
 Date: 2026-11-15
 Risk: High
 SRS: UI-DESIGN-001, REQ-RBAC-001, REQ-AUDIT-001
