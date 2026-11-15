@@ -1,10 +1,10 @@
 # Current State
 
 Date: 2026-11-15
-Status: Complete — delegated QR settings access pushed and merged
+Status: Amman Notes import UI implemented locally; live write pending
 Risk: High
 
-- A user with `USERS_MANAGE` can save a Custom Admin Hub QR complaint intake grant for an individual user of any role. The user receives the QR tile, settings page, field editor, and API read/write access only when the server session contains Custom mode plus both `admin` and `admin:portal-intake`. Admin retains access. Navigation presets do not silently grant QR access; Select All is an explicit Custom grant.
-- API denials remain 403 with a SECURITY audit. Save routes retain CSRF, and existing settings/form services retain same-transaction CONFIG audit and optimistic version checks. No branch, portal public response, database, credential, or production data change.
-- Passed: focused QR guard allowed/denied and CSRF metadata proof in Portal 32/32, RBAC 2/2, Admin 43/43, web shell 233/233, security check, typecheck, lint, OpenAPI check, EN desktop/AR mobile grant form browser and scoped Axe, screenshot inspection. Initial browser harness and contrast findings were repaired; reruns passed.
-- Implementation commit `e5c831e` was pushed and fast-forward merged to the feature, `waleed`, and `production` branches. Deployment and live staff UAT for this QR access change are Not Run. Preserve user `tmp/`, `uploads/`, and the previous workbook in `outputs/`.
+- The user authorized importing the 378 Amman Notes source entries, keeping 19 review-flagged rows for manual work. A 359-row JSON file is in `outputs/amman-notes-20261115/` for the Admin Booking Settings import tab; it is excluded from Git. Thirteen additional rows have no safe live catalog match and have a separate local CSV for manual review. One stray source fragment was not counted as a booking.
+- The import tab uses existing appointment create/list APIs, server session, CSRF, lane validation, and per-booking transactional audit. It plans within the 9/hour, 3/slot, 70/day active Amman Notes lane, preserves exact source text and source key in notes, skips previously imported and same-hour phone matches, and stops on the first creation error so a rerun can resume safely.
+- Passed: live read-only catalog/rules/lane preflight; 3 focused tests; web shell 236/236; lint, web typecheck, OpenAPI, security check; EN desktop/AR mobile browser preview with scoped Axe and screenshot inspection. Deployment and actual appointment creation Not Run yet. Preserve user `tmp/`, `uploads/`, and `outputs/`.
+- QR delegated access release is merged on feature, `waleed`, and `production` through docs commit `a75face`; live UAT Not Verified.

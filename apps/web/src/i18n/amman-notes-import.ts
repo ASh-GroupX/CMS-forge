@@ -1,0 +1,24 @@
+export const ammanNotesImportText = {
+  en: {
+    tab: 'Import Amman Notes', title: 'Import Amman Notes bookings',
+    subtitle: 'One-time import of the reviewed 359-row file. Existing bookings and lane limits are checked before creation.',
+    file: 'Amman Notes clear-row JSON file', loading: 'Checking live bookings…', failed: 'Could not prepare the import.',
+    model: 'Car model for', choose: 'Choose a model', ready: 'Ready', imported: 'Already imported',
+    conflicts: 'Needs review', start: 'Create ready bookings', progress: 'Created',
+    noFile: 'Choose the prepared 359-row file to begin.', noLane: 'The active Amman Notes lane is unavailable.',
+    noType: 'The active Notes maintenance type is unavailable.', finished: 'Import finished. Reload the file to verify every result.',
+    issue: 'Issue at', details: 'Source keys needing attention',
+    count: 'The selected file must contain exactly 359 reviewed rows.',
+  },
+  ar: {
+    tab: 'استيراد ملاحظات عمان', title: 'استيراد حجوزات ملاحظات عمان',
+    subtitle: 'استيراد ملف 359 حجزاً بعد مراجعته. يتم فحص الحجوزات الموجودة وسعة المسار قبل الإنشاء.',
+    file: 'ملف حجوزات ملاحظات عمان JSON', loading: 'جار فحص الحجوزات الحالية…', failed: 'تعذر تحضير الاستيراد.',
+    model: 'موديل السيارة لـ', choose: 'اختر الموديل', ready: 'جاهز', imported: 'مستورد مسبقاً',
+    conflicts: 'يحتاج مراجعة', start: 'إنشاء الحجوزات الجاهزة', progress: 'تم إنشاء',
+    noFile: 'اختر ملف 359 حجزاً المحضر للبدء.', noLane: 'مسار ملاحظات عمان غير متاح.',
+    noType: 'نوع صيانة ملاحظات غير متاح.', finished: 'اكتمل الاستيراد. أعد تحميل الملف للتحقق من النتائج.',
+    issue: 'مشكلة عند', details: 'مفاتيح الحجوزات التي تحتاج مراجعة',
+    count: 'يجب أن يحتوي الملف المحدد على 359 حجزاً بعد المراجعة.',
+  },
+} as const;

@@ -1,10 +1,10 @@
-# Delegated QR settings access
+# One-time Amman Notes appointment import
 
-Status: Complete — pushed and merged
+Status: Implemented locally — live import pending deployment
 Date: 2026-11-15
 Risk: High
-SRS: REQ-RBAC-001, REQ-ADMIN-001, UI-DESIGN-001
+SRS: REQ-BOOK-LANE-001, REQ-RBAC-001, UI-DESIGN-001
 
-Scope: Allow an Admin Hub user manager to grant QR complaint intake settings access to a specific user of any role through Custom navigation rules. Keep Admin access, deny absent/preset-only grants at the API, audit denial, retain CSRF and settings audit, and align both QR pages and the Admin Hub tile.
+Scope: Prepare the 359 unflagged Amman Notes source entries for an authenticated Admin Hub import. Use the existing appointment API so server-side RBAC, lane capacity, and per-booking audit remain authoritative. Preserve source text and stable source keys; skip existing matches and report conflicts. Keep the 19 flagged entries and one stray fragment for human review. Do not commit customer data to Git.
 
-Proof: Passed focused QR guard allowed/denied and CSRF metadata tests (included in Portal 32/32), RBAC 2/2, Admin 43/43, web shell 233/233, security check, typecheck, lint, OpenAPI check, EN desktop/AR mobile grant-form browser and scoped Axe with no serious/critical findings; screenshots inspected. The grant form browser proof initially needed an exact Select All locator, an explicit Playwright context, and a token-based contrast repair. No database migration or live user grant. Preserve `tmp/`, `uploads/`, and the prior workbook in `outputs/`.
+Proof: Passed live read-only catalog/rule/lane preflight; 346/359 clear rows map to active catalog models, 13 held for manual catalog review. Passed 3 focused import tests, web shell 236/236, lint, web typecheck, OpenAPI check, security check, EN desktop/AR mobile browser preview, scoped Axe no serious/critical findings, screenshot inspection. The normal appointment API remains the only write path. Deployment and actual import Not Run at this point.
