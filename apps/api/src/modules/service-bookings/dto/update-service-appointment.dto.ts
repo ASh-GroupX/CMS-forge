@@ -10,6 +10,7 @@ export class UpdateServiceAppointmentDto {
   vin?: string | null;
   carModelId?: string;
   maintenanceTypeId?: string;
+  periodicMileageKm?: number | null;
 }
 
 const VALID_STATUSES = ['BOOKED', 'CONFIRMED', 'IN_SERVICE', 'COMPLETED', 'CANCELLED', 'NO_SHOW'] as const;
@@ -63,6 +64,14 @@ export function parseUpdateServiceAppointmentBody(input: unknown): UpdateService
   }
   if (body.maintenanceTypeId !== undefined) {
     result.maintenanceTypeId = String(body.maintenanceTypeId).trim();
+    if (!result.maintenanceTypeId) throw new Error('Invalid maintenance type');
+  }
+  if (body.periodicMileageKm !== undefined) {
+    const mileage = body.periodicMileageKm == null ? null : Number(body.periodicMileageKm);
+    if (mileage != null && !([1000, 5000].includes(mileage) || mileage >= 10000 && mileage <= 150000 && mileage % 10000 === 0)) {
+      throw new Error('Invalid periodic maintenance mileage');
+    }
+    result.periodicMileageKm = mileage;
   }
 
   return result;

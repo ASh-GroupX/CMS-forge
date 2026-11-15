@@ -1882,6 +1882,7 @@ model ServiceBookingLane {
   code                 String
   nameEn               String               @map("name_en")
   nameAr               String               @map("name_ar")
+  color                String               @default("blue")
   maxDailyAppointments Int                  @default(80) @map("max_daily_appointments")
   maxPerHour           Int                  @default(5) @map("max_per_hour")
   maxPerSlot           Int                  @default(2) @map("max_per_slot")

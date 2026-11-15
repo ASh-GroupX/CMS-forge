@@ -234,7 +234,7 @@ export class ServiceBookingsController {
   }
 
   @Patch('appointments/:id')
-  @UseGuards(SessionAuthGuard)
+  @UseGuards(SessionAuthGuard, CsrfGuard)
   async updateAppointmentPath(
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
@@ -258,7 +258,7 @@ export class ServiceBookingsController {
   }
 
   @Patch(':id')
-  @UseGuards(SessionAuthGuard)
+  @UseGuards(SessionAuthGuard, CsrfGuard)
   async updateAppointment(
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
@@ -266,6 +266,6 @@ export class ServiceBookingsController {
   ) {
     const dto = parseUpdateServiceAppointmentBody(body);
     const actorId = req.principal?.userId ?? null;
-    return this.service.updateAppointment(id, dto, actorId);
+    return this.service.updateAppointment(id, dto, actorId, req.principal?.roleCode);
   }
 }

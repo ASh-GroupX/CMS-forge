@@ -96,7 +96,7 @@ export function ServiceBookingProvider({
   const [slotAvailability, setSlotAvailability] = useState<Record<string, DayAvailability | null>>({});
   const [branches, setBranches] = useState<BranchOption[]>(initialBranches);
   const [bookingLanes, setBookingLanes] = useState<ServiceBookingLane[]>(() => initialBookingLanes ?? initialBranches.map((branch) => ({
-    id: `lane_${branch.id}`, serviceCenterId: branch.id, code: 'GENERAL', nameEn: 'General bookings', nameAr: 'الحجوزات العامة',
+    id: `lane_${branch.id}`, serviceCenterId: branch.id, code: 'GENERAL', nameEn: 'General bookings', nameAr: 'الحجوزات العامة', color: 'blue',
     maxDailyAppointments: 24, maxPerHour: 3, maxPerSlot: 1, position: 0, isActive: true, updatedAt: '',
   })));
   const [carModels, setCarModels] = useState<CarModel[]>(initialCarModels);

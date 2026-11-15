@@ -16,8 +16,8 @@ const historyDate = new Date(Date.parse(`${getTodayDateString()}T00:00:00Z`) - 8
 const branch = { id: 'center_main', code: 'MAIN', nameEn: 'Main Service Center', nameAr: 'مركز الصيانة الرئيسي' };
 const north = { id: 'center_north', code: 'NORTH', nameEn: 'North Service Center', nameAr: 'مركز الصيانة الشمالي' };
 const bookingLanes = [
-  { id: 'lane_notes', serviceCenterId: branch.id, code: 'NOTES', nameEn: 'Notes', nameAr: 'نوتس', maxDailyAppointments: 80, maxPerHour: 9, maxPerSlot: 3, position: 0, isActive: true, updatedAt: `${date}T00:00:00.000Z` },
-  { id: 'lane_other', serviceCenterId: branch.id, code: 'OTHER', nameEn: 'Other services', nameAr: 'الخدمات الأخرى', maxDailyAppointments: 50, maxPerHour: 5, maxPerSlot: 2, position: 1, isActive: true, updatedAt: `${date}T00:00:00.000Z` },
+  { id: 'lane_notes', serviceCenterId: branch.id, code: 'NOTES', nameEn: 'Notes', nameAr: 'نوتس', color: 'amber', maxDailyAppointments: 80, maxPerHour: 9, maxPerSlot: 3, position: 0, isActive: true, updatedAt: `${date}T00:00:00.000Z` },
+  { id: 'lane_other', serviceCenterId: branch.id, code: 'OTHER', nameEn: 'Other services', nameAr: 'الخدمات الأخرى', color: 'green', maxDailyAppointments: 50, maxPerHour: 5, maxPerSlot: 2, position: 1, isActive: true, updatedAt: `${date}T00:00:00.000Z` },
   { id: 'lane_north', serviceCenterId: north.id, code: 'GENERAL', nameEn: 'General', nameAr: 'عام', maxDailyAppointments: 40, maxPerHour: 4, maxPerSlot: 2, position: 0, isActive: true, updatedAt: `${date}T00:00:00.000Z` },
 ];
 const appointments: ServiceAppointment[] = ['Customer One', 'Customer Two'].map((customerName, index) => ({

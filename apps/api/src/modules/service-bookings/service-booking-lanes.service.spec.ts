@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ServiceBookingsController } from './service-bookings.controller.js';
 import { ServiceBookingLanesService } from './service-booking-lanes.service.js';
+import { parseUpsertServiceBookingLaneBody } from './dto/service-booking-lane.dto.js';
 
 const admin = { userId: 'admin-1', roleCode: 'ADMIN', branchId: 'center-main' } as any;
 const staff = { userId: 'staff-1', roleCode: 'CR_OFFICER', branchId: 'center-main' } as any;
 const laneInput = {
-  serviceCenterId: 'center-main', code: 'NOTES', nameEn: 'Notes', nameAr: 'نوتس',
+  serviceCenterId: 'center-main', code: 'NOTES', nameEn: 'Notes', nameAr: 'نوتس', color: 'amber',
   maxDailyAppointments: 80, maxPerHour: 9, maxPerSlot: 3, position: 0, isActive: true,
 };
 
@@ -24,6 +25,7 @@ test('Admin creates a lane and its CONFIG audit in the same transaction', async 
   const lane = await service.upsert(laneInput, admin);
   assert.equal(lane.id, 'lane-notes');
   assert.equal(lane.maxPerHour, 9);
+  assert.equal(lane.color, 'amber');
   assert.equal(auditClient, transactionClient);
 });
 
@@ -50,4 +52,9 @@ test('lane write route requires session, Admin RBAC, and CSRF guards', () => {
   const guards = Reflect.getMetadata('__guards__', ServiceBookingsController.prototype.upsertBookingLane) as Array<{ name: string }>;
   assert.deepEqual(guards.map((guard) => guard.name), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
   assert.deepEqual(Reflect.getMetadata('cms:auto:roles', ServiceBookingsController.prototype.upsertBookingLane), ['ADMIN']);
+});
+
+test('lane color accepts only the configured palette', () => {
+  assert.equal(parseUpsertServiceBookingLaneBody(laneInput).color, 'amber');
+  assert.throws(() => parseUpsertServiceBookingLaneBody({ ...laneInput, color: '#ff0000' }), /Invalid booking lane/);
 });

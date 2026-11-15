@@ -3,11 +3,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDown, Clock } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
+import { laneColor, laneColors } from '../../../lib/booking-lane-colors';
 import { useServiceBooking } from './service-booking-context';
 import { getNowTimeParts, getTodayDateString, matchesBranch } from './service-booking-utils';
 import { TimelineSlotContent } from './timeline-slot-content';
 import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api';
-
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8:00 to 17:00 (ends 18:00)
 const SLOTS_PER_HOUR = ['00', '15', '30', '45'];
 
@@ -157,7 +157,7 @@ export function TimelineDayView() {
           style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(10rem, 1fr))` }}
         >
           {columns.map(({ branch, lane }) => (
-            <div className="p-3 text-center text-content-strong" data-booking-lane-header={lane.id} key={lane.id}>
+            <div className={`border-t-4 p-3 text-center text-content-strong ${laneColors[laneColor(lane.color)].header}`} data-booking-lane-header={lane.id} key={lane.id}>
               <span className="block text-xs font-medium text-content-muted">{isAr ? branch!.nameAr : branch!.nameEn}</span>
               <span className="mt-0.5 inline-flex items-center gap-2 text-sm font-bold">{isAr ? lane.nameAr : lane.nameEn}
               <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand">

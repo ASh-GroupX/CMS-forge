@@ -4,6 +4,7 @@ export type ServiceBookingLane = {
   code: string;
   nameEn: string;
   nameAr: string;
+  color: string;
   maxDailyAppointments: number;
   maxPerHour: number;
   maxPerSlot: number;

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test, { mock } from 'node:test';
 import { ServiceBookingsRepository } from './service-bookings.repository.js';
 import { ServiceBookingsService } from './service-bookings.service.js';
+import { ServiceBookingsController } from './service-bookings.controller.js';
 import { parseUpsertCarModelBody } from './dto/service-master-data.dto.js';
 import { parseCreateServiceAppointmentBody } from './dto/create-service-appointment.dto.js';
 
@@ -328,4 +329,40 @@ test('rescheduling replaces the reminder using the updated appointment revision'
   const result = await service.updateAppointment('apt-2', { date: '2026-10-05', startTime: '09:30' }, 'admin-1', 'ADMIN');
   assert.equal(result.startTime, '09:30');
   assert.equal(scheduledRevision, '2026-10-01T12:00:00.000Z');
+});
+
+test('maintenance edit checks booking access, recalculates duration, and audits atomically', async () => {
+  const existing: any = { id: 'apt-3', status: 'BOOKED', serviceCenterId: 'center_main', bookingLaneId: 'lane-1',
+    date: new Date('2026-11-20T00:00:00.000Z'), startTime: '09:00', durationMinutes: 30,
+    maintenanceTypeId: 'maint_oil_filter', maintenanceTypeName: 'Oil and Filter Change', periodicMileageKm: null,
+    customerName: 'Maya', customerPhone: '0791234567', createdAt: new Date() };
+  let writes = 0;
+  let saved: any;
+  let audits: any;
+  const repo = createMockRepository({ findAppointmentById: async () => existing,
+    findMaintenanceTypeById: async () => ({ id: 'maint_periodic_40k', nameEn: 'Periodic Maintenance 40,000 km', estimatedDurationMinutes: 60, isActive: true }),
+    updateAppointmentWithAudits: async (_id: string, data: any, auditRows: any) => {
+      writes++; saved = data; audits = auditRows;
+      return { ...existing, ...data, updatedAt: new Date() };
+    }, findAppointmentHistory: async () => [] });
+  const permissions = { checkPermission: async (_id: string, _role: string, key: string) => {
+    assert.equal(key, 'canRescheduleBookings'); throw new Error('denied');
+  } };
+  const denied = new ServiceBookingsService(repo, permissions as any);
+  await assert.rejects(denied.updateAppointment('apt-3', { maintenanceTypeId: 'maint_periodic_40k', periodicMileageKm: 40000 }, 'staff-1', 'STAFF'), /denied/);
+  assert.equal(writes, 0);
+  const allowed = new ServiceBookingsService(repo, { checkPermission: async () => undefined } as any);
+  await allowed.updateAppointment('apt-3', { maintenanceTypeId: 'maint_periodic_40k', periodicMileageKm: 40000 }, 'staff-2', 'STAFF');
+  assert.equal(saved.durationMinutes, 60);
+  assert.equal(saved.endTime, '10:00');
+  assert.equal(saved.periodicMileageKm, 40000);
+  assert.equal(audits[0].action, 'service_booking_details_change');
+  assert.deepEqual(audits[0].metadata.fields, ['maintenanceTypeId', 'periodicMileageKm']);
+});
+
+test('appointment edit routes require a session and CSRF token', () => {
+  for (const handler of ['updateAppointmentPath', 'updateAppointment'] as const) {
+    const guards = Reflect.getMetadata('__guards__', ServiceBookingsController.prototype[handler]) as Array<{ name: string }>;
+    assert.deepEqual(guards.map((guard) => guard.name), ['SessionAuthGuard', 'CsrfGuard']);
+  }
 });

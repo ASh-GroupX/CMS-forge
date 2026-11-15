@@ -6,6 +6,7 @@ export type UpsertServiceBookingLaneDto = {
   code: string;
   nameEn: string;
   nameAr: string;
+  color: string;
   maxDailyAppointments: number;
   maxPerHour: number;
   maxPerSlot: number;
@@ -25,6 +26,8 @@ export function parseUpsertServiceBookingLaneBody(input: unknown): UpsertService
   if (!nameEn || !nameAr || !code) invalid('nameEn');
 
   const expectedUpdatedAt = text(body.expectedUpdatedAt);
+  const color = text(body.color) || 'blue';
+  if (!['slate', 'blue', 'green', 'amber', 'rose', 'violet'].includes(color)) invalid('color');
   if (expectedUpdatedAt && Number.isNaN(Date.parse(expectedUpdatedAt))) invalid('expectedUpdatedAt');
   return {
     ...(text(body.id) ? { id: text(body.id) } : {}),
@@ -32,6 +35,7 @@ export function parseUpsertServiceBookingLaneBody(input: unknown): UpsertService
     code,
     nameEn,
     nameAr,
+    color,
     maxDailyAppointments: positive(body.maxDailyAppointments, 'maxDailyAppointments'),
     maxPerHour: positive(body.maxPerHour, 'maxPerHour'),
     maxPerSlot: positive(body.maxPerSlot, 'maxPerSlot'),

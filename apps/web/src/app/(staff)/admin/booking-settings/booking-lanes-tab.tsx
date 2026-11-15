@@ -13,8 +13,9 @@ import type { ServiceBookingCopy } from '../../../../i18n/staff-service-booking'
 import type { Locale } from '../../../../i18n/staff-shell';
 import { fetchServiceBookingLanes, type ServiceBookingLane, type ServiceCenter } from '../../../../lib/staff-service-bookings-api';
 import { saveBookingLaneAction } from './booking-lane-actions';
+import { laneColor, laneColors, type LaneColor } from '../../../../lib/booking-lane-colors';
 
-const emptyLane = (centerId: string): ServiceBookingLane => ({ id: '', serviceCenterId: centerId, code: '', nameEn: '', nameAr: '',
+const emptyLane = (centerId: string): ServiceBookingLane => ({ id: '', serviceCenterId: centerId, code: '', nameEn: '', nameAr: '', color: 'blue',
   maxDailyAppointments: 80, maxPerHour: 5, maxPerSlot: 2, position: 0, isActive: true, updatedAt: '' });
 
 export function BookingLanesTab({ centers, locale, t }: { centers: ServiceCenter[]; locale: Locale; t: ServiceBookingCopy }) {
@@ -55,7 +56,7 @@ export function BookingLanesTab({ centers, locale, t }: { centers: ServiceCenter
   return <section className="space-y-4" aria-label={copy.title}>
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-56 space-y-1.5"><Label>{copy.center}</Label>
-        <Select value={centerId} onValueChange={setCenterId}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>
+        <Select value={centerId} onValueChange={setCenterId}><SelectTrigger aria-label={copy.center}><SelectValue /></SelectTrigger><SelectContent>
           {centers.filter((center) => center.isActive).map((center) => <SelectItem key={center.id} value={center.id}>{locale === 'ar' ? center.nameAr : center.nameEn}</SelectItem>)}
         </SelectContent></Select></div>
       <Button className="gap-2" disabled={!centerId} onClick={() => setEditing(emptyLane(centerId))} type="button"><Plus className="size-4" />{copy.add}</Button>
@@ -66,7 +67,7 @@ export function BookingLanesTab({ centers, locale, t }: { centers: ServiceCenter
     {state === 'ready' && lanes.length === 0 && <div className="rounded-2xl border border-dashed border-line-subtle p-8 text-center text-content-muted">{copy.empty}</div>}
     {state === 'ready' && lanes.length > 0 && <div className="grid gap-3 lg:grid-cols-2">{lanes.map((lane) =>
       <article className={`rounded-2xl border border-line-subtle bg-surface p-4 ${lane.isActive ? '' : 'opacity-60'}`} key={lane.id}>
-        <div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold text-content-strong">{locale === 'ar' ? lane.nameAr : lane.nameEn}</h3><p className="text-xs text-content-muted">{lane.code}</p></div>
+        <div className="flex items-start justify-between gap-3"><div><h3 className="flex items-center gap-2 font-semibold text-content-strong"><span aria-hidden="true" className={`size-3 rounded-full ${laneColors[laneColor(lane.color)].swatch}`} />{locale === 'ar' ? lane.nameAr : lane.nameEn}</h3><p className="text-xs text-content-muted">{lane.code}</p></div>
           <Button aria-label={`${copy.edit} ${lane.nameEn}`} onClick={() => setEditing(lane)} size="icon" variant="ghost"><Pencil className="size-4" /></Button></div>
         <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs"><Metric label={copy.daily} value={lane.maxDailyAppointments} /><Metric label={copy.hourly} value={lane.maxPerHour} /><Metric label={copy.slot} value={lane.maxPerSlot} /></div>
       </article>)}</div>}
@@ -76,6 +77,7 @@ export function BookingLanesTab({ centers, locale, t }: { centers: ServiceCenter
         <Field label={copy.nameEn}><Input aria-label={copy.nameEn} required value={editing.nameEn} onChange={(event) => setEditing({ ...editing, nameEn: event.target.value })} /></Field>
         <Field label={copy.nameAr}><Input aria-label={copy.nameAr} required dir="rtl" value={editing.nameAr} onChange={(event) => setEditing({ ...editing, nameAr: event.target.value })} /></Field>
         <Field label={copy.code}><Input aria-label={copy.code} required value={editing.code} onChange={(event) => setEditing({ ...editing, code: event.target.value.toUpperCase() })} /></Field>
+        <Field label={copy.color}><Select value={laneColor(editing.color)} onValueChange={(color: LaneColor) => setEditing({ ...editing, color })}><SelectTrigger aria-label={copy.color}><SelectValue /></SelectTrigger><SelectContent>{(Object.keys(laneColors) as LaneColor[]).map((color) => <SelectItem key={color} value={color}><span className="flex items-center gap-2"><span aria-hidden="true" className={`size-3 rounded-full ${laneColors[color].swatch}`} />{copy.colors[color]}</span></SelectItem>)}</SelectContent></Select></Field>
         <Field label={copy.position}><Input aria-label={copy.position} min={0} type="number" value={editing.position} onChange={(event) => setEditing({ ...editing, position: Number(event.target.value) })} /></Field>
         <Field label={copy.daily}><Input aria-label={copy.daily} min={1} required type="number" value={editing.maxDailyAppointments} onChange={(event) => setEditing({ ...editing, maxDailyAppointments: Number(event.target.value) })} /></Field>
         <Field label={copy.hourly}><Input aria-label={copy.hourly} min={1} required type="number" value={editing.maxPerHour} onChange={(event) => setEditing({ ...editing, maxPerHour: Number(event.target.value) })} /></Field>

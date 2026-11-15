@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useServiceBooking } from './service-booking-context';
 import { getAppointmentAction, updateAppointmentStatusAction } from './actions';
 import { AppointmentRescheduleForm } from './appointment-reschedule-form';
+import { AppointmentDetailsEditForm } from './appointment-details-edit-form';
 import { maintenanceLabel } from './service-booking-utils';
 import type {
   ServiceAppointment,
@@ -21,6 +22,8 @@ export function AppointmentDetailModal() {
   const {
     branches,
     bookingLanes,
+    carModels,
+    maintenanceTypes,
     isDetailModalOpen,
     locale,
     selectedAppointment,
@@ -35,7 +38,7 @@ export function AppointmentDetailModal() {
   const apt = selectedAppointment;
 
   const [detailedApt, setDetailedApt] = useState<ServiceAppointment | null>(apt);
-  const [activeTab, setActiveTab] = useState<'details' | 'reschedule' | 'status'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'edit' | 'reschedule' | 'status'>('details');
   const [targetStatus, setTargetStatus] = useState<ServiceAppointmentStatus>('CONFIRMED');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -98,6 +101,7 @@ export function AppointmentDetailModal() {
           <button className={`flex-1 rounded-lg py-1.5 transition-all ${activeTab === 'details' ? 'bg-surface text-content-strong shadow-xs' : 'text-content-muted hover:text-content-strong'}`} onClick={() => setActiveTab('details')} type="button">
             {t.modal.detailsTab}
           </button>
+          {userRules.canRescheduleBookings && <button className={`flex-1 rounded-lg py-1.5 transition-all ${activeTab === 'edit' ? 'bg-surface text-content-strong shadow-xs' : 'text-content-muted hover:text-content-strong'}`} onClick={() => setActiveTab('edit')} type="button">{t.modal.editDetailsTab}</button>}
           {userRules.canRescheduleBookings && (
             <button className={`flex-1 rounded-lg py-1.5 transition-all ${activeTab === 'reschedule' ? 'bg-surface text-content-strong shadow-xs' : 'text-content-muted hover:text-content-strong'}`} onClick={() => setActiveTab('reschedule')} type="button">
               {t.modal.rescheduleTab}
@@ -182,6 +186,7 @@ export function AppointmentDetailModal() {
                         <span className="text-content-strong">
                           {h.action === 'service_booking_reschedule'
                             ? (isAr ? 'إعادة جدولة الموعد' : 'Appointment Rescheduled')
+                            : h.action === 'service_booking_details_change' ? t.modal.editDetailsTab
                             : (isAr ? 'تغيير الحالة' : 'Status Changed')}
                         </span>
                         <span className="text-[10px] text-content-muted font-normal">
@@ -226,6 +231,13 @@ export function AppointmentDetailModal() {
         )}
 
         {/* Reschedule Tab */}
+        {activeTab === 'edit' && userRules.canRescheduleBookings && <AppointmentDetailsEditForm
+          appointment={currentApt} carModels={carModels} maintenanceTypes={maintenanceTypes} isAr={isAr} t={t}
+          onSuccess={(updated) => {
+            toast.success(t.modal.detailsSaved);
+            setAppointments((prev) => prev.map((item) => item.id === apt.id ? updated : item));
+            setSelectedAppointment(updated); setDetailedApt(updated); setActiveTab('details');
+          }} />}
         {activeTab === 'reschedule' && userRules.canRescheduleBookings && (
           <AppointmentRescheduleForm
             appointment={apt}

@@ -30,6 +30,7 @@ export class ServiceBookingLanesService {
         code: dto.code,
         nameEn: dto.nameEn,
         nameAr: dto.nameAr,
+        color: dto.color,
         maxDailyAppointments: dto.maxDailyAppointments,
         maxPerHour: dto.maxPerHour,
         maxPerSlot: dto.maxPerSlot,
@@ -56,7 +57,7 @@ export class ServiceBookingLanesService {
       await this.audit.record({
         eventType: 'CONFIG', action, actorId: actor.userId, branchId: actor.branchId,
         targetType: 'ServiceBookingLane', targetId: lane.id,
-        metadata: { serviceCenterId: lane.serviceCenterId, code: lane.code, isActive: lane.isActive,
+        metadata: { serviceCenterId: lane.serviceCenterId, code: lane.code, color: lane.color, isActive: lane.isActive,
           maxDailyAppointments: lane.maxDailyAppointments, maxPerHour: lane.maxPerHour, maxPerSlot: lane.maxPerSlot },
       }, client);
       return lane;

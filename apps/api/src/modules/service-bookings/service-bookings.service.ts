@@ -111,15 +111,45 @@ export class ServiceBookingsService extends ServiceBookingsCatalogService {
     const updateData: Prisma.ServiceAppointmentUncheckedUpdateInput = {};
     const isStatusChanged = Boolean(dto.status && dto.status !== existing.status);
     const isReminderDataChanged = dto.customerName !== undefined && dto.customerName !== existing.customerName
-      || dto.customerPhone !== undefined && dto.customerPhone !== existing.customerPhone;
+      || dto.customerPhone !== undefined && dto.customerPhone !== existing.customerPhone
+      || dto.maintenanceTypeId !== undefined || dto.periodicMileageKm !== undefined;
+    const detailsChanged = ['notes', 'customerName', 'customerPhone', 'vin', 'carModelId', 'maintenanceTypeId', 'periodicMileageKm']
+      .filter((field) => dto[field as keyof UpdateServiceAppointmentDto] !== undefined);
+    if (detailsChanged.length && actorId && this.userRulesService) {
+      await this.userRulesService.checkPermission(actorId, roleCode, 'canRescheduleBookings');
+    }
     if (isStatusChanged && actorId && this.userRulesService) {
       await this.userRulesService.checkPermission(actorId, roleCode, 'canChangeStatus');
     }
     if (dto.status) updateData.status = dto.status as ServiceAppointmentStatus;
     if (dto.notes !== undefined) updateData.notes = dto.notes;
-    if (dto.customerName) updateData.customerName = dto.customerName;
-    if (dto.customerPhone) updateData.customerPhone = dto.customerPhone;
+    if (dto.customerName !== undefined) {
+      if (!dto.customerName.trim()) throw new BadRequestException('Customer name is required');
+      updateData.customerName = dto.customerName.trim();
+    }
+    if (dto.customerPhone !== undefined) {
+      if (!dto.customerPhone.trim()) throw new BadRequestException('Customer phone is required');
+      updateData.customerPhone = dto.customerPhone.trim();
+    }
     if (dto.vin !== undefined) updateData.vin = dto.vin;
+    if (dto.carModelId !== undefined) {
+      const car = await this.repository.findCarModelById(dto.carModelId).catch(() => null);
+      if (!car || !car.isActive) throw new BadRequestException('Select an active vehicle model');
+      updateData.carModelId = car.id;
+      updateData.carModelName = `${car.brand} ${car.nameEn}`;
+    }
+    let duration = existing.durationMinutes;
+    if (dto.maintenanceTypeId !== undefined || dto.periodicMileageKm !== undefined) {
+      const typeId = dto.maintenanceTypeId ?? existing.maintenanceTypeId;
+      const maintenance = typeId ? await this.repository.findMaintenanceTypeById(typeId).catch(() => null) : null;
+      if (!maintenance || !maintenance.isActive) throw new BadRequestException('Select an active maintenance type');
+      const periodic = periodicMaintenance(dto.periodicMileageKm ?? (dto.maintenanceTypeId === undefined ? existing.periodicMileageKm : null), typeId!, maintenance.nameEn);
+      duration = maintenance.estimatedDurationMinutes || 30;
+      updateData.maintenanceTypeId = maintenance.id;
+      updateData.maintenanceTypeName = periodic.name;
+      updateData.periodicMileageKm = periodic.mileage;
+      updateData.durationMinutes = duration;
+    }
 
     let isRescheduled = false;
     const oldCenter = existing.serviceCenterId || existing.branchId || 'center_main';
@@ -163,8 +193,9 @@ export class ServiceBookingsService extends ServiceBookingsCatalogService {
       updateData.bookingLaneId = lane.id;
       updateData.date = targetDate;
       updateData.startTime = targetTime;
-      updateData.endTime = calculateEndTime(targetTime, existing.durationMinutes);
+      updateData.endTime = calculateEndTime(targetTime, duration);
     }
+    if (duration !== existing.durationMinutes && !isRescheduled) updateData.endTime = calculateEndTime(existing.startTime, duration);
 
     const audits: Array<{ action: string; actorId?: string | null; metadata: Prisma.InputJsonValue }> = [];
     if (isRescheduled) {
@@ -180,6 +211,9 @@ export class ServiceBookingsService extends ServiceBookingsCatalogService {
         metadata: { oldStatus: existing.status, newStatus: dto.status },
       });
     }
+    if (detailsChanged.length) audits.push({ action: 'service_booking_details_change', actorId: actorId ?? null,
+      metadata: { fields: detailsChanged, oldMaintenanceTypeId: existing.maintenanceTypeId,
+        newMaintenanceTypeId: dto.maintenanceTypeId ?? existing.maintenanceTypeId } });
     const updated = audits.length > 0
       ? await this.repository.updateAppointmentWithAudits(id, updateData, audits)
       : await this.repository.updateAppointment(id, updateData);

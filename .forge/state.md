@@ -1,8 +1,8 @@
 # Current State
 
-Date: 2026-11-14
-Status: Complete — booking form field alignment repository merge
-Risk: Medium
+Date: 2026-11-15
+Status: Complete locally — booking detail editing and lane colors; not pushed
+Risk: High
 
 - Current production revision: 1714138ce612a6cdd595a8be9f1134eed57ec68f; GitHub run 43566832522 completed success in Validate and Test and Deploy to VPS. Live health, portal options, EN/AR portal and protected Admin API smoke passed with matching deployment revision. The earlier named complaint still requires authenticated staff inspection.
 - Public QR page now shows Submit Complaint only; success keeps the reference and copy action without a Track action. Verified tracking and surveys remain available to the existing workflow through their dedicated routes.
@@ -18,3 +18,5 @@ Risk: Medium
 - Passed: focused model-first/make-first Playwright proof in EN desktop and AR mobile, screenshot inspection, scoped Axe scan with no serious/critical findings, shell 232/232, typecheck, lint, and diff check. The first Axe attempt required an explicit Playwright context; the corrected harness passed. No API, database, authority, booking record, or production data changed. Implementation commit `efabfa4` was pushed and fast-forward merged into `waleed` and `production`; `tmp/` and `uploads/` were preserved.
 - Current task: the car model button opens a dropdown with search above the options. Focused browser proof passes EN/AR, including the nested appointment dialog and automatic make selection; screenshots inspected, scoped Axe no serious/critical findings, typecheck, lint, diff check passed. Initial nested popover was intercepted by the dialog overlay, fixed by rendering the popover in its dialog context. Repository merge requested; `tmp/` and `uploads/` preserved.
 - Current task: make and model share a desktop row; VIN and Maintenance Type share the following row. Periodic mileage stays below its maintenance selector, and fields stack on mobile. EN desktop/AR mobile booking browser passed with screenshot inspection and no serious/critical Axe findings; typecheck and lint passed. The existing suggestion fixture lacked a booking lane after lane support was added, so the fixture now supplies it and uses the searchable model button. Repository merge requested; no API, database, or production data change. `tmp/` and `uploads/` preserved.
+- Current local task: The user confirmed Staff with the Admin-configurable `canRescheduleBookings` permission can edit booking name, phone, VIN, car model, maintenance type/mileage, and notes. The backend revalidates catalog selections, recalculates duration/end time, enforces permission and CSRF, and commits a metadata-only audit with the update. Admin can set a lane to one of six localized colors; the persisted color appears in the Admin list and timeline header. The database migration adds a default blue color for existing lanes.
+- Passed: Prisma validation/client generation, booking API 43/43, OpenAPI check, typecheck, lint, web 232/232, EN desktop/AR mobile edit/Admin color Playwright and scoped Axe with no serious/critical findings, EN/AR timeline Playwright, screenshot inspection, diff check. Live PostgreSQL migration, production deployment, authenticated production staff UAT Not Run. No commit or push; `tmp/` and `uploads/` preserved.

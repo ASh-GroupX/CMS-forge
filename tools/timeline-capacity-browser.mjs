@@ -76,6 +76,8 @@ try {
       assert.ok(await page.locator('[data-booking-lane-id="lane_notes"]').count() > 0 && await page.locator('[data-booking-lane-id="lane_other"]').count() > 0,
         `${locale}: lanes in the same service center stay side-by-side`);
       assert.match(await page.locator('[data-booking-lane-header="lane_other"]').innerText(), locale === 'ar' ? /الخدمات الأخرى/ : /Other services/);
+      assert.ok(await page.locator('[data-booking-lane-header="lane_notes"]').evaluate((element) => element.classList.contains('border-t-amber-500')));
+      assert.ok(await page.locator('[data-booking-lane-header="lane_other"]').evaluate((element) => element.classList.contains('border-t-green-600')));
       await page.getByRole('checkbox', { name: northName }).click();
       assert.equal(await page.locator('[data-branch-id="center_north"]').count(), 0, `${locale}: second unchecked center is hidden`);
       await page.getByRole('checkbox', { name: locale === 'ar' ? 'مركز الصيانة الرئيسي' : 'Main Service Center' }).click();
