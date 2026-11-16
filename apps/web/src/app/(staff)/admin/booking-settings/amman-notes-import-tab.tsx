@@ -6,12 +6,12 @@ import { FormSelect } from '../../../../components/ui/form-select';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
 import {
-  createAppointmentApi, fetchServiceAppointments, fetchServiceBookingLanes,
+  createAppointmentApi, fetchCarModels, fetchServiceAppointments, fetchServiceBookingLanes,
   type CarModel, type MaintenanceType, type ServiceAppointment,
 } from '../../../../lib/staff-service-bookings-api';
 import type { ServiceBookingLane } from '../../../../lib/staff-service-booking-lanes-api';
 import {
-  parseAmmanNotesRows, planAmmanNotesImport, sourceMarker, suggestCatalogModel,
+  buildAmmanCustomerNotes, parseAmmanNotesRows, planAmmanNotesImport, suggestCatalogModel,
   type AmmanImportRow,
 } from '../../../../lib/amman-notes-import';
 import type { Locale } from '../../../../i18n/staff-shell';
@@ -26,6 +26,7 @@ export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale }: {
   const [lane, setLane] = useState<ServiceBookingLane | null>(null);
   const [typeId, setTypeId] = useState('');
   const [modelByType, setModelByType] = useState<Record<string, string>>({});
+  const [catalog, setCatalog] = useState(carModels);
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState(0);
   const [message, setMessage] = useState<string>(t.noFile);
@@ -35,9 +36,9 @@ export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale }: {
   const ready = plan.filter((item) => item.startTime);
   const imported = plan.filter((item) => item.reason === 'already-imported');
   const conflicts = plan.filter((item) => item.reason && item.reason !== 'already-imported');
-  const options = useMemo(() => carModels.filter((model) => model.isActive).map((model) => ({
+  const options = useMemo(() => catalog.filter((model) => model.isActive).map((model) => ({
     value: model.id, label: `${model.brand} · ${model.nameEn}`,
-  })).sort((a, b) => a.label.localeCompare(b.label)), [carModels]);
+  })).sort((a, b) => a.label.localeCompare(b.label)), [catalog]);
 
   async function load(file: File | undefined) {
     if (!file) return;
@@ -45,17 +46,18 @@ export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale }: {
     try {
       const parsed = parseAmmanNotesRows(JSON.parse(await file.text()) as unknown);
       if (parsed.length !== 359) throw new Error(t.count);
-      const [lanes, appointments] = await Promise.all([
+      const [lanes, appointments, freshModels] = await Promise.all([
         fetchServiceBookingLanes('center_main'),
         fetchServiceAppointments({ branchId: 'center_main', fromDate: parsed[0]!.date, toDate: parsed.at(-1)!.date }),
+        fetchCarModels(),
       ]);
       const notesLane = lanes.find((item) => item.isActive && item.nameEn.toLowerCase() === 'notes');
       const notesType = maintenanceTypes.find((item) => item.isActive && item.nameEn.toLowerCase() === 'notes');
       if (!notesLane) throw new Error(t.noLane);
       if (!notesType) throw new Error(t.noType);
-      setLane(notesLane); setTypeId(notesType.id); setExisting(appointments);
+      setLane(notesLane); setTypeId(notesType.id); setExisting(appointments); setCatalog(freshModels);
       setModelByType(Object.fromEntries([...new Set(parsed.map((row) => row.carType))].map((name) => [
-        name, suggestCatalogModel(name, carModels),
+        name, suggestCatalogModel(name, freshModels),
       ])));
       setRows(parsed); setMessage('');
     } catch (error) {
@@ -76,7 +78,7 @@ export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale }: {
           carModelId: modelByType[row.carType]!, customerName: row.customerName,
           customerPhone: row.customerPhone, date: row.date, startTime: item.startTime!,
           durationMinutes: 15,
-          notes: `${sourceMarker(row.sourceKey)}\nSource car type: ${row.carType}\nSource hour: ${row.hour}\nOriginal: ${row.originalText}`,
+          notes: buildAmmanCustomerNotes(row),
         });
         if (!result.ok) throw new Error(result.message || t.failed);
         completed += 1; setCreated(completed);

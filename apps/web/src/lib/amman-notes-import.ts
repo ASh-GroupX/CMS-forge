@@ -41,6 +41,17 @@ export function parseAmmanNotesRows(value: unknown): AmmanImportRow[] {
 
 export function sourceMarker(key: string): string { return `${MARKER}${key}`; }
 
+export function buildAmmanCustomerNotes(row: AmmanImportRow): string {
+  const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  let requests = row.originalText;
+  for (const value of [row.customerName, row.customerPhone, row.carType]) {
+    if (value) requests = requests.replace(new RegExp(escape(value), 'i'), '');
+  }
+  requests = requests.replace(/^[\s/\\|:,;\-–—]+|[\s/\\|:,;\-–—]+$/g, '')
+    .replace(/\s*[/\\|]+\s*/g, ' / ').replace(/\s+/g, ' ').trim();
+  return `${sourceMarker(row.sourceKey)}\nNotes / Customer Requests: ${requests || row.originalText}\nSource car type: ${row.carType}\nSource hour: ${row.hour}\nOriginal source: ${row.originalText}`;
+}
+
 export function suggestCatalogModel(carType: string, models: CarModel[]): string {
   const alias: Record<string, string> = {
     Mage: 'Dongfeng Mage ICE', Nami: 'Dongfeng Nammi-01 EV 430 KM Plus CCC',
@@ -57,6 +68,9 @@ export function suggestCatalogModel(carType: string, models: CarModel[]): string
     D60: 'Dongfeng D60 Qichen EV 405 KM Comfort CCC',
     AX7: 'Dongfeng AX7 Gasoline E1 CCC',
     IX7: 'DFSK Fengon Glory IX7 Gasoline CCC',
+    Huge: 'Dongfeng Huge Gasoline E1 GCC',
+    NS1: 'Honda NS1', ID4: 'ID.4', T5: 'Forthing T5 Hybrid Exclusive CCC',
+    'BYD Seagull': 'seagull',
     Box: 'DFM BOX E3 EU', BJ30: 'BAIC BJ30e Hybrid GCC',
     'Song L': 'BYD Song L E1 EV CCC',
   };

@@ -32,13 +32,28 @@ const browser = await chromium.launch({ headless: true });
 try {
   for (const locale of ['en', 'ar']) {
     const context = await browser.newContext({ viewport: { width: locale === 'en' ? 1280 : 390, height: 900 } });
+    await context.addCookies([{ name: 'cms_csrf_token', value: 'proof-csrf', url: `http://127.0.0.1:${server.address().port}` }]);
     const page = await context.newPage();
     const errors = [];
+    const posted = [];
     page.on('pageerror', (error) => errors.push(error.message));
+    await page.route('**/service-bookings/car-models?*', (route) => route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify([
+        { id: 'mage', brand: 'Dongfeng', nameEn: 'Dongfeng Mage ICE', isActive: true },
+        { id: 'nami', brand: 'Dongfeng', nameEn: 'Dongfeng Nammi-01 EV 430 KM Plus CCC', isActive: true },
+        { id: 'vigo', brand: 'Dongfeng', nameEn: 'Dongfeng Nammi-06 VIGO EV 410 KM E1 GCC', isActive: true },
+        { id: 'friday', brand: 'Forthing', nameEn: 'Forthing Friday EV', isActive: true },
+      ]) }));
     await page.route('**/service-bookings/centers/center_main/lanes', (route) => route.fulfill({ status: 200, contentType: 'application/json',
       body: JSON.stringify([{ id: 'notes', serviceCenterId: 'center_main', code: 'NOT', nameEn: 'notes', nameAr: 'ملاحظات',
         maxDailyAppointments: 70, maxPerHour: 9, maxPerSlot: 3, isActive: true }]) }));
     await page.route('**/service-bookings/appointments?*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+    await page.route('**/service-bookings/appointments', (route) => {
+      const body = route.request().postDataJSON();
+      posted.push({ csrf: route.request().headers()['x-csrf-token'], body });
+      return route.fulfill({ status: posted.length === 1 ? 200 : 403, contentType: 'application/json',
+        body: JSON.stringify(posted.length === 1 ? { ...body, id: 'created-1', status: 'BOOKED' } : { error: { message: 'Denied' } }) });
+    });
     await page.goto(`http://127.0.0.1:${server.address().port}/?${locale}`);
     const rows = Array.from({ length: 359 }, (_, index) => {
       const day = new Date(Date.UTC(2026, 10, 19 + Math.floor(index / 15))).toISOString().slice(0, 10);
@@ -54,6 +69,11 @@ try {
     await page.screenshot({ path: `${output}/${locale}-import-preview.png`, fullPage: true });
     const severe = (await new AxeBuilder({ page }).include('main').analyze()).violations.filter((item) => ['critical', 'serious'].includes(item.impact));
     assert.deepEqual(severe.map((item) => ({ id: item.id, targets: item.nodes.map((node) => node.target.join(' ')) })), []);
+    await page.getByRole('button', { name: locale === 'en' ? 'Create ready bookings' : 'إنشاء الحجوزات الجاهزة' }).click();
+    await page.getByText(locale === 'en' ? 'Created: 1' : 'تم إنشاء: 1').waitFor();
+    assert.equal(posted.length, 2);
+    assert.equal(posted[0].csrf, 'proof-csrf');
+    assert.match(posted[0].body.notes, /Notes \/ Customer Requests:/);
     assert.deepEqual(errors, []);
     await context.close();
   }

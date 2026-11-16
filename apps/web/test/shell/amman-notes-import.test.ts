@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseAmmanNotesRows, planAmmanNotesImport, sourceMarker } from '../../src/lib/amman-notes-import';
+import { buildAmmanCustomerNotes, parseAmmanNotesRows, planAmmanNotesImport, sourceMarker } from '../../src/lib/amman-notes-import';
 import type { ServiceAppointment } from '../../src/lib/staff-service-bookings-api';
 import type { ServiceBookingLane } from '../../src/lib/staff-service-booking-lanes-api';
 
@@ -35,4 +35,12 @@ test('marks an existing same-hour phone as possible duplicate', () => {
     customerPhone: base.customerPhone, notes: 'Another booking' }] as ServiceAppointment[];
   const plan = planAmmanNotesImport([base], existing, lane, { Mage: 'car-mage' });
   assert.equal(plan[0]?.reason, 'possible-duplicate');
+});
+
+test('puts mileage and complaints first in customer requests while keeping the original text', () => {
+  const row = { ...base, originalText: 'Test Customer / 0791234567 / Mage / 20k / brake noise' };
+  const notes = buildAmmanCustomerNotes(row);
+  assert.match(notes, /Notes \/ Customer Requests: 20k \/ brake noise/);
+  assert.match(notes, /Original source: Test Customer \/ 0791234567 \/ Mage/);
+  assert.match(notes, /Amman Notes source: 2026-11-19-B2-1/);
 });

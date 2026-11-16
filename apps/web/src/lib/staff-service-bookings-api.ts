@@ -147,8 +147,9 @@ async function getAuthHeaders(customCookie?: string): Promise<HeadersInit> {
       }
     } catch {}
   }
+  if (!cookieHeader && typeof document !== 'undefined') cookieHeader = document.cookie;
   if (cookieHeader) {
-    headers.cookie = cookieHeader;
+    if (typeof window === 'undefined') headers.cookie = cookieHeader;
     const csrf = cookieHeader.split(';').map((c) => c.trim()).find((c) => c.startsWith('cms_csrf_token='))?.slice('cms_csrf_token='.length);
     if (csrf) headers['x-csrf-token'] = csrf;
   }
@@ -251,7 +252,7 @@ export async function createAppointmentApi(data: CreateAppointmentInput): Promis
   const url = `${getApiBaseUrl()}/service-bookings/appointments`;
   const res = await fetch(url, { method: 'POST', headers: await getAuthHeaders(), body: JSON.stringify(data) });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) return { ok: false, message: json.message || 'Failed to create appointment' };
+  if (!res.ok) return { ok: false, message: json.error?.message || json.message || `Booking request failed (${res.status})` };
   return { ok: true, appointment: json };
 }
 
@@ -297,4 +298,3 @@ export async function fetchMyBookingRules(cookieHeader?: string): Promise<UserBo
   if (!res.ok) return { userId: '', canViewBookings: true, canCreateBookings: true, canRescheduleBookings: true, canChangeStatus: true, canCancelBookings: true, canManageSettings: false };
   return res.json();
 }
-
