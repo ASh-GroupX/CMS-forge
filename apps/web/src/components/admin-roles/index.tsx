@@ -115,6 +115,10 @@ function permissionGroup(code: string): keyof (typeof adminRolesText)['en']['per
   if (code.startsWith('ATTACHMENT_') || code.startsWith('COMPENSATION_')) return 'operations';
   if (code.startsWith('TICKET_') || code.startsWith('BYPASS_TICKET_')) return 'tickets';
   if (code.startsWith('BOOKING_')) return 'booking';
+  if (code.startsWith('TASK_')) return 'tasks';
+  if (code.startsWith('DEAL_')) return 'deals';
+  if (code.startsWith('CASE_')) return 'cases';
+  if (code.startsWith('ASSIGNMENT_')) return 'assignments';
   if (code.startsWith('REPORT_') || code.startsWith('AUDIT_')) return 'reporting';
   if (/^(USERS|ROLES|MASTER_DATA|SLA|NOTIFICATIONS|INTEGRATIONS|COMMUNICATION_GROUPS)_/.test(code)) return 'administration';
   return 'other';
