@@ -1,11 +1,10 @@
 # Current State
 
 Date: 2026-11-16
-Status: Maintenance type booking flow verified locally; release pending
+Status: Role capability change verified locally; release pending
 Risk: High
 
-- New bookings use the active maintenance type catalog without reinstating deactivated legacy defaults. All three periodic types expose mileage and preserve their distinct subtype in the appointment snapshot and display.
-- Historical appointments retain saved maintenance names and may be edited without forcing a deactivated type back into an update. The five requested types are the defaults for an empty catalog; the live catalog's active flags remain Admin-controlled.
-- Passed: booking API 45/45, web shell 243/243, EN desktop/AR mobile booking edit browser with no serious/critical Axe issues, lint, typecheck, OpenAPI. Security check passed. Live catalog/deactivation verification Not Run.
-- Role permission audit and grouped descriptions are in progress in the working tree and are not part of this booking release.
+- Booking maintenance types release `3b93b09` reached `production`; GitHub run 43868804967 completed validation and VPS deployment successfully. The live catalog's active flags and a signed-in booking were not checked.
+- Assignable permissions now cover CR manager/officer workflow and related task, deal, case, assignment, search, and report capabilities. The role editor has grouped English and Arabic explanations; built-in role grants are seeded by audited migration. Server sessions remain the authority.
+- Passed the focused API suites (auth 41, admin 46, RBAC 2, portal 32, internal tickets 8, search 5, reports 46, tasks 46, deals 9, cases 29, assignments 9, complaints 101), web 243, EN/AR role editor browser proof, lint, typecheck, OpenAPI, security check. Live migration and signed-in role UAT Not Run locally.
 - Preserve untracked `outputs/`, `tmp/`, and `uploads/`.
