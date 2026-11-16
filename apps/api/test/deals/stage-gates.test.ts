@@ -222,6 +222,12 @@ test('cross-branch deal handoff board request is denied and audited', async () =
   assert.deepEqual(auditRecords[0]?.metadata, { deniedBranchId: 'branch_b' });
 });
 
+test('cross-branch deal grant passes the route guard for custom roles', async () => {
+  const guard = new RbacGuard(new Reflector(), { record: async () => undefined } as AuditService);
+  const custom = { ...branchManager, roleCode: 'CUSTOM_ROLE', permissions: ['DEAL_VIEW_BRANCH', 'DEAL_VIEW_ALL'] };
+  assert.equal(await guard.canActivate(context(request(custom, '/deals/handoff-board?branchId=branch_b'))), true);
+});
+
 function serviceOnly(): DealsService {
   return new DealsService(new DealsRepository({} as never));
 }
