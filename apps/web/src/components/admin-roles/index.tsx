@@ -90,14 +90,14 @@ function PermissionChecklist({ copyEnabled, data, initialCodes, locale, onSelect
   return <div className="grid gap-3 rounded-md border border-input bg-background p-3">
     {copyEnabled ? <label className="grid gap-1 text-sm font-medium">{t.copyPermissions}<FormSelect onValueChange={copyFrom} options={data.roles.filter(({ id, code }) => id !== role?.id && code !== 'CUSTOMER_PORTAL').map((source) => ({ label: localizedName(source, locale), value: source.id }))} placeholder={t.selectRole} /></label> : null}
     {!role?.isSystem ? <p className="text-xs text-muted-foreground">{t.navigationHelp}</p> : null}
-    {Object.entries(permissionGroups(t)).map(([group, codes]) => {
-      const groupPermissions = permissions.filter(({ code }) => codes(code));
+    {Object.entries(t.permissionGroups).map(([key, group]) => {
+      const groupPermissions = permissions.filter(({ code }) => permissionGroup(code) === key);
       return groupPermissions.length ? <fieldset className="grid gap-2" disabled={group === t.permissionGroups.navigation && !selected.includes('ROLE_VIEW_CUSTOM')} key={group}><legend className="text-sm font-semibold">{group}</legend><div className="grid gap-2 sm:grid-cols-2">
         {groupPermissions.map((permission) => <label className="flex items-start gap-2 rounded-sm border border-border p-2 text-sm" key={permission.id}><input checked={selected.includes(permission.code)} className="mt-1 size-4 accent-primary" name="permissionCodes" onChange={(event) => {
           const code = permission.code;
           if (code.startsWith('ROLE_VIEW_')) setSelected([...selected.filter((item) => !/^ROLE_(VIEW|NAV)_/.test(item)), code]);
           else setSelected(event.target.checked ? [...selected, code] : selected.filter((item) => item !== code));
-        }} type={permission.code.startsWith('ROLE_VIEW_') ? 'radio' : 'checkbox'} value={permission.code} /><span><span className="block font-medium">{localizedName(permission, locale)}</span><span className="block text-xs text-muted-foreground"><bdi>{permission.code}</bdi></span></span></label>)}
+        }} type={permission.code.startsWith('ROLE_VIEW_') ? 'radio' : 'checkbox'} value={permission.code} /><span><span className="block font-medium">{localizedName(permission, locale)}</span><span className="block text-xs text-muted-foreground">{permissionDescription(permission.code, localizedName(permission, locale), t)}</span><span className="block text-xs text-muted-foreground"><bdi>{permission.code}</bdi></span></span></label>)}
       </div></fieldset> : null;
     })}
   </div>;
@@ -107,13 +107,20 @@ function localizedName(item: { nameAr?: string | null; nameEn: string }, locale:
   return locale === 'ar' && item.nameAr ? item.nameAr : item.nameEn;
 }
 
-function permissionGroups(t: (typeof adminRolesText)[Locale]) {
-  return {
-    [t.permissionGroups.view]: (code: string) => code.startsWith('ROLE_VIEW_'),
-    [t.permissionGroups.navigation]: (code: string) => code.startsWith('ROLE_NAV_'),
-    [t.permissionGroups.complaints]: (code: string) => code === 'STAFF_LOGIN' || code.startsWith('COMPLAINT_'),
-    [t.permissionGroups.operations]: (code: string) => code.startsWith('ATTACHMENT_') || code.startsWith('COMPENSATION_'),
-    [t.permissionGroups.administration]: (code: string) => /^(USERS|ROLES|MASTER_DATA|SLA|NOTIFICATIONS|INTEGRATIONS)_/.test(code),
-    [t.permissionGroups.reporting]: (code: string) => code.startsWith('REPORT_') || code.startsWith('AUDIT_'),
-  };
+function permissionGroup(code: string): keyof (typeof adminRolesText)['en']['permissionGroups'] {
+  if (code.startsWith('ROLE_VIEW_')) return 'view';
+  if (code.startsWith('ROLE_NAV_')) return 'navigation';
+  if (code === 'STAFF_LOGIN') return 'access';
+  if (code.startsWith('COMPLAINT_')) return 'complaints';
+  if (code.startsWith('ATTACHMENT_') || code.startsWith('COMPENSATION_')) return 'operations';
+  if (code.startsWith('TICKET_') || code.startsWith('BYPASS_TICKET_')) return 'tickets';
+  if (code.startsWith('BOOKING_')) return 'booking';
+  if (code.startsWith('REPORT_') || code.startsWith('AUDIT_')) return 'reporting';
+  if (/^(USERS|ROLES|MASTER_DATA|SLA|NOTIFICATIONS|INTEGRATIONS|COMMUNICATION_GROUPS)_/.test(code)) return 'administration';
+  return 'other';
+}
+
+function permissionDescription(code: string, label: string, t: (typeof adminRolesText)[Locale]): string {
+  if (code.startsWith('ROLE_NAV_')) return t.pageHelp.replace('{page}', label);
+  return t.permissionHelp[code] ?? t.defaultPermissionHelp;
 }

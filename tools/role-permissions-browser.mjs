@@ -46,6 +46,10 @@ try {
     const selected = await form.evaluate((element) => new FormData(element).getAll('permissionCodes'));
     assert.deepEqual(selected.filter((code) => String(code).startsWith('ROLE_')), ['ROLE_VIEW_CUSTOM', 'ROLE_NAV_SERVICE_BOOKING']);
     assert.equal(await page.locator('article:has-text("ADMIN") input[value="ROLE_VIEW_CUSTOM"]').count(), 0);
+    for (const code of ['COMPLAINT_CREATE_CROSS_BRANCH', 'TICKET_SETTINGS_MANAGE', 'BOOKING_SETTINGS_MANAGE', 'COMMUNICATION_GROUPS_MANAGE']) {
+      assert.equal(await form.locator(`input[value="${code}"]`).count(), 1);
+    }
+    assert.ok(await form.getByText(locale === 'en' ? 'Service booking' : 'حجوزات الصيانة', { exact: true }).count());
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2));
     assert.deepEqual(errors, []);
     const severe = (await new AxeBuilder({ page }).include('#root').analyze()).violations

@@ -6,7 +6,7 @@ import { AdminRoles } from '../../src/components/admin-roles';
 import type { AdminPermission, AdminRolesData } from '../../src/lib/staff-admin-roles-api';
 
 const permission = (code: string): AdminPermission => ({ id: code, code, nameEn: code, nameAr: code });
-const permissions = ['STAFF_LOGIN', 'ROLE_VIEW_BOTH', 'ROLE_VIEW_CRM', 'ROLE_VIEW_CUSTOM', 'ROLE_NAV_SERVICE_BOOKING'];
+const permissions = ['STAFF_LOGIN', 'ROLE_VIEW_BOTH', 'ROLE_VIEW_CRM', 'ROLE_VIEW_CUSTOM', 'ROLE_NAV_SERVICE_BOOKING', 'COMPLAINT_APPROVE', 'TICKET_SETTINGS_MANAGE', 'BOOKING_SETTINGS_MANAGE', 'COMMUNICATION_GROUPS_MANAGE', 'REPORT_VIEW', 'FUTURE_PERMISSION'];
 const data: AdminRolesData = { permissions: permissions.map(permission), roles: [
   { ...permission('ADMIN'), isActive: true, isSystem: true, permissions: [permission('STAFF_LOGIN')], updatedAt: '2026-11-16', affectedActiveUserCount: 1 },
   { ...permission('SERVICE_LEAD'), isActive: true, isSystem: false, permissions: [permission('STAFF_LOGIN'), permission('ROLE_VIEW_CUSTOM'), permission('ROLE_NAV_SERVICE_BOOKING')], updatedAt: '2026-11-16', affectedActiveUserCount: 1 },
@@ -19,5 +19,16 @@ test('new roles expose localized view and navigation controls while built-in rol
     assert.match(html, /type="radio"[^>]*value="ROLE_VIEW_BOTH"/);
     assert.match(html, /value="ROLE_NAV_SERVICE_BOOKING"/);
     assert.equal(data.roles[0]!.permissions.some((item) => item.code.startsWith('ROLE_')), false);
+  }
+});
+
+test('every assignable permission appears in a category with localized guidance', () => {
+  for (const locale of ['en', 'ar'] as const) {
+    const html = renderToStaticMarkup(<AdminRoles createAction={() => undefined} data={data} locale={locale} />);
+    for (const code of permissions) assert.match(html, new RegExp(`value="${code}"`));
+    assert.match(html, new RegExp(locale === 'en' ? 'Internal tickets' : 'التذاكر الداخلية'));
+    assert.match(html, new RegExp(locale === 'en' ? 'Service booking' : 'حجوزات الصيانة'));
+    assert.match(html, new RegExp(locale === 'en' ? 'Other permissions' : 'صلاحيات أخرى'));
+    assert.match(html, new RegExp(locale === 'en' ? 'Change internal ticket rules' : 'تعديل قواعد وحقول'));
   }
 });
