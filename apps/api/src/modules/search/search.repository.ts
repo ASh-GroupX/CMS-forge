@@ -3,8 +3,6 @@ import { RoleCode, type Prisma } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 import type { SearchActor, SearchResult, SearchType } from './dto/search-response.dto.js';
 
-const MANAGER_ROLES = new Set<string>([RoleCode.ADMIN, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.MGMT_READONLY]);
-
 @Injectable()
 export class SearchRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -18,7 +16,7 @@ export class SearchRepository {
   }
 
   private async complaints(q: string, limit: number, actor: SearchActor): Promise<SearchResult[]> {
-    const rows = await this.prisma.complaint.findMany({ where: { ...branchScope(actor), OR: [{ referenceNumber: { contains: q, mode: 'insensitive' } }, { subject: { contains: q, mode: 'insensitive' } }, { customer: { nameEn: { contains: q, mode: 'insensitive' } } }, { customer: { nameAr: { contains: q, mode: 'insensitive' } } }, { customer: { phone: { contains: q } } }] }, orderBy: { updatedAt: 'desc' }, take: limit, select: { id: true, referenceNumber: true, subject: true, customer: { select: { nameEn: true, nameAr: true } }, branch: { select: { nameEn: true, nameAr: true } } } });
+    const rows = await this.prisma.complaint.findMany({ where: { ...branchScope(actor, 'COMPLAINT_VIEW_ALL'), OR: [{ referenceNumber: { contains: q, mode: 'insensitive' } }, { subject: { contains: q, mode: 'insensitive' } }, { customer: { nameEn: { contains: q, mode: 'insensitive' } } }, { customer: { nameAr: { contains: q, mode: 'insensitive' } } }, { customer: { phone: { contains: q } } }] }, orderBy: { updatedAt: 'desc' }, take: limit, select: { id: true, referenceNumber: true, subject: true, customer: { select: { nameEn: true, nameAr: true } }, branch: { select: { nameEn: true, nameAr: true } } } });
     return rows.map((row) => ({ type: 'COMPLAINT', id: row.id, label: `${row.referenceNumber} · ${row.customer.nameEn}`, labelAr: `${row.referenceNumber} · ${row.customer.nameAr}`, context: `${row.subject} · ${row.branch.nameEn}`, contextAr: `${row.subject} · ${row.branch.nameAr}`, href: `/complaints/${row.id}` }));
   }
 
@@ -33,7 +31,7 @@ export class SearchRepository {
   }
 
   private async deals(q: string, limit: number, actor: SearchActor): Promise<SearchResult[]> {
-    const rows = await this.prisma.deal.findMany({ where: { ...branchScope(actor), OR: [{ title: { contains: q, mode: 'insensitive' } }, { currentHolder: { nameEn: { contains: q, mode: 'insensitive' } } }, { currentHolder: { nameAr: { contains: q, mode: 'insensitive' } } }] }, orderBy: { updatedAt: 'desc' }, take: limit, select: { id: true, title: true, branch: { select: { nameEn: true, nameAr: true } }, currentHolder: { select: { nameEn: true, nameAr: true } } } });
+    const rows = await this.prisma.deal.findMany({ where: { ...branchScope(actor, 'DEAL_VIEW_ALL'), OR: [{ title: { contains: q, mode: 'insensitive' } }, { currentHolder: { nameEn: { contains: q, mode: 'insensitive' } } }, { currentHolder: { nameAr: { contains: q, mode: 'insensitive' } } }] }, orderBy: { updatedAt: 'desc' }, take: limit, select: { id: true, title: true, branch: { select: { nameEn: true, nameAr: true } }, currentHolder: { select: { nameEn: true, nameAr: true } } } });
     return rows.map((row) => ({ type: 'DEAL', id: row.id, label: row.title, labelAr: row.title, context: `${row.currentHolder?.nameEn ?? ''} · ${row.branch.nameEn}`, contextAr: `${row.currentHolder?.nameAr ?? ''} · ${row.branch.nameAr}`, href: '/deals/handoff' }));
   }
 
@@ -43,17 +41,17 @@ export class SearchRepository {
   }
 }
 
-function branchScope(actor: SearchActor): { branchId?: string } { return actor.roleCode === RoleCode.ADMIN || actor.roleCode === RoleCode.CR_MANAGER ? {} : { branchId: actor.branchId ?? '' }; }
+function branchScope(actor: SearchActor, permission: string): { branchId?: string } { return actor.roleCode === RoleCode.ADMIN || actor.permissions?.includes(permission) ? {} : { branchId: actor.branchId ?? '' }; }
 function participantAccess(actor: SearchActor): Prisma.TaskWhereInput[] { return [{ ownerId: actor.userId }, { assigneeId: actor.userId }, { nextActionWhoId: actor.userId }, { participants: { some: { userId: actor.userId } } }]; }
 function taskAccess(actor: SearchActor): Prisma.TaskWhereInput {
-  if (actor.roleCode === RoleCode.ADMIN) return {};
+  if (actor.permissions?.includes('TASK_MANAGE_ALL')) return {};
   const participant = participantAccess(actor);
-  if (!MANAGER_ROLES.has(actor.roleCode) || !actor.branchId) return { OR: participant };
+  if (!actor.permissions?.includes('TASK_VIEW_BRANCH') || !actor.branchId) return { OR: participant };
   return { OR: [...participant, { confidentialityLevel: 'NORMAL', OR: [{ owner: { branchId: actor.branchId } }, { assignee: { branchId: actor.branchId } }, { nextActionWho: { branchId: actor.branchId } }] }] };
 }
 function caseAccess(actor: SearchActor): Prisma.CaseWhereInput {
-  if (actor.roleCode === RoleCode.ADMIN) return {};
+  if (actor.permissions?.includes('CASE_VIEW_ALL')) return {};
   const own = [{ ownerId: actor.userId }, { participants: { some: { userId: actor.userId } } }];
-  return MANAGER_ROLES.has(actor.roleCode) && actor.branchId ? { OR: [...own, { branchId: actor.branchId, confidentialityLevel: 'NORMAL' }] } : { OR: own };
+  return actor.permissions?.includes('CASE_VIEW_BRANCH') && actor.branchId ? { OR: [...own, { branchId: actor.branchId, confidentialityLevel: 'NORMAL' }] } : { OR: own };
 }
 function customerAccess(actor: SearchActor): Prisma.CustomerWhereInput { return actor.roleCode === RoleCode.ADMIN ? {} : { complaints: { some: { branchId: actor.branchId ?? '' } } }; }
