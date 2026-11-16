@@ -1,5 +1,4 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { RoleCode } from '@prisma/client';
 import { ZipArchive } from 'archiver';
 import bidiFactory from 'bidi-js';
 import PDFDocument from 'pdfkit';
@@ -81,8 +80,8 @@ export class ReportsRecordExportService {
     const row = await this.prisma.complaint.findFirst({
       where: {
         id,
-        ...(scope.role === RoleCode.ADMIN ? {} : scope.branchId ? { branchId: scope.branchId } : {}),
-        ...(scope.role === RoleCode.CR_MANAGER || (!scope.branchId && scope.role !== RoleCode.ADMIN)
+        ...(scope.permissions?.includes('REPORT_SCOPE_ALL') ? {} : scope.permissions?.includes('REPORT_SCOPE_BRANCH') && scope.branchId ? { branchId: scope.branchId } : {}),
+        ...(!scope.permissions?.includes('REPORT_SCOPE_ALL') && (!scope.permissions?.includes('REPORT_SCOPE_BRANCH') || !scope.branchId)
           ? { departmentId: scope.departmentId ?? '__no_department_scope__' }
           : {}),
       },
@@ -117,9 +116,9 @@ export class ReportsRecordExportService {
     const row = await this.prisma.internalTicket.findFirst({
       where: {
         id,
-        ...(scope.role === RoleCode.ADMIN ? {} : scope.role === RoleCode.CR_MANAGER
-          ? { targetDepartmentId: departmentId }
-          : scope.branchId ? { targetDepartment: { branchId: scope.branchId } } : { targetDepartmentId: departmentId }),
+        ...(scope.permissions?.includes('REPORT_SCOPE_ALL') ? {} : scope.permissions?.includes('REPORT_SCOPE_BRANCH') && scope.branchId
+          ? { targetDepartment: { branchId: scope.branchId } }
+          : { targetDepartmentId: departmentId }),
       },
       include: {
         requestedBy: { select: { id: true, nameEn: true, nameAr: true, departmentId: true } },

@@ -17,6 +17,7 @@ export type DashboardReportScope = {
   branchId?: string | null;
   departmentId?: string | null;
   userId?: string | null;
+  permissions?: string[];
   now?: Date | string;
 };
 

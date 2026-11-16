@@ -3,7 +3,20 @@ import test from 'node:test';
 import { RoleCode } from '@prisma/client';
 import { createPdf, ReportsRecordExportService } from '../../src/modules/reports/reports.record-export.service.js';
 
-const scope = { role: RoleCode.ADMIN, branchId: null, departmentId: null, userId: 'admin-1' };
+const scope = { role: RoleCode.ADMIN, branchId: null, departmentId: null, userId: 'admin-1', permissions: ['REPORT_SCOPE_ALL'] };
+
+test('record export scope follows grants for custom roles and denies ungranted global access', async () => {
+  const queries: unknown[] = [];
+  const prisma: any = { complaint: { findFirst: async (query: unknown) => { queries.push(query); return null; } } };
+  const service = new ReportsRecordExportService(prisma, {} as any, { record: async () => undefined } as any);
+  for (const permissions of [['REPORT_SCOPE_BRANCH'], []]) {
+    await assert.rejects(service.createArchive('complaint', 'record-1', { role: 'CUSTOM_ROLE' as RoleCode, branchId: 'branch-1', departmentId: 'dept-1', permissions }, {}), (error: any) => error?.code === 'RBAC_FORBIDDEN');
+  }
+  assert.deepEqual((queries[0] as { where: unknown }).where, { id: 'record-1', branchId: 'branch-1' });
+  assert.deepEqual((queries[1] as { where: unknown }).where, { id: 'record-1', departmentId: 'dept-1' });
+  await assert.rejects(service.createArchive('complaint', 'record-1', { role: 'CUSTOM_ROLE' as RoleCode, branchId: null, departmentId: 'dept-1', permissions: ['REPORT_SCOPE_ALL'] }, {}), (error: any) => error?.code === 'RBAC_FORBIDDEN');
+  assert.deepEqual((queries[2] as { where: unknown }).where, { id: 'record-1' });
+});
 
 test('complete record PDFs embed Arabic glyphs for mixed-language text', async () => {
   const pdf = await createPdf('Complete record — السجل الكامل', [

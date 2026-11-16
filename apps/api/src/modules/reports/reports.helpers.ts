@@ -63,6 +63,7 @@ export function dashboardScope(request: AuthenticatedRequest, queryBranchId?: st
     branchId: scopedBranchId(queryBranchId, request),
     departmentId: request.principal?.departmentId ?? null,
     userId: request.principal?.userId ?? null,
+    permissions: request.principal?.permissions ?? [],
   };
 }
 
