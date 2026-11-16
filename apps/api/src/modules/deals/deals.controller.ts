@@ -14,16 +14,16 @@ export class DealsController {
 
   @Get('handoff-board')
   @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
-  @Permissions('COMPLAINT_ASSIGN')
+  @Permissions('DEAL_VIEW_BRANCH')
   @BranchScoped()
   async handoffBoard(@Req() request: AuthenticatedRequest): Promise<DealHandoffBoardResponseDto> {
     const principal = requirePrincipal(request);
-    return this.dealsService.handoffBoard({ roleCode: principal.roleCode, branchId: principal.branchId });
+    return this.dealsService.handoffBoard({ roleCode: principal.roleCode, branchId: principal.branchId, permissions: principal.permissions ?? [] });
   }
 
   @Post()
   @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)
-  @Permissions('COMPLAINT_ASSIGN')
+  @Permissions('DEAL_MANAGE_BRANCH')
   @BranchScoped()
   async create(@Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
     const principal = requirePrincipal(request);
@@ -33,7 +33,7 @@ export class DealsController {
 
   @Post(':id/advance')
   @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)
-  @Permissions('COMPLAINT_ASSIGN')
+  @Permissions('DEAL_MANAGE_BRANCH')
   @BranchScoped()
   async advance(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
     const principal = requirePrincipal(request);
@@ -42,7 +42,7 @@ export class DealsController {
 
   @Patch(':id/blocker')
   @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)
-  @Permissions('COMPLAINT_ASSIGN')
+  @Permissions('DEAL_MANAGE_BRANCH')
   @BranchScoped()
   async blocker(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
     const principal = requirePrincipal(request);
@@ -52,7 +52,7 @@ export class DealsController {
 
   @Patch(':id/details')
   @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)
-  @Permissions('COMPLAINT_ASSIGN')
+  @Permissions('DEAL_MANAGE_BRANCH')
   @BranchScoped()
   async details(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
     const principal = requirePrincipal(request);

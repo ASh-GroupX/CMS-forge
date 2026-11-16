@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { RoleCode, TaskLinkEntityType } from '@prisma/client';
+import { TaskLinkEntityType } from '@prisma/client';
 import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import type { DealHandoffBoardResponseDto } from './dto/deal-response.dto.js';
@@ -18,8 +18,8 @@ export type CreateDealInput = { title: string; branchId: string; ownerId: string
 export type AdvanceDealStageInput = { deal: DealRecord; toStage: DealStageCode; currentHolderId?: string | null; assignedDepartmentId?: string | null; stageDueAt: Date | string; blocker?: string | null; updateNote?: string | null };
 
 type DealAuditContext = { actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
-type DealBoardScope = { roleCode: string; branchId: string | null };
-export type DealWriteActor = { userId: string; roleCode: string; branchId: string | null };
+type DealBoardScope = { roleCode: string; branchId: string | null; permissions?: string[] };
+export type DealWriteActor = { userId: string; roleCode: string; branchId: string | null; permissions?: string[] };
 
 @Injectable()
 export class DealsService {
@@ -80,7 +80,8 @@ export class DealsService {
   }
 
   async createForActor(input: Omit<CreateDealInput, 'branchId' | 'ownerId'> & { branchId?: string }, actor: DealWriteActor, audit: DealAuditContext = {}): Promise<DealRecord> {
-    const branchId = actor.roleCode === RoleCode.ADMIN ? requiredText(input.branchId ?? '', 'branchId') : scopedBranchId(actor);
+    if (!actor.permissions?.includes('DEAL_MANAGE_BRANCH') && !actor.permissions?.includes('DEAL_MANAGE_ALL')) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+    const branchId = actor.permissions?.includes('DEAL_MANAGE_ALL') ? requiredText(input.branchId ?? '', 'branchId') : scopedBranchId(actor);
     const deal = await this.createPersisted({ ...input, branchId, ownerId: actor.userId }, audit, actor);
     await this.assignmentsService?.notifyAfterCommit?.('DEAL', deal.id, { href: `/deals/${deal.id}`, title: deal.title });
     return deal;
@@ -198,14 +199,11 @@ export class DealsService {
 }
 
 function managerBranchId(scope: DealBoardScope): string | null {
-  if (!managerRoles.has(scope.roleCode)) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
-  if (scope.roleCode === RoleCode.ADMIN) return null;
+  if (!scope.permissions?.includes('DEAL_VIEW_BRANCH') && !scope.permissions?.includes('DEAL_VIEW_ALL')) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+  if (scope.permissions?.includes('DEAL_VIEW_ALL')) return null;
   if (!scope.branchId) throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
   return scope.branchId;
 }
-
-const managerRoles = new Set<string>([RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN, RoleCode.MGMT_READONLY]);
-const writeRoles = new Set<string>([RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN]);
 
 function scopedBranchId(actor: DealWriteActor): string {
   if (!actor.branchId) throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
@@ -213,8 +211,8 @@ function scopedBranchId(actor: DealWriteActor): string {
 }
 
 function assertDealWriteAllowed(deal: DealRecord, actor: DealWriteActor): void {
-  if (!writeRoles.has(actor.roleCode)) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
-  if (actor.roleCode !== RoleCode.ADMIN && scopedBranchId(actor) !== deal.branchId) {
+  if (!actor.permissions?.includes('DEAL_MANAGE_BRANCH') && !actor.permissions?.includes('DEAL_MANAGE_ALL')) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+  if (!actor.permissions?.includes('DEAL_MANAGE_ALL') && scopedBranchId(actor) !== deal.branchId) {
     throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
   }
 }

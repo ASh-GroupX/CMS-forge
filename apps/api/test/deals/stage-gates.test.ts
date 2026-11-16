@@ -168,7 +168,7 @@ test('manager sees scoped deal handoff board derived from deal data', async () =
     },
   } as unknown as DealsRepository);
 
-  const result = await service.handoffBoard({ roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a' }, new Date('2026-06-20T10:00:00.000Z'));
+  const result = await service.handoffBoard({ roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a', permissions: ['DEAL_VIEW_BRANCH'] }, new Date('2026-06-20T10:00:00.000Z'));
 
   assert.equal(scopedBranch, 'branch_a');
   assert.deepEqual(historyIds, ['late', 'blocked']);
@@ -189,15 +189,15 @@ test('deal routes require permissions and keep CSRF/branch-scope guards', async 
 
   const auditRecords: AuditRecordInput[] = [];
   const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
-  assert.equal(await guard.canActivate(context(request({ ...branchManager, permissions: ['COMPLAINT_ASSIGN'] }), 'handoffBoard')), true);
-  assert.equal(await guard.canActivate(context(request({ ...branchManager, permissions: ['COMPLAINT_ASSIGN'] }, '/deals'), 'create')), true);
+  assert.equal(await guard.canActivate(context(request({ ...branchManager, permissions: ['DEAL_VIEW_BRANCH'] }), 'handoffBoard')), true);
+  assert.equal(await guard.canActivate(context(request({ ...branchManager, permissions: ['DEAL_MANAGE_BRANCH'] }, '/deals'), 'create')), true);
 
   await assert.rejects(
     guard.canActivate(context(request({ ...employee, permissions: ['REPORT_VIEW'] }), 'handoffBoard')),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
   assert.equal(auditRecords[0]?.action, 'permission_forbidden');
-  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['COMPLAINT_ASSIGN']);
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['DEAL_VIEW_BRANCH']);
 });
 
 test('deals module wires audit service and permission guard for runtime denies', () => {
@@ -234,6 +234,7 @@ const branchManager: StaffPrincipal = {
   nameAr: 'Manager',
   roleCode: RoleCode.BRANCH_MANAGER,
   branchId: 'branch_a',
+  permissions: ['DEAL_VIEW_BRANCH', 'DEAL_MANAGE_BRANCH'],
 };
 
 const employee: StaffPrincipal = { ...branchManager, userId: 'employee_a', roleCode: RoleCode.CR_OFFICER };

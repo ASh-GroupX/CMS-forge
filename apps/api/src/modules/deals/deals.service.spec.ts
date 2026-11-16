@@ -140,7 +140,7 @@ test('deal details update does not advance stage or create a task', async () => 
     currentHolderId: 'sales_2',
     stageDueAt: '2026-06-22T09:00:00.000Z',
     updateNote: 'Moved to sales lead while staying in lead stage.',
-  }, { userId: 'manager_1', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' }, { actorId: 'manager_1' });
+  }, { userId: 'manager_1', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1', permissions: ['DEAL_MANAGE_BRANCH'] }, { actorId: 'manager_1' });
 
   assert.equal(result.stage, 'LEAD');
   assert.equal(result.currentHolderId, 'sales_2');
@@ -165,7 +165,7 @@ test('deal handoff board derives stage, stuck, holder, and delay data from scope
   } as unknown as DealsRepository;
   const service = new DealsService(repository);
 
-  const result = await service.handoffBoard({ roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' }, new Date('2026-06-20T10:00:00.000Z'));
+  const result = await service.handoffBoard({ roleCode: 'BRANCH_MANAGER', branchId: 'branch_1', permissions: ['DEAL_VIEW_BRANCH'] }, new Date('2026-06-20T10:00:00.000Z'));
 
   assert.equal(scopedBranch, 'branch_1');
   assert.equal(result.byStage.find((stage) => stage.stage === 'LEAD')?.count, 1);
@@ -183,6 +183,14 @@ test('ordinary employee is denied deal handoff board access in service', async (
     service.handoffBoard({ roleCode: 'CR_OFFICER', branchId: 'branch_1' }),
     (error) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
+});
+
+test('deal oversight follows grants rather than role names', async () => {
+  let branch: string | null | undefined;
+  const service = new DealsService({ listHandoffBoard: async (value: string | null) => { branch = value; return []; }, listHandoffHistory: async () => [] } as unknown as DealsRepository);
+  await service.handoffBoard({ roleCode: 'CUSTOM_ROLE', branchId: 'branch_1', permissions: ['DEAL_VIEW_BRANCH'] });
+  assert.equal(branch, 'branch_1');
+  await assert.rejects(service.handoffBoard({ roleCode: 'CR_MANAGER', branchId: 'branch_1', permissions: [] }), (error) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN');
 });
 
 function repo(): DealsRepository {
