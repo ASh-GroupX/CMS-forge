@@ -6,12 +6,12 @@ import { FormSelect } from '../../../../components/ui/form-select';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
 import {
-  createAppointmentApi, fetchCarModels, fetchServiceAppointments, fetchServiceBookingLanes,
+  createAppointmentApi, fetchCarModels, fetchServiceAppointments, fetchServiceBookingLanes, updateAppointmentApi,
   type CarModel, type MaintenanceType, type ServiceAppointment,
 } from '../../../../lib/staff-service-bookings-api';
 import type { ServiceBookingLane } from '../../../../lib/staff-service-booking-lanes-api';
 import {
-  buildAmmanCustomerNotes, parseAmmanNotesRows, planAmmanNotesImport, suggestCatalogModel,
+  buildAmmanCustomerNotes, findAmmanNotesToClean, parseAmmanNotesRows, planAmmanNotesImport, suggestCatalogModel,
   type AmmanImportRow,
 } from '../../../../lib/amman-notes-import';
 import type { Locale } from '../../../../i18n/staff-shell';
@@ -29,6 +29,7 @@ export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale }: {
   const [catalog, setCatalog] = useState(carModels);
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState(0);
+  const [cleaned, setCleaned] = useState(0);
   const [message, setMessage] = useState<string>(t.noFile);
 
   const kinds = useMemo(() => [...new Set(rows.map((row) => row.carType))].sort(), [rows]);
@@ -36,13 +37,14 @@ export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale }: {
   const ready = plan.filter((item) => item.startTime);
   const imported = plan.filter((item) => item.reason === 'already-imported');
   const conflicts = plan.filter((item) => item.reason && item.reason !== 'already-imported');
+  const toClean = useMemo(() => lane ? findAmmanNotesToClean(rows, existing, lane.id) : [], [rows, existing, lane]);
   const options = useMemo(() => catalog.filter((model) => model.isActive).map((model) => ({
     value: model.id, label: `${model.brand} · ${model.nameEn}`,
   })).sort((a, b) => a.label.localeCompare(b.label)), [catalog]);
 
   async function load(file: File | undefined) {
     if (!file) return;
-    setBusy(true); setCreated(0); setMessage(t.loading); setRows([]);
+    setBusy(true); setCreated(0); setCleaned(0); setMessage(t.loading); setRows([]);
     try {
       const parsed = parseAmmanNotesRows(JSON.parse(await file.text()) as unknown);
       if (parsed.length !== 359) throw new Error(t.count);
@@ -92,6 +94,25 @@ export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale }: {
     setMessage(t.finished); setBusy(false);
   }
 
+  async function cleanImportedNotes() {
+    if (busy || !toClean.length) return;
+    setBusy(true); setCleaned(0); setMessage('');
+    let completed = 0;
+    for (const { appointmentId, row } of toClean) {
+      try {
+        const result = await updateAppointmentApi(appointmentId, { notes: row.originalText });
+        if (!result.ok || !result.appointment) throw new Error(result.message || t.failed);
+        completed += 1; setCleaned(completed);
+        setExisting((previous) => previous.map((item) => item.id === appointmentId ? result.appointment! : item));
+      } catch (error) {
+        setMessage(`${t.issue} ${row.sourceKey}: ${error instanceof Error ? error.message : t.failed}`);
+        setBusy(false);
+        return;
+      }
+    }
+    setMessage(t.cleanFinished); setBusy(false);
+  }
+
   return (
     <section aria-label={t.title} className="space-y-5 rounded-2xl border border-line-subtle bg-surface p-5">
       <div><h2 className="text-lg font-semibold text-content-strong">{t.title}</h2><p className="text-sm text-content-muted">{t.subtitle}</p></div>
@@ -118,6 +139,10 @@ export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale }: {
         </details> : null}
         <Button onClick={() => void importReady()} disabled={busy || ready.length === 0}>{t.start}</Button>
         <p aria-live="polite" className="text-sm text-content-muted">{t.progress}: {created}</p>
+        {toClean.length > 0 || cleaned > 0 ? <>
+          <Button onClick={() => void cleanImportedNotes()} disabled={busy || toClean.length === 0}>{t.clean}</Button>
+          <p aria-live="polite" className="text-sm text-content-muted">{t.cleaned}: {cleaned}</p>
+        </> : null}
       </> : null}
       {message ? <p role={rows.length ? 'status' : 'alert'} className="text-sm text-content-muted">{message}</p> : null}
     </section>

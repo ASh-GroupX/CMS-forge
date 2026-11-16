@@ -42,14 +42,19 @@ export function parseAmmanNotesRows(value: unknown): AmmanImportRow[] {
 export function sourceMarker(key: string): string { return `${MARKER}${key}`; }
 
 export function buildAmmanCustomerNotes(row: AmmanImportRow): string {
-  const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  let requests = row.originalText;
-  for (const value of [row.customerName, row.customerPhone, row.carType]) {
-    if (value) requests = requests.replace(new RegExp(escape(value), 'i'), '');
-  }
-  requests = requests.replace(/^[\s/\\|:,;\-–—]+|[\s/\\|:,;\-–—]+$/g, '')
-    .replace(/\s*[/\\|]+\s*/g, ' / ').replace(/\s+/g, ' ').trim();
-  return `${sourceMarker(row.sourceKey)}\nNotes / Customer Requests: ${requests || row.originalText}\nSource car type: ${row.carType}\nSource hour: ${row.hour}\nOriginal source: ${row.originalText}`;
+  return row.originalText;
+}
+
+export function findAmmanNotesToClean(rows: AmmanImportRow[], existing: ServiceAppointment[], laneId: string) {
+  const byKey = new Map(rows.map((row) => [row.sourceKey, row]));
+  return existing.flatMap((item) => {
+    if (item.bookingLaneId !== laneId) return [];
+    const key = item.notes.match(/^Amman Notes source: ([^\s]+)\n/)?.[1];
+    const row = key ? byKey.get(key) : undefined;
+    return row && item.date.slice(0, 10) === row.date && item.customerName === row.customerName
+      && item.customerPhone === row.customerPhone && item.notes.endsWith(`Original source: ${row.originalText}`)
+      ? [{ appointmentId: item.id, row }] : [];
+  });
 }
 
 export function suggestCatalogModel(carType: string, models: CarModel[]): string {
@@ -102,6 +107,8 @@ export function planAmmanNotesImport(
   }
   return rows.map((row) => {
     if (importedKeys.has(row.sourceKey)) return { row, reason: 'already-imported' };
+    if (active.some((item) => item.date.slice(0, 10) === row.date && item.customerPhone === row.customerPhone
+      && item.customerName === row.customerName && item.notes === row.originalText)) return { row, reason: 'already-imported' };
     if (active.some((item) => item.date.slice(0, 10) === row.date && phoneKey(item.customerPhone) === phoneKey(row.customerPhone)
       && item.startTime.slice(0, 2) === row.hour.slice(0, 2))) return { row, reason: 'possible-duplicate' };
     if (!modelByType[row.carType]) return { row, reason: 'model-unmapped' };

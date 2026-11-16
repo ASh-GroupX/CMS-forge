@@ -36,6 +36,7 @@ try {
     const page = await context.newPage();
     const errors = [];
     const posted = [];
+    const patched = [];
     page.on('pageerror', (error) => errors.push(error.message));
     await page.route('**/service-bookings/car-models?*', (route) => route.fulfill({ status: 200, contentType: 'application/json',
       body: JSON.stringify([
@@ -47,7 +48,14 @@ try {
     await page.route('**/service-bookings/centers/center_main/lanes', (route) => route.fulfill({ status: 200, contentType: 'application/json',
       body: JSON.stringify([{ id: 'notes', serviceCenterId: 'center_main', code: 'NOT', nameEn: 'notes', nameAr: 'ملاحظات',
         maxDailyAppointments: 70, maxPerHour: 9, maxPerSlot: 3, isActive: true }]) }));
-    await page.route('**/service-bookings/appointments?*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+    const legacy = { id: 'legacy-1', date: '2026-11-19', startTime: '09:00', status: 'BOOKED', bookingLaneId: 'notes',
+      customerName: 'Customer 1', customerPhone: '0790000000',
+      notes: 'Amman Notes source: 2026-11-19-B2-1\nNotes / Customer Requests: Original note 1\nOriginal source: Original note 1' };
+    await page.route('**/service-bookings/appointments?*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([legacy]) }));
+    await page.route('**/service-bookings/appointments/legacy-1', (route) => {
+      patched.push({ csrf: route.request().headers()['x-csrf-token'], body: route.request().postDataJSON() });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...legacy, ...patched.at(-1).body }) });
+    });
     await page.route('**/service-bookings/appointments', (route) => {
       const body = route.request().postDataJSON();
       posted.push({ csrf: route.request().headers()['x-csrf-token'], body });
@@ -73,7 +81,10 @@ try {
     await page.getByText(locale === 'en' ? 'Created: 1' : 'تم إنشاء: 1').waitFor();
     assert.equal(posted.length, 2);
     assert.equal(posted[0].csrf, 'proof-csrf');
-    assert.match(posted[0].body.notes, /Notes \/ Customer Requests:/);
+    assert.equal(posted[0].body.notes, 'Original note 2');
+    await page.getByRole('button', { name: locale === 'en' ? 'Keep original note only' : 'الاحتفاظ بالنص الأصلي فقط' }).click();
+    await page.getByText(locale === 'en' ? 'Notes cleaned: 1' : 'ملاحظات تم تعديلها: 1').waitFor();
+    assert.deepEqual(patched, [{ csrf: 'proof-csrf', body: { notes: 'Original note 1' } }]);
     assert.deepEqual(errors, []);
     await context.close();
   }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildAmmanCustomerNotes, parseAmmanNotesRows, planAmmanNotesImport, sourceMarker } from '../../src/lib/amman-notes-import';
+import { buildAmmanCustomerNotes, findAmmanNotesToClean, parseAmmanNotesRows, planAmmanNotesImport, sourceMarker } from '../../src/lib/amman-notes-import';
 import type { ServiceAppointment } from '../../src/lib/staff-service-bookings-api';
 import type { ServiceBookingLane } from '../../src/lib/staff-service-booking-lanes-api';
 
@@ -37,10 +37,21 @@ test('marks an existing same-hour phone as possible duplicate', () => {
   assert.equal(plan[0]?.reason, 'possible-duplicate');
 });
 
-test('puts mileage and complaints first in customer requests while keeping the original text', () => {
+test('saves only the original text and still recognizes a cleaned import', () => {
   const row = { ...base, originalText: 'Test Customer / 0791234567 / Mage / 20k / brake noise' };
-  const notes = buildAmmanCustomerNotes(row);
-  assert.match(notes, /Notes \/ Customer Requests: 20k \/ brake noise/);
-  assert.match(notes, /Original source: Test Customer \/ 0791234567 \/ Mage/);
-  assert.match(notes, /Amman Notes source: 2026-11-19-B2-1/);
+  assert.equal(buildAmmanCustomerNotes(row), row.originalText);
+  const existing = [{ id: 'created-1', date: row.date, startTime: row.hour, status: 'BOOKED', bookingLaneId: lane.id,
+    customerName: row.customerName, customerPhone: row.customerPhone, notes: row.originalText }] as ServiceAppointment[];
+  assert.equal(planAmmanNotesImport([row], existing, lane, { Mage: 'car-mage' })[0]?.reason, 'already-imported');
+  assert.deepEqual(findAmmanNotesToClean([row], existing, lane.id), []);
+});
+
+test('cleans only matching imported notes and ignores other appointments', () => {
+  const row = { ...base, originalText: 'Test Customer / 0791234567 / Mage / brake noise' };
+  const legacy = `${sourceMarker(row.sourceKey)}\nNotes / Customer Requests: brake noise\nOriginal source: ${row.originalText}`;
+  const item = { id: 'created-1', date: row.date, startTime: row.hour, bookingLaneId: lane.id,
+    customerName: row.customerName, customerPhone: row.customerPhone, notes: legacy } as ServiceAppointment;
+  assert.deepEqual(findAmmanNotesToClean([row], [item], lane.id), [{ appointmentId: item.id, row }]);
+  assert.deepEqual(findAmmanNotesToClean([row], [{ ...item, customerPhone: '0790000000' }], lane.id), []);
+  assert.deepEqual(findAmmanNotesToClean([row], [{ ...item, notes: 'Staff edited this note' }], lane.id), []);
 });
