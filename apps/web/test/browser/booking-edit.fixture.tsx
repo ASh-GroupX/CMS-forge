@@ -22,8 +22,14 @@ export function BookingEditFixture({ locale }: { locale: 'en' | 'ar' }) {
     <section aria-label={t.modal.editDetailsTab}>
       <h1 className="mb-4 text-xl font-bold">{t.modal.editDetailsTab}</h1>
       <AppointmentDetailsEditForm appointment={appointment} carModels={[{ id: 'car-1', brand: 'BYD', nameEn: 'HAN', nameAr: 'هان', isActive: true }]}
-        maintenanceTypes={[{ id: 'maint_oil_filter', nameEn: 'Oil and Filter Change', nameAr: 'تغيير الزيت والفلتر', estimatedDurationMinutes: 30, isActive: true },
-          { id: 'maint_periodic_40k', nameEn: 'Periodic Maintenance 40,000 km', nameAr: 'الصيانة الدورية', estimatedDurationMinutes: 60, isActive: true }]}
+        maintenanceTypes={[
+          { id: 'maint_periodic', nameEn: 'Periodic Maintenance', nameAr: 'صيانة دورية', estimatedDurationMinutes: 30, isActive: true },
+          { id: 'maint_periodic_electrical_notes', nameEn: 'Periodic Maintenance with Electrical Notes', nameAr: 'صيانة دورية مع ملاحظات كهرباء', estimatedDurationMinutes: 30, isActive: true },
+          { id: 'maint_periodic_mechanical_notes', nameEn: 'Periodic Maintenance with Mechanical Notes', nameAr: 'صيانة دورية مع ملاحظات ميكانيك', estimatedDurationMinutes: 30, isActive: true },
+          { id: 'maint_mechanical_notes', nameEn: 'Mechanical Notes', nameAr: 'ملاحظات ميكانيك', estimatedDurationMinutes: 30, isActive: true },
+          { id: 'maint_electrical_notes', nameEn: 'Electrical Notes', nameAr: 'ملاحظات كهرباء', estimatedDurationMinutes: 30, isActive: true },
+          { id: 'maint_oil_filter', nameEn: 'Oil and Filter Change', nameAr: 'تغيير الزيت والفلتر', estimatedDurationMinutes: 30, isActive: false },
+        ]}
         isAr={locale === 'ar'} onSuccess={setUpdated} t={t} />
       <output data-testid="updated">{updated?.maintenanceTypeId}</output>
     </section>

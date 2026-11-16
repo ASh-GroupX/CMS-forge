@@ -49,17 +49,25 @@ try {
         maxDailyAppointments: 80, maxPerHour: 9, maxPerSlot: 3, position: 0, isActive: true, updatedAt: '2026-11-14T08:00:00.000Z' },
     ]) }));
     await page.goto(`http://127.0.0.1:${server.address().port}/?${locale}`);
+    await page.getByRole('button', { name: t.modal.saveDetails }).click();
+    assert.equal(await page.evaluate(() => 'maintenanceTypeId' in window.savedBooking.data), false, `${locale}: archived type stays untouched when editing other details`);
     await page.getByRole('combobox', { name: t.modal.maintenanceType }).click();
-    await page.getByRole('option', { name: t.modal.periodicMaintenance }).click();
+    assert.equal(await page.getByRole('option').count(), 5);
+    assert.equal(await page.getByRole('option', { name: locale === 'ar' ? 'تغيير الزيت والفلتر' : 'Oil and Filter Change' }).count(), 0);
+    await page.getByRole('option', { name: locale === 'ar' ? 'صيانة دورية مع ملاحظات ميكانيك' : 'Periodic Maintenance with Mechanical Notes' }).click();
     await page.getByRole('combobox', { name: t.modal.periodicMileage }).click();
     await page.getByRole('option').nth(5).click();
     await page.locator('form').first().evaluate((form) => { form.scrollTop = 0; });
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: `${output}/${locale}-edit-and-lane-color.png`, fullPage: true });
+    if (locale === 'ar') {
+      await page.getByRole('combobox', { name: t.modal.periodicMileage }).scrollIntoViewIfNeeded();
+      await page.screenshot({ path: `${output}/ar-periodic-mileage.png`, fullPage: true });
+    }
     const severe = (await new AxeBuilder({ page }).include('main').analyze()).violations.filter((item) => ['critical', 'serious'].includes(item.impact));
     assert.deepEqual(severe.map((item) => ({ id: item.id, targets: item.nodes.map((node) => node.target.join(' ')) })), []);
     await page.getByRole('button', { name: t.modal.saveDetails }).click();
-    assert.equal(await page.evaluate(() => window.savedBooking.data.maintenanceTypeId), 'maint_periodic_40k');
+    assert.equal(await page.evaluate(() => window.savedBooking.data.maintenanceTypeId), 'maint_periodic_mechanical_notes');
     assert.equal(await page.evaluate(() => window.savedBooking.data.periodicMileageKm), 40000);
     await page.getByRole('button', { name: `${t.adminSettings.lanes.edit} Notes` }).click();
     await page.getByRole('combobox', { name: t.adminSettings.lanes.color }).click();

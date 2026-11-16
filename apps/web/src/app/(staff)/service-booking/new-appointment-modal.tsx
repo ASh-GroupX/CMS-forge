@@ -111,10 +111,8 @@ export function NewAppointmentModal() {
 
     setLoading(true);
     const effectiveCarModelId = carModelId;
-    const effectiveMaintId = maintenanceTypeId || maintenanceTypes.find((type) => type.isActive)?.id || 'maint_periodic_10k';
-    const matchedPeriodic = isPeriodic && periodicMileageKm != null
-      ? maintenanceTypes.find((m) => m.isActive && m.id === `maint_periodic_${periodicMileageKm / 1000}k`) : null;
-    const selectedMaint = matchedPeriodic ?? maintenanceTypes.find((m) => m.id === effectiveMaintId);
+    const selectedMaint = maintenanceTypes.find((m) => m.id === maintenanceTypeId && m.isActive);
+    if (!selectedMaint) { setErrorMsg(t.modal.selectMaintenanceType); return; }
     const res = await createAppointmentAction({
       branchId: branchId || branches[0]?.id || 'center_main',
       bookingLaneId,
@@ -123,7 +121,7 @@ export function NewAppointmentModal() {
       customerPhone: customerPhone.trim(),
       date,
       durationMinutes: selectedMaint?.estimatedDurationMinutes || 30,
-      maintenanceTypeId: selectedMaint?.id ?? effectiveMaintId,
+      maintenanceTypeId: selectedMaint.id,
       periodicMileageKm: isPeriodic ? periodicMileageKm : null,
       notes: notes.trim() || 'Service appointment',
       startTime,

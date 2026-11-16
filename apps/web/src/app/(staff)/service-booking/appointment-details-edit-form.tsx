@@ -33,7 +33,10 @@ export function AppointmentDetailsEditForm({ appointment, carModels, maintenance
     setSaving(true); setError(null);
     const result = await updateAppointmentAction(appointment.id, {
       customerName: name.trim(), customerPhone: phone.trim(), vin: vin.trim() || null,
-      carModelId, maintenanceTypeId, periodicMileageKm: mileage, notes: notes.trim(),
+      notes: notes.trim(),
+      ...(carModelId !== appointment.carModelId ? { carModelId } : {}),
+      ...(maintenanceTypeId !== appointment.maintenanceTypeId ? { maintenanceTypeId, periodicMileageKm: mileage } :
+        mileage !== (appointment.periodicMileageKm ?? null) ? { periodicMileageKm: mileage } : {}),
     });
     setSaving(false);
     if (!result.success) { setError(result.error); return; }

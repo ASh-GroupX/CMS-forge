@@ -6,7 +6,7 @@ import type { MaintenanceType } from '../../../lib/staff-service-bookings-api';
 
 export const PERIODIC_MILEAGES = [1000, 5000, ...Array.from({ length: 15 }, (_, index) => (index + 1) * 10000)];
 export const isPeriodicMaintenanceType = (type: MaintenanceType) =>
-  type.id.startsWith('maint_periodic') || /^Periodic Maintenance\b/i.test(type.nameEn);
+  type.id.startsWith('maint_periodic') || /^Periodic Maintenance\b/i.test(type.nameEn) || /^صيانة دورية/.test(type.nameAr);
 
 export function MaintenanceTypeSelector({
   isAr, maintenanceTypeId, maintenanceTypes, onSelect, periodicMileageKm, onMileageChange,
@@ -24,19 +24,17 @@ export function MaintenanceTypeSelector({
   mileageLabel: string;
   selectMileageLabel: string;
 }) {
-  const periodic = maintenanceTypes.find((type) => type.isActive && isPeriodicMaintenanceType(type));
   const selectedPeriodic = maintenanceTypes.some((type) => type.id === maintenanceTypeId && type.isActive && isPeriodicMaintenanceType(type));
-  const choices = maintenanceTypes.filter((type) => type.isActive && !isPeriodicMaintenanceType(type));
+  const choices = maintenanceTypes.filter((type) => type.isActive);
   return <div className="grid gap-3">
     <div>
       <label className="mb-1 block text-xs font-bold text-content-strong" htmlFor="booking-maintenance-type">{maintenanceTypeLabel} <span className="text-status-error">*</span></label>
-      <Select onValueChange={(value) => { onSelect(value); onMileageChange(null); }} value={selectedPeriodic ? periodic?.id ?? '' : maintenanceTypeId}>
+      <Select onValueChange={(value) => { onSelect(value); onMileageChange(null); }} value={maintenanceTypeId}>
       <SelectTrigger aria-label={maintenanceTypeLabel} className="h-11 rounded-xl border-line-subtle bg-surface" id="booking-maintenance-type">
         <SelectValue placeholder={selectTypeLabel} />
       </SelectTrigger>
       <SelectContent>
-        {periodic && <SelectItem value={periodic.id}>{periodicLabel}</SelectItem>}
-        {choices.map((type) => <SelectItem key={type.id} value={type.id}>{isAr ? type.nameAr : type.nameEn}</SelectItem>)}
+        {choices.map((type) => <SelectItem key={type.id} value={type.id}>{(isAr ? type.nameAr : type.nameEn) || periodicLabel}</SelectItem>)}
       </SelectContent>
       </Select>
     </div>

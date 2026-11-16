@@ -4,8 +4,10 @@ import {
   appointmentStatusStyle,
   getNowTimeParts,
   getTodayDateString,
+  maintenanceLabel,
   matchesBranch,
 } from '../../src/app/(staff)/service-booking/service-booking-utils';
+import { isPeriodicMaintenanceType } from '../../src/app/(staff)/service-booking/maintenance-type-selector';
 import type { ServiceAppointment } from '../../src/lib/staff-service-bookings-api';
 
 test('getTodayDateString returns a valid YYYY-MM-DD date format', () => {
@@ -56,4 +58,17 @@ test('appointmentStatusStyle maps appointment statuses to distinctive styles', (
   assert.ok(appointmentStatusStyle('CANCELLED').includes('line-through'));
   assert.ok(appointmentStatusStyle('NO_SHOW').includes('purple-500'));
   assert.ok(appointmentStatusStyle('BOOKED').includes('border-brand'));
+});
+
+test('periodic note types retain their subtype and mileage in booking labels', () => {
+  for (const [nameEn, nameAr] of [
+    ['Periodic Maintenance', 'صيانة دورية'],
+    ['Periodic Maintenance with Electrical Notes', 'صيانة دورية مع ملاحظات كهرباء'],
+    ['Periodic Maintenance with Mechanical Notes', 'صيانة دورية مع ملاحظات ميكانيك'],
+  ]) {
+    assert.equal(isPeriodicMaintenanceType({ id: nameEn, nameEn, nameAr, estimatedDurationMinutes: 30, isActive: true }), true);
+    const appointment = { maintenanceTypeName: nameEn, periodicMileageKm: 40000 } as ServiceAppointment;
+    assert.equal(maintenanceLabel(appointment, 'en', 'Periodic Maintenance'), `${nameEn} 40,000 km`);
+    assert.equal(maintenanceLabel(appointment, 'ar', 'صيانة دورية'), `${nameAr} ٤٠٬٠٠٠ كم`);
+  }
 });

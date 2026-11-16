@@ -2,7 +2,12 @@ import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api
 
 export function maintenanceLabel(appointment: ServiceAppointment, locale: 'en' | 'ar', periodicName: string) {
   if (appointment.periodicMileageKm == null) return appointment.maintenanceTypeName;
-  return `${periodicName} ${appointment.periodicMileageKm.toLocaleString(locale === 'ar' ? 'ar-JO' : 'en-US')} ${locale === 'ar' ? 'كم' : 'km'}`;
+  const name = appointment.maintenanceTypeName.replace(/\s+\d[\d,]*\s*km$/i, '');
+  const localized = locale === 'ar' ? ({
+    'Periodic Maintenance with Electrical Notes': 'صيانة دورية مع ملاحظات كهرباء',
+    'Periodic Maintenance with Mechanical Notes': 'صيانة دورية مع ملاحظات ميكانيك',
+  } as Record<string, string>)[name] ?? periodicName : name;
+  return `${localized} ${appointment.periodicMileageKm.toLocaleString(locale === 'ar' ? 'ar-JO' : 'en-US')} ${locale === 'ar' ? 'كم' : 'km'}`;
 }
 
 /**

@@ -82,18 +82,7 @@ export default async function ServiceBookingPage({
     ...defaultCarModels.filter((def) => !carModels.some((c) => c.id === def.id || (c.nameEn.toLowerCase() === def.nameEn.toLowerCase() && c.brand === def.brand))),
   ];
 
-  const defaultMaintenanceTypes: MaintenanceType[] = [
-    { id: 'maint_periodic_10k', nameEn: 'Periodic Maintenance 10,000 km', nameAr: 'صيانة دورية 10,000 كم', estimatedDurationMinutes: 30, isActive: true },
-    { id: 'maint_periodic_20k', nameEn: 'Periodic Maintenance 20,000 km', nameAr: 'صيانة دورية 20,000 كم', estimatedDurationMinutes: 45, isActive: true },
-    { id: 'maint_periodic_40k', nameEn: 'Periodic Maintenance 40,000 km', nameAr: 'صيانة دورية 40,000 كم', estimatedDurationMinutes: 60, isActive: true },
-    { id: 'maint_oil_filter', nameEn: 'Oil and Filter Change', nameAr: 'تغيير زيت وفلتر', estimatedDurationMinutes: 30, isActive: true },
-    { id: 'maint_brake_pads', nameEn: 'Brake Pads & Discs Service', nameAr: 'فحص واستبدال فحمات وفرامل', estimatedDurationMinutes: 45, isActive: true },
-    { id: 'maint_general_check', nameEn: 'Comprehensive Inspection', nameAr: 'فحص شامل وفحص كمبيوتر', estimatedDurationMinutes: 60, isActive: true },
-  ];
-  const effectiveMaintenanceTypes: MaintenanceType[] = [
-    ...maintenanceTypes,
-    ...defaultMaintenanceTypes.filter((def) => !maintenanceTypes.some((m) => m.id === def.id || m.nameEn.toLowerCase() === def.nameEn.toLowerCase())),
-  ];
+  const effectiveMaintenanceTypes = maintenanceTypes;
 
   return (
     <section aria-label="Service Center Booking" className="grid gap-4 w-full" dir={shell.dir}>
