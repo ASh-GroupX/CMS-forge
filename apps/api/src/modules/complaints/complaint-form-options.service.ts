@@ -6,7 +6,7 @@ import { PortalIntakeService } from '../portal-intake/portal-intake.service.js';
 import type { BookingCarOption } from '@cms-auto/contracts';
 
 function hasGlobalView(principal: StaffPrincipal): boolean {
-  if (principal.roleCode === RoleCode.ADMIN || principal.roleCode === RoleCode.CR_MANAGER || principal.roleCode === RoleCode.CR_OFFICER) return true;
+  if (principal.permissions?.includes('COMPLAINT_CREATE_CROSS_BRANCH')) return true;
   return principal.permissions?.includes('COMPLAINT_VIEW_ALL') ?? false;
 }
 

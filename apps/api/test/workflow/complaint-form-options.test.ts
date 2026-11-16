@@ -22,7 +22,7 @@ test('complaint form options come from DB and branch scope comes from the server
   assert.deepEqual(options.severities, Object.values(ComplaintSeverity));
 });
 
-test('complaint form options allow CR officer to see all branches for cross-branch intake', async () => {
+test('complaint form options allow any role with create permission to see intake branches', async () => {
   const branchQueries: unknown[] = [];
   const service = new ComplaintFormOptionsService({
     branch: { findMany: async (query: unknown) => { branchQueries.push(query); return [{ id: 'branch_main', code: 'MAIN', nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي' }, { id: 'branch_alex', code: 'ALEX', nameEn: 'Alexandria', nameAr: 'الإسكندرية' }]; } },
@@ -30,8 +30,10 @@ test('complaint form options allow CR officer to see all branches for cross-bran
     department: { findMany: async () => [] },
   } as never);
 
-  const options = await service.list({ sessionId: 'ses_1', userId: 'usr_1', email: 'u@test', nameEn: 'User', nameAr: 'User', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_main' });
+  const options = await service.list({ sessionId: 'ses_1', userId: 'usr_1', email: 'u@test', nameEn: 'User', nameAr: 'User', roleCode: 'SERVICE_LEAD', permissions: ['COMPLAINT_CREATE_CROSS_BRANCH'], branchId: 'branch_main' });
 
   assert.deepEqual((branchQueries[0] as { where: unknown }).where, { isActive: true });
   assert.equal(options.branches.length, 2);
+  await service.list({ sessionId: 'ses_2', userId: 'usr_2', email: 'v@test', nameEn: 'Viewer', nameAr: 'Viewer', roleCode: 'SERVICE_VIEWER', permissions: [], branchId: 'branch_main' });
+  assert.deepEqual((branchQueries[1] as { where: unknown }).where, { isActive: true, id: 'branch_main' });
 });
