@@ -29,7 +29,7 @@ import { CasesModule } from '../../src/modules/cases/cases.module.ts';
 import { ComplaintsController } from '../../src/modules/complaints/complaints.controller.ts';
 import { ComplaintsModule } from '../../src/modules/complaints/complaints.module.ts';
 import { ComplaintsRepository } from '../../src/modules/complaints/complaints.repository.ts';
-import { ComplaintsService } from '../../src/modules/complaints/complaints.service.ts';
+import { ComplaintsService, WORKFLOW_TRANSITIONS } from '../../src/modules/complaints/complaints.service.ts';
 import { NotificationsModule } from '../../src/modules/notifications/notifications.module.ts';
 import { SlaModule } from '../../src/modules/sla/sla.module.ts';
 
@@ -71,7 +71,7 @@ const matrixCases = [
 
 test('workflow validator accepts every SRS matrix transition', () => {
   for (const [fromStatus, action, actorRole, toStatus] of matrixCases) {
-    assert.deepEqual(service.validateTransition({ fromStatus, action, actorRole }), {
+    assert.deepEqual(service.validateTransition({ fromStatus, action, actorRole, actorPermissions: testGrants(fromStatus, action, actorRole) }), {
       fromStatus,
       action,
       actorRole,
@@ -108,6 +108,11 @@ test('workflow validator rejects unauthorized roles', () => {
   );
 });
 
+test('workflow grants apply to custom roles and revocation applies to built-in roles', () => {
+  assert.equal(service.validateTransition({ fromStatus: ComplaintStatus.SUBMITTED, action: ComplaintTransitionAction.ACCEPT_INTAKE, actorRole: 'CUSTOM_ROLE', actorPermissions: ['COMPLAINT_APPROVE'] }).toStatus, ComplaintStatus.MANAGER_REVIEW);
+  assert.throws(() => service.validateTransition({ fromStatus: ComplaintStatus.SUBMITTED, action: ComplaintTransitionAction.ACCEPT_INTAKE, actorRole: RoleCode.CR_MANAGER, actorPermissions: [] }), (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN');
+});
+
 test('workflow transition persistence uses one transaction for status history and audit', async () => {
   const txClient = {};
   const calls: unknown[] = [];
@@ -138,6 +143,7 @@ test('workflow transition persistence uses one transaction for status history an
     fromStatus: ComplaintStatus.DRAFT,
     action: ComplaintTransitionAction.SUBMIT,
     actorRole: RoleCode.CR_OFFICER,
+    actorPermissions: ['COMPLAINT_SUBMIT'],
     actorId: 'usr_1',
     requestSource: ComplaintTransitionRequestSource.STAFF_API,
     reason: 'ready',
@@ -499,7 +505,7 @@ test('workflow assignment accepts a department without a user and dual-writes th
       scopeBranchId: 'branch_main',
       reason: 'route to service team',
     },
-    actor: { userId: 'usr_1', roleCode: RoleCode.ADMIN, branchId: 'branch_main' },
+    actor: { userId: 'usr_1', roleCode: RoleCode.ADMIN, branchId: 'branch_main', permissions: testGrants(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.ASSIGN_INVESTIGATION, RoleCode.ADMIN) },
     audit: transitionInput(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.ASSIGN_INVESTIGATION, RoleCode.ADMIN, {
       reason: 'route to service team', ownerId: null, targetDepartmentId: 'dept_service',
     }),
@@ -773,6 +779,7 @@ test('workflow transition persistence rejects stale persisted status before hist
       fromStatus: ComplaintStatus.DRAFT,
       action: ComplaintTransitionAction.SUBMIT,
       actorRole: RoleCode.CR_OFFICER,
+      actorPermissions: ['COMPLAINT_SUBMIT'],
       requestSource: ComplaintTransitionRequestSource.STAFF_API,
     }),
     (error: unknown) =>
@@ -1202,5 +1209,10 @@ function expectedStatus(action: ComplaintTransitionAction): ComplaintStatus {
 }
 
 function transitionInput(fromStatus: ComplaintStatus, action: ComplaintTransitionAction, actorRole: RoleCode, extra: Partial<Parameters<ComplaintsService['applyTransition']>[0]> = {}): Parameters<ComplaintsService['applyTransition']>[0] {
-  return { complaintId: 'cmp_1', fromStatus, action, actorRole, actorId: 'usr_1', requestSource: ComplaintTransitionRequestSource.STAFF_API, ...extra };
+  return { complaintId: 'cmp_1', fromStatus, action, actorRole, actorPermissions: testGrants(fromStatus, action, actorRole), actorId: 'usr_1', requestSource: ComplaintTransitionRequestSource.STAFF_API, ...extra };
+}
+
+function testGrants(fromStatus: ComplaintStatus, action: ComplaintTransitionAction, role: RoleCode): string[] {
+  const required = WORKFLOW_TRANSITIONS.find((item) => item.fromStatus === fromStatus && item.action === action)?.requiredPermission;
+  return [...(required ? [required] : []), ...(role === RoleCode.ADMIN || role === RoleCode.CR_MANAGER ? ['COMPLAINT_MANAGE', 'COMPLAINT_VIEW_ALL'] : []), ...(role === RoleCode.BRANCH_MANAGER ? ['COMPLAINT_CLOSE'] : [])];
 }

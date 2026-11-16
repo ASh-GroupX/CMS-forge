@@ -58,34 +58,31 @@ export type ComplaintSearchRow = ComplaintQueueItemDto & { categoryId: string; c
 
 type WorkflowTransition = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; toStatus: ComplaintStatus; allowedRoles: readonly string[]; requiredPermission?: string };
 
-const MANAGER_ROLES = [RoleCode.CR_MANAGER, RoleCode.ADMIN, 'DEPARTMENT_MANAGER', 'DEPARTMENT_MANGER'] as const;
-const BRANCH_MANAGER_ROLES = [RoleCode.BRANCH_MANAGER, RoleCode.CR_MANAGER, RoleCode.ADMIN, 'DEPARTMENT_MANAGER', 'DEPARTMENT_MANGER'] as const;
-const OWNER_OR_BRANCH_MANAGER_ROLES = [RoleCode.CR_OFFICER, ...BRANCH_MANAGER_ROLES] as const;
 
 export const WORKFLOW_TRANSITIONS: readonly WorkflowTransition[] = [
-  transition(ComplaintStatus.DRAFT, ComplaintTransitionAction.SUBMIT, ComplaintStatus.SUBMITTED, [RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.ADMIN, RoleCode.CUSTOMER_PORTAL], 'COMPLAINT_SUBMIT'),
-  transition(ComplaintStatus.SUBMITTED, ComplaintTransitionAction.ACCEPT_INTAKE, ComplaintStatus.MANAGER_REVIEW, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
-  transition(ComplaintStatus.SUBMITTED, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintStatus.REJECTED, MANAGER_ROLES, 'COMPLAINT_REJECT'),
-  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.ACCEPT_INTAKE, ComplaintStatus.IN_PROGRESS, OWNER_OR_BRANCH_MANAGER_ROLES, 'COMPLAINT_APPROVE'),
-  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintStatus.BRANCH_REVIEW, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
-  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.SEND_BACK, ComplaintStatus.DRAFT, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
-  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintStatus.REJECTED, MANAGER_ROLES, 'COMPLAINT_REJECT'),
-  transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.ASSIGN_INVESTIGATION, ComplaintStatus.IN_PROGRESS, BRANCH_MANAGER_ROLES, 'COMPLAINT_ASSIGN'),
-  transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.RESOLVE_DIRECTLY, ComplaintStatus.RESOLVED, BRANCH_MANAGER_ROLES, 'COMPLAINT_RESOLVE'),
-  transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.REJECT_AFTER_REVIEW, ComplaintStatus.REJECTED, BRANCH_MANAGER_ROLES, 'COMPLAINT_REJECT'),
-  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE, ComplaintStatus.IN_PROGRESS, OWNER_OR_BRANCH_MANAGER_ROLES, 'COMPLAINT_COMMENT_INTERNAL'),
-  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.RESOLVE, ComplaintStatus.RESOLVED, OWNER_OR_BRANCH_MANAGER_ROLES, 'COMPLAINT_RESOLVE'),
-  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION, ComplaintStatus.REJECTED, BRANCH_MANAGER_ROLES, 'COMPLAINT_REJECT'),
-  transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.COMPLETE, ComplaintStatus.COMPLETED, BRANCH_MANAGER_ROLES, 'COMPLAINT_CLOSE'),
-  transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CLOSE, ComplaintStatus.CLOSED, BRANCH_MANAGER_ROLES, 'COMPLAINT_CLOSE'),
-  transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.REJECT_RESOLUTION, ComplaintStatus.IN_PROGRESS, BRANCH_MANAGER_ROLES, 'COMPLAINT_REJECT'),
+  transition(ComplaintStatus.DRAFT, ComplaintTransitionAction.SUBMIT, ComplaintStatus.SUBMITTED, [RoleCode.CUSTOMER_PORTAL], 'COMPLAINT_SUBMIT'),
+  transition(ComplaintStatus.SUBMITTED, ComplaintTransitionAction.ACCEPT_INTAKE, ComplaintStatus.MANAGER_REVIEW, [], 'COMPLAINT_APPROVE'),
+  transition(ComplaintStatus.SUBMITTED, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintStatus.REJECTED, [], 'COMPLAINT_REJECT'),
+  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.ACCEPT_INTAKE, ComplaintStatus.IN_PROGRESS, [], 'COMPLAINT_APPROVE'),
+  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintStatus.BRANCH_REVIEW, [], 'COMPLAINT_APPROVE'),
+  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.SEND_BACK, ComplaintStatus.DRAFT, [], 'COMPLAINT_APPROVE'),
+  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintStatus.REJECTED, [], 'COMPLAINT_REJECT'),
+  transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.ASSIGN_INVESTIGATION, ComplaintStatus.IN_PROGRESS, [], 'COMPLAINT_ASSIGN'),
+  transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.RESOLVE_DIRECTLY, ComplaintStatus.RESOLVED, [], 'COMPLAINT_RESOLVE'),
+  transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.REJECT_AFTER_REVIEW, ComplaintStatus.REJECTED, [], 'COMPLAINT_REJECT'),
+  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE, ComplaintStatus.IN_PROGRESS, [], 'COMPLAINT_COMMENT_INTERNAL'),
+  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.RESOLVE, ComplaintStatus.RESOLVED, [], 'COMPLAINT_RESOLVE'),
+  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION, ComplaintStatus.REJECTED, [], 'COMPLAINT_REJECT'),
+  transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.COMPLETE, ComplaintStatus.COMPLETED, [], 'COMPLAINT_CLOSE'),
+  transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CLOSE, ComplaintStatus.CLOSED, [], 'COMPLAINT_CLOSE'),
+  transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.REJECT_RESOLUTION, ComplaintStatus.IN_PROGRESS, [], 'COMPLAINT_REJECT'),
 
-  transition(ComplaintStatus.COMPLETED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, MANAGER_ROLES, 'COMPLAINT_REOPEN'),
-  transition(ComplaintStatus.CLOSED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, MANAGER_ROLES, 'COMPLAINT_REOPEN'),
-  transition(ComplaintStatus.REJECTED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, MANAGER_ROLES, 'COMPLAINT_REOPEN'),
-  transition(ComplaintStatus.REOPENED, ComplaintTransitionAction.ROUTE_AGAIN, ComplaintStatus.MANAGER_REVIEW, MANAGER_ROLES, 'COMPLAINT_REOPEN'),
-  transition(ComplaintStatus.REOPENED, ComplaintTransitionAction.ACCEPT_INTAKE, ComplaintStatus.IN_PROGRESS, OWNER_OR_BRANCH_MANAGER_ROLES, 'COMPLAINT_APPROVE'),
-  transition(ComplaintStatus.REOPENED, ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintStatus.IN_PROGRESS, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
+  transition(ComplaintStatus.COMPLETED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, [], 'COMPLAINT_REOPEN'),
+  transition(ComplaintStatus.CLOSED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, [], 'COMPLAINT_REOPEN'),
+  transition(ComplaintStatus.REJECTED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, [], 'COMPLAINT_REOPEN'),
+  transition(ComplaintStatus.REOPENED, ComplaintTransitionAction.ROUTE_AGAIN, ComplaintStatus.MANAGER_REVIEW, [], 'COMPLAINT_REOPEN'),
+  transition(ComplaintStatus.REOPENED, ComplaintTransitionAction.ACCEPT_INTAKE, ComplaintStatus.IN_PROGRESS, [], 'COMPLAINT_APPROVE'),
+  transition(ComplaintStatus.REOPENED, ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintStatus.IN_PROGRESS, [], 'COMPLAINT_APPROVE'),
   transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CUSTOMER_REJECT_RESOLUTION, ComplaintStatus.IN_PROGRESS, [RoleCode.CUSTOMER_PORTAL]),
   transition(ComplaintStatus.REJECTED, ComplaintTransitionAction.CUSTOMER_RESUBMIT, ComplaintStatus.MANAGER_REVIEW, [RoleCode.CUSTOMER_PORTAL]),
   transition(ComplaintStatus.CLOSED, ComplaintTransitionAction.CUSTOMER_RESUBMIT, ComplaintStatus.MANAGER_REVIEW, [RoleCode.CUSTOMER_PORTAL]),
@@ -175,7 +172,7 @@ export class ComplaintsService {
     actor: { roleCode: RoleCode; userId: string | null; permissions?: string[]; departmentId?: string | null },
   ): ComplaintTransitionAction[] { 
     const actions = WORKFLOW_TRANSITIONS.filter((item) => {
-      const roleMatch = item.allowedRoles.includes(actor.roleCode);
+      const roleMatch = !item.requiredPermission && actor.roleCode === RoleCode.CUSTOMER_PORTAL && item.allowedRoles.includes(actor.roleCode);
       const permMatch = Boolean(item.requiredPermission && actor.permissions?.includes(item.requiredPermission));
       const canSee = actorCanSeeAction(item.action, actor, complaint);
       return item.fromStatus === complaint.status && (roleMatch || permMatch) && canSee;
@@ -217,11 +214,8 @@ export class ComplaintsService {
 
     if (!transition) throw invalidTransitionError();
     
-    if (!transition.allowedRoles.includes(input.actorRole)) {
-      if (!input.actorPermissions || !transition.requiredPermission || !input.actorPermissions.includes(transition.requiredPermission)) {
-        throw roleForbiddenError();
-      }
-    }
+    const portalAction = !transition.requiredPermission && input.actorRole === RoleCode.CUSTOMER_PORTAL && transition.allowedRoles.includes(input.actorRole);
+    if (!portalAction && (!transition.requiredPermission || !input.actorPermissions?.includes(transition.requiredPermission))) throw roleForbiddenError();
 
     return { fromStatus: input.fromStatus, action: input.action, actorRole: input.actorRole, toStatus: transition.toStatus };
   }
@@ -266,7 +260,7 @@ export class ComplaintsService {
         if (this.assignmentsService && ASSIGNMENT_ACTIONS.has(input.action) && (complaint.ownerId || complaint.departmentId)) {
           await this.assignmentsService.setInTransaction({
             entityType: 'COMPLAINT', entityId: complaint.id, assignedUserId: complaint.ownerId, assignedDepartmentId: complaint.departmentId, scopeBranchId: complaint.branchId, reason: input.reason ?? null,
-          }, { userId: input.actorId ?? '', roleCode: input.actorRole, branchId: complaint.branchId }, input, client);
+          }, { userId: input.actorId ?? '', roleCode: input.actorRole, branchId: complaint.branchId, permissions: input.actorPermissions ?? [] }, input, client);
         }
 
         return { result: { complaintId: complaint.id, ...decision }, complaint };

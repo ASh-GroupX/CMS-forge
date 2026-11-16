@@ -124,7 +124,7 @@ test('per-card allowedTransitions carry the target status; managers act where of
   const stages = [stage({ id: 's_review', position: 0, mappedComplaintStatus: ComplaintStatus.BRANCH_REVIEW })];
   const cards = [card({ id: 'c_review', status: ComplaintStatus.BRANCH_REVIEW, ownerId: null })];
 
-  const managerBoard = await realBoard(stages, cards, { userId: 'user_manager', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a' });
+  const managerBoard = await realBoard(stages, cards, { userId: 'user_manager', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a', permissions: ['COMPLAINT_ASSIGN', 'COMPLAINT_RESOLVE', 'COMPLAINT_REJECT'] });
   const managerCard = firstCard(managerBoard);
   assert.deepEqual(managerCard.allowedTransitions, [
     { action: ComplaintTransitionAction.ASSIGN_INVESTIGATION, toStatus: ComplaintStatus.IN_PROGRESS },
