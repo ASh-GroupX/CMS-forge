@@ -110,7 +110,7 @@ export default async function TasksPage({
   const assignedComplaints = Array.from(complaintMap.values());
 
   let allTickets = canSeeInternal ? tickets : [];
-  if (canSeeInternal && principal?.departmentId && (principal.roleCode === 'BRANCH_MANAGER' || principal.roleCode === 'DEPARTMENT_MANGER' || principal.roleCode === 'CR_MANAGER')) {
+  if (canSeeInternal && principal?.departmentId && principal.permissions?.includes('TICKET_VIEW_DEPARTMENT')) {
     const deptTickets = await fetchDepartmentTickets(principal.departmentId, apiUrl, cookieHeader, fetchImpl);
     const map = new Map<string, any>();
     for (const item of allTickets) map.set(item.id, item);

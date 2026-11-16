@@ -26,11 +26,7 @@ export default async function DepartmentTicketsPage({
 
   const principal = await getStaffSessionPrincipal();
   const isAdmin = principal?.roleCode === 'ADMIN';
-  const isManager =
-    principal?.roleCode === 'BRANCH_MANAGER' ||
-    principal?.roleCode === 'DEPARTMENT_MANGER' ||
-    principal?.roleCode === 'DEPARTMENT_MANAGER' ||
-    principal?.roleCode === 'CR_MANAGER';
+  const isManager = Boolean(principal?.permissions?.includes('TICKET_VIEW_DEPARTMENT'));
 
   // Fetch tickets for the department (or all for admin)
   const tickets = await getDepartmentTickets(isAdmin ? 'ALL' : principal?.departmentId || '').catch(() => []);

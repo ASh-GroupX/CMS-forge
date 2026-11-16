@@ -39,7 +39,7 @@ export function PremiumDashboard({ locale, principal, data, workloadData, option
   const isRtl = locale === 'ar';
   const role = principal?.roleCode || 'STAFF';
   const isAdmin = role === 'ADMIN';
-  const isManager = ['BRANCH_MANAGER', 'DEPARTMENT_MANGER', 'CR_MANAGER'].includes(role);
+  const isManager = Boolean(principal?.permissions?.includes('TICKET_VIEW_DEPARTMENT') || principal?.permissions?.includes('COMPLAINT_MANAGE'));
   const isOfficer = !isAdmin && !isManager;
 
   const { canSeeCrm, canSeeInternal, isInternalOnly, isCrmOnly } = resolveUserDashboardCapabilities(principal);

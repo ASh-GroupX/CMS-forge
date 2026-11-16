@@ -13,7 +13,7 @@ export default async function InternalTicketsPage({ searchParams }: { searchPara
   const statusFilter = params?.status;
 
   const principal = await getStaffSessionPrincipal();
-  const isManager = principal?.roleCode === 'BRANCH_MANAGER' || principal?.roleCode === 'DEPARTMENT_MANGER' || principal?.roleCode === 'CR_MANAGER';
+  const isManager = Boolean(principal?.permissions?.includes('TICKET_VIEW_DEPARTMENT'));
   
   const myDirectTickets = await getMyTickets().then(t => t || []);
   

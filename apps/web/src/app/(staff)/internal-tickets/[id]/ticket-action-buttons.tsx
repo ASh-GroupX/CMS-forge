@@ -187,7 +187,7 @@ export function TicketActionButtons({
   };
 
   // RBAC checks
-  const isManager = principal?.roleCode === 'BRANCH_MANAGER' || principal?.roleCode === 'DEPARTMENT_MANGER' || principal?.roleCode === 'DEPARTMENT_MANAGER' || principal?.roleCode === 'CR_MANAGER';
+  const isManager = Boolean(principal?.permissions?.includes('TICKET_VIEW_DEPARTMENT'));
   const isAssignedOfficer = principal?.userId === ticket.assignedEmployeeId;
   const isTargetDepartment = Boolean(principal?.departmentId && principal?.departmentId === ticket.targetDepartmentId);
   const isRequester = principal?.userId === ticket.requestedById || Boolean(principal?.departmentId && principal?.departmentId === ticket.requestedBy?.departmentId);

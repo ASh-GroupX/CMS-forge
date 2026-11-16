@@ -151,10 +151,7 @@ export default async function ReportsPage({
         <div className="border-t p-4 sm:p-6">
           <ReportsDashboard
             canExport={Boolean(
-              principal?.permissions.includes('REPORT_EXPORT') ||
-              principal?.roleCode === 'ADMIN' ||
-              principal?.roleCode === 'CR_MANAGER' ||
-              principal?.roleCode === 'BRANCH_MANAGER',
+              principal?.permissions.includes('REPORT_EXPORT'),
             )}
             catalog={catalog.status === 'ready' ? catalog.data : undefined}
             filters={filters}

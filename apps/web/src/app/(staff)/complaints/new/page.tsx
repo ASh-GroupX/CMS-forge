@@ -43,7 +43,7 @@ export default async function NewComplaintPage({
     cookieHeader: finalCookie,
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
   });
-  const canEditIncidentDate = principal?.roleCode === 'ADMIN' || principal?.roleCode === 'CR_MANAGER' || principal?.roleCode === 'BRANCH_MANAGER';
+  const canEditIncidentDate = Boolean(principal?.permissions?.includes('COMPLAINT_MANAGE'));
 
   return (
     <main className="grid gap-4">
