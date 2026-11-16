@@ -599,9 +599,10 @@ test('complaint creation route audits branch-scope denials for branch-scoped rol
   );
 
   assert.equal(await guard.canActivate(context(request())), true);
-  assert.equal(await guard.canActivate(context(request(RoleCode.CR_OFFICER, 'branch_other'))), true);
+  assert.equal(await guard.canActivate(context(request(RoleCode.CR_OFFICER, 'branch_other', ['COMPLAINT_CREATE', 'COMPLAINT_CREATE_CROSS_BRANCH']))), true);
+  assert.equal(await guard.canActivate(context(request('SERVICE_LEAD', 'branch_other', ['COMPLAINT_CREATE', 'COMPLAINT_CREATE_CROSS_BRANCH']))), true);
   await assert.rejects(
-    guard.canActivate(context(request(RoleCode.BRANCH_MANAGER, 'branch_other'))),
+    guard.canActivate(context(request(RoleCode.BRANCH_MANAGER, 'branch_other', ['COMPLAINT_CREATE', 'COMPLAINT_VIEW_BRANCH']))),
     (error: unknown) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
   );
 
@@ -1241,7 +1242,7 @@ function validQueueItem() {
 }
 
 function request(
-  roleCode = RoleCode.CR_OFFICER,
+  roleCode: string = RoleCode.CR_OFFICER,
   branchId = 'branch_main',
   permissions = ['COMPLAINT_CREATE', 'COMPLAINT_VIEW_BRANCH'],
   url = `/complaints?branchId=${branchId}`,
@@ -1255,7 +1256,7 @@ function request(
   };
 }
 
-function principal(roleCode: RoleCode, permissions: string[]): StaffPrincipal {
+function principal(roleCode: string, permissions: string[]): StaffPrincipal {
   return {
     sessionId: 'ses_create',
     userId: 'usr_officer',
