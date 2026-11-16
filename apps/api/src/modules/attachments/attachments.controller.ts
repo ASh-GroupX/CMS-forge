@@ -232,6 +232,6 @@ function headerValue(value: string | string[] | undefined): string | null {
 function queueBranchId(value: string | undefined, request: AuthenticatedRequest): string | null {
   if (value?.trim()) return value.trim();
   const role = request.principal?.roleCode;
-  const isGlobal = role === RoleCode.ADMIN || role === RoleCode.CR_MANAGER || role === RoleCode.CR_OFFICER || Boolean(request.principal?.permissions?.includes('COMPLAINT_VIEW_ALL'));
+  const isGlobal = role === RoleCode.ADMIN || Boolean(request.principal?.permissions?.includes('COMPLAINT_VIEW_ALL'));
   return isGlobal ? null : request.principal?.branchId ?? null;
 }

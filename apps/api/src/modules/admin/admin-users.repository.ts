@@ -42,7 +42,7 @@ export class AdminUsersRepository {
       tx.branch.findMany({ where: { isActive: true }, select: { id: true, nameEn: true, nameAr: true }, orderBy: { nameEn: 'asc' } }),
       tx.category.findMany({ where: { isActive: true }, select: { id: true, branchId: true, nameEn: true, nameAr: true }, orderBy: { nameEn: 'asc' } }),
         tx.department.findMany({ where: { isActive: true }, select: { id: true, branchId: true, nameEn: true, nameAr: true }, orderBy: { nameEn: 'asc' } }),
-        tx.user.findMany({ where: { isActive: true, lockedAt: null, role: { OR: [{ code: { in: ['ADMIN', 'CR_MANAGER'] } }, { permissions: { some: { permission: { code: 'COMPLAINT_MANAGE', isActive: true } } } }] } }, select: { id: true, nameEn: true, nameAr: true, branchId: true, departmentId: true, role: { select: { code: true } } }, orderBy: { nameEn: 'asc' } }),
+        tx.user.findMany({ where: { isActive: true, lockedAt: null, role: { permissions: { some: { permission: { code: 'COMPLAINT_MANAGE', isActive: true } } } } }, select: { id: true, nameEn: true, nameAr: true, branchId: true, departmentId: true, role: { select: { code: true } } }, orderBy: { nameEn: 'asc' } }),
     ]);
       return { branches, categories, departments, members: members.map(({ role, ...member }) => ({ ...member, roleCode: role.code })) };
   }

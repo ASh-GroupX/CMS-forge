@@ -9,7 +9,7 @@ export function requestRole(request: AuthenticatedRequest): RoleCode {
 }
 
 export function scopedBranchId(queryBranchId: string | undefined, request: AuthenticatedRequest): string | null {
-  if (request.principal?.roleCode === RoleCode.ADMIN || request.principal?.roleCode === RoleCode.CR_MANAGER) {
+  if (request.principal?.roleCode === RoleCode.ADMIN || request.principal?.permissions?.includes('COMPLAINT_VIEW_ALL')) {
     return optionalText(queryBranchId);
   }
   return request.principal?.branchId ?? null;
