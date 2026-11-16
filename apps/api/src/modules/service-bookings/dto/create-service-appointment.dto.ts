@@ -32,7 +32,8 @@ export function parseCreateServiceAppointmentBody(input: unknown): CreateService
   if (!carModelId) throw new BadRequestException('A vehicle model is required');
   const bookingLaneId = String(body.bookingLaneId ?? '').trim();
   if (!bookingLaneId) throw new BadRequestException('A booking lane is required');
-  const maintenanceTypeId = String(body.maintenanceTypeId ?? '').trim() || 'maint_periodic_10k';
+  const maintenanceTypeId = String(body.maintenanceTypeId ?? '').trim();
+  if (!maintenanceTypeId) throw new BadRequestException('A maintenance type is required');
 
   const date = String(body.date ?? '').trim();
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {

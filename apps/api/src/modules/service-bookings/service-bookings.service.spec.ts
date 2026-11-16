@@ -5,6 +5,7 @@ import { ServiceBookingsService } from './service-bookings.service.js';
 import { ServiceBookingsController } from './service-bookings.controller.js';
 import { parseUpsertCarModelBody } from './dto/service-master-data.dto.js';
 import { parseCreateServiceAppointmentBody } from './dto/create-service-appointment.dto.js';
+import { periodicMaintenance, DEFAULT_MAINTENANCE_TYPES } from './service-bookings.utils.js';
 
 test('admin car catalog requires a brand and a separate model name', () => {
   for (const brand of [undefined, '', '   ', 123]) {
@@ -25,6 +26,11 @@ test('booking parser requires an explicit booking lane', () => {
     carModelId: 'c1', maintenanceTypeId: 'm1', date: '2026-11-02', startTime: '11:15' }), /booking lane.*required/i);
 });
 
+test('booking parser requires an explicit maintenance type', () => {
+  assert.throws(() => parseCreateServiceAppointmentBody({ customerName: 'Test', customerPhone: '0790000000',
+    carModelId: 'c1', bookingLaneId: 'lane-1', date: '2026-11-02', startTime: '11:15' }), /maintenance type is required/i);
+});
+
 test('periodic mileage accepts the offered values and rejects invalid values', () => {
   const base = { customerName: 'Test', customerPhone: '0790000000', carModelId: 'c1',
     maintenanceTypeId: 'maint_periodic_10k', bookingLaneId: 'lane-1', date: '2026-11-02', startTime: '11:15' };
@@ -33,6 +39,17 @@ test('periodic mileage accepts the offered values and rejects invalid values', (
   }
   for (const value of [0, 999, 6000, 160000, 'oops']) {
     assert.throws(() => parseCreateServiceAppointmentBody({ ...base, periodicMileageKm: value }), /valid periodic maintenance mileage/i);
+  }
+});
+
+test('all three current periodic types require mileage and keep their distinct labels', () => {
+  for (const type of DEFAULT_MAINTENANCE_TYPES.slice(0, 3)) {
+    assert.throws(() => periodicMaintenance(null, type.id, type.nameEn, type.nameAr), /periodic maintenance mileage/i);
+    assert.deepEqual(periodicMaintenance(40000, type.id, type.nameEn, type.nameAr), { mileage: 40000, name: type.nameEn });
+  }
+  for (const type of DEFAULT_MAINTENANCE_TYPES.slice(3)) {
+    assert.deepEqual(periodicMaintenance(null, type.id, type.nameEn, type.nameAr), { mileage: null, name: type.nameEn });
+    assert.throws(() => periodicMaintenance(40000, type.id, type.nameEn, type.nameAr), /only valid for periodic/i);
   }
 });
 

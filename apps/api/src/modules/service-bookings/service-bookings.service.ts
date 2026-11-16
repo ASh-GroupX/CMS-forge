@@ -84,8 +84,8 @@ export class ServiceBookingsService extends ServiceBookingsCatalogService {
     const carModel = dto.carModelId ? await this.repository.findCarModelById(dto.carModelId).catch(() => null) : null;
     if (!carModel || carModel.isActive === false) throw new BadRequestException('Select an active vehicle model');
     const maintenanceType = dto.maintenanceTypeId ? await this.repository.findMaintenanceTypeById(dto.maintenanceTypeId).catch(() => null) : null;
-    if (maintenanceType?.isActive === false) throw new BadRequestException('Select an active maintenance type');
-    const periodic = periodicMaintenance(dto.periodicMileageKm, dto.maintenanceTypeId, maintenanceType?.nameEn);
+    if (!maintenanceType || maintenanceType.isActive === false) throw new BadRequestException('Select an active maintenance type');
+    const periodic = periodicMaintenance(dto.periodicMileageKm, maintenanceType.id, maintenanceType.nameEn, maintenanceType.nameAr);
     const duration = dto.durationMinutes || maintenanceType?.estimatedDurationMinutes || 30;
     const endTime = calculateEndTime(dto.startTime, duration);
     const referenceNumber = await this.repository.generateReferenceNumber(dateObj);
@@ -143,7 +143,7 @@ export class ServiceBookingsService extends ServiceBookingsCatalogService {
       const typeId = dto.maintenanceTypeId ?? existing.maintenanceTypeId;
       const maintenance = typeId ? await this.repository.findMaintenanceTypeById(typeId).catch(() => null) : null;
       if (!maintenance || !maintenance.isActive) throw new BadRequestException('Select an active maintenance type');
-      const periodic = periodicMaintenance(dto.periodicMileageKm ?? (dto.maintenanceTypeId === undefined ? existing.periodicMileageKm : null), typeId!, maintenance.nameEn);
+      const periodic = periodicMaintenance(dto.periodicMileageKm ?? (dto.maintenanceTypeId === undefined ? existing.periodicMileageKm : null), typeId!, maintenance.nameEn, maintenance.nameAr);
       duration = maintenance.estimatedDurationMinutes || 30;
       updateData.maintenanceTypeId = maintenance.id;
       updateData.maintenanceTypeName = periodic.name;

@@ -34,12 +34,11 @@ export const DEFAULT_CAR_MODELS = [
 ];
 
 export const DEFAULT_MAINTENANCE_TYPES = [
-  { id: 'maint_periodic_10k', nameEn: 'Periodic Maintenance 10,000 km', nameAr: 'صيانة دورية 10,000 كم', estimatedDurationMinutes: 30, isActive: true },
-  { id: 'maint_periodic_20k', nameEn: 'Periodic Maintenance 20,000 km', nameAr: 'صيانة دورية 20,000 كم', estimatedDurationMinutes: 45, isActive: true },
-  { id: 'maint_periodic_40k', nameEn: 'Periodic Maintenance 40,000 km', nameAr: 'صيانة دورية 40,000 كم', estimatedDurationMinutes: 60, isActive: true },
-  { id: 'maint_oil_filter', nameEn: 'Oil and Filter Change', nameAr: 'تغيير زيت وفلتر', estimatedDurationMinutes: 30, isActive: true },
-  { id: 'maint_brake_pads', nameEn: 'Brake Pads & Discs Service', nameAr: 'فحص واستبدال فحمات وفرامل', estimatedDurationMinutes: 45, isActive: true },
-  { id: 'maint_general_check', nameEn: 'Comprehensive Inspection', nameAr: 'فحص شامل وفحص كمبيوتر', estimatedDurationMinutes: 60, isActive: true },
+  { id: 'maint_periodic', nameEn: 'Periodic Maintenance', nameAr: 'صيانة دورية', estimatedDurationMinutes: 30, isActive: true },
+  { id: 'maint_periodic_electrical_notes', nameEn: 'Periodic Maintenance with Electrical Notes', nameAr: 'صيانة دورية مع ملاحظات كهرباء', estimatedDurationMinutes: 30, isActive: true },
+  { id: 'maint_periodic_mechanical_notes', nameEn: 'Periodic Maintenance with Mechanical Notes', nameAr: 'صيانة دورية مع ملاحظات ميكانيك', estimatedDurationMinutes: 30, isActive: true },
+  { id: 'maint_mechanical_notes', nameEn: 'Mechanical Notes', nameAr: 'ملاحظات ميكانيك', estimatedDurationMinutes: 30, isActive: true },
+  { id: 'maint_electrical_notes', nameEn: 'Electrical Notes', nameAr: 'ملاحظات كهرباء', estimatedDurationMinutes: 30, isActive: true },
 ];
 
 export function getAmmanNow(now = new Date()) {
@@ -58,13 +57,14 @@ export function isBookableTime(rule: { startTime: string; endTime: string; slotD
     && interval > 0 && (requested - start) % interval === 0;
 }
 
-export function periodicMaintenance(mileage: number | null | undefined, typeId: string, typeName?: string) {
-  const periodic = typeId.startsWith('maint_periodic') || /^Periodic Maintenance\b/i.test(typeName ?? '');
+export function periodicMaintenance(mileage: number | null | undefined, typeId: string, typeName?: string, typeNameAr?: string) {
+  const periodic = typeId.startsWith('maint_periodic') || /^Periodic Maintenance\b/i.test(typeName ?? '') || /^صيانة دورية/.test(typeNameAr ?? '');
   if (!periodic && mileage != null) throw new BadRequestException('Mileage is only valid for periodic maintenance');
   if (!periodic) return { mileage: null, name: typeName ?? 'Service appointment' };
-  const legacyMileage = Number(typeId.match(/_(\d+)k$/)?.[1] ?? 10) * 1000;
-  const value = mileage ?? legacyMileage;
-  return { mileage: value, name: `Periodic Maintenance ${value.toLocaleString('en-US')} km` };
+  const legacyMileage = typeId.match(/^maint_periodic_(\d+)k$/)?.[1];
+  const value = mileage ?? (legacyMileage ? Number(legacyMileage) * 1000 : null);
+  if (value == null) throw new BadRequestException('Select a periodic maintenance mileage');
+  return { mileage: value, name: legacyMileage ? `Periodic Maintenance ${value.toLocaleString('en-US')} km` : typeName ?? 'Periodic Maintenance' };
 }
 
 export function calculateEndTime(startTime: string, durationMinutes: number): string {
