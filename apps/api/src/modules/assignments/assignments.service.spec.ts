@@ -103,6 +103,14 @@ test('rejects an out-of-branch target from the server-session scope', async () =
     (error: unknown) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
   );
 });
+test('cross-branch assignment scope follows the assigned permission', async () => {
+  const repository = repositoryFor({ user: { id: 'user_2', branchId: 'branch_1', departmentId: null }, department: null });
+  const service = new AssignmentsService(repository, auditStub());
+  const input = { entityType: 'TASK', entityId: 'task_1', assignedUserId: 'user_2', scopeBranchId: 'branch_2' };
+  const actor = { userId: 'custom_user', roleCode: 'CUSTOM_ROLE', branchId: 'branch_1' };
+  await assert.rejects(service.setInTransaction(input, { ...actor, permissions: [] }, {}, transactionClient), (error: unknown) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN');
+  assert.equal((await service.setInTransaction(input, { ...actor, permissions: ['ASSIGNMENT_CROSS_BRANCH'] }, {}, transactionClient)).scopeBranchId, 'branch_2');
+});
 test('dedicated intake redirect accepts an active destination branch without widening general assignments', async () => {
   const repository = repositoryFor({ user: { id: 'user_2', branchId: 'branch_2', departmentId: 'dept_2' }, department: { id: 'dept_2', branchId: 'branch_2' } });
   const service = new AssignmentsService(repository, auditStub());

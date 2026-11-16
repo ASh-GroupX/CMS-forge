@@ -16,5 +16,5 @@ test('assignment options use only the authenticated server principal', async () 
     principal: { userId: 'user_1', roleCode: 'CR_MANAGER', branchId: 'branch_1', departmentId: 'dept_1', permissions: [] },
   } as never);
   assert.deepEqual(result, { users: [], departments: [] });
-  assert.deepEqual(actor, { userId: 'user_1', roleCode: 'CR_MANAGER', branchId: 'branch_1', departmentId: 'dept_1' });
+  assert.deepEqual(actor, { userId: 'user_1', roleCode: 'CR_MANAGER', branchId: 'branch_1', permissions: [], departmentId: 'dept_1' });
 });

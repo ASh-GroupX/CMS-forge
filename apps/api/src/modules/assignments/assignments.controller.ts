@@ -18,6 +18,7 @@ export class AssignmentsController {
       userId: principal.userId,
       roleCode: principal.roleCode,
       branchId: principal.branchId,
+      permissions: principal.permissions ?? [],
       ...(principal.departmentId !== undefined ? { departmentId: principal.departmentId } : {}),
     });
   }

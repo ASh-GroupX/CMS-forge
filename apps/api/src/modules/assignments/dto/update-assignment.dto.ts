@@ -3,6 +3,7 @@ export type AssignmentActor = {
   roleCode: string;
   branchId: string | null;
   departmentId?: string | null;
+  permissions?: string[];
 };
 export type AssignmentAuditContext = {
   correlationId?: string | null;
