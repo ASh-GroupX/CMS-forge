@@ -61,7 +61,7 @@ test('staff case timeline route uses session actor and suppresses restricted not
   const result = await controller.timeline('case_public', request({ roleCode: RoleCode.CR_MANAGER, url: '/cases/case_public/timeline?roleCode=ADMIN&branchId=other' }));
 
   assert.equal(result.case.id, 'case_public');
-  assert.deepEqual((calls[0] as { actor: unknown; includeRestrictedNotes: boolean }).actor, { userId: 'session_user', role: RoleCode.CR_MANAGER, branchId: 'branch_1' });
+  assert.deepEqual((calls[0] as { actor: unknown; includeRestrictedNotes: boolean }).actor, { userId: 'session_user', role: RoleCode.CR_MANAGER, branchId: 'branch_1', permissions: [] });
   assert.equal((calls[0] as { includeRestrictedNotes: boolean }).includeRestrictedNotes, false);
 });
 
@@ -91,7 +91,7 @@ test('case CAPA routes use session actor and parse minimal create body', async (
   }, request({ roleCode: RoleCode.CR_MANAGER, url: '/cases/case_1/capa?roleCode=ADMIN&branchId=other' }));
 
   assert.equal(created.capa.id, 'capa_created');
-  assert.deepEqual((calls[0] as { actor: unknown }).actor, { userId: 'session_user', role: RoleCode.CR_MANAGER, branchId: 'branch_1' });
+  assert.deepEqual((calls[0] as { actor: unknown }).actor, { userId: 'session_user', role: RoleCode.CR_MANAGER, branchId: 'branch_1', permissions: [] });
   assert.deepEqual((calls[1] as { create: unknown }).create, {
     caseId: 'case_1',
     ownerId: 'owner_2',
@@ -101,7 +101,7 @@ test('case CAPA routes use session actor and parse minimal create body', async (
     dueAt: '2026-06-25T09:00:00.000Z',
     status: CapaActionStatus.DONE,
   });
-  assert.deepEqual((calls[1] as { actor: unknown }).actor, { userId: 'session_user', role: RoleCode.CR_MANAGER, branchId: 'branch_1' });
+  assert.deepEqual((calls[1] as { actor: unknown }).actor, { userId: 'session_user', role: RoleCode.CR_MANAGER, branchId: 'branch_1', permissions: [] });
 });
 
 test('case assignment route uses only session authority and accepts department-only assignment', async () => {
@@ -130,7 +130,7 @@ test('case assignment route uses only session authority and accepts department-o
     reason: 'Route to service',
   });
   assert.deepEqual((calls[0] as { actor: unknown }).actor, {
-    userId: 'session_user', role: RoleCode.CR_MANAGER, branchId: 'branch_1', departmentId: 'dept_actor',
+    userId: 'session_user', role: RoleCode.CR_MANAGER, branchId: 'branch_1', permissions: [], departmentId: 'dept_actor',
   });
 });
 

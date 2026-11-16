@@ -14,35 +14,35 @@ export class CasesController {
 
   @Get(':caseId/timeline')
   @UseGuards(SessionAuthGuard, PermissionGuard)
-  @Permissions('COMPLAINT_VIEW_BRANCH')
+  @Permissions('CASE_VIEW_BRANCH')
   async timeline(@Param('caseId') caseId: string, @Req() request: AuthenticatedRequest): Promise<CaseTimelineResponseDto> {
     return this.casesService.timelineForActor(caseId, actor(request), auditContext(request), false);
   }
 
   @Get(':caseId/confidential-timeline')
   @UseGuards(SessionAuthGuard, PermissionGuard)
-  @Permissions('COMPLAINT_VIEW_BRANCH')
+  @Permissions('CASE_VIEW_BRANCH')
   async confidentialTimeline(@Param('caseId') caseId: string, @Req() request: AuthenticatedRequest): Promise<CaseTimelineResponseDto> {
     return this.casesService.timelineForActor(caseId, actor(request), auditContext(request));
   }
 
   @Get(':caseId/capa')
   @UseGuards(SessionAuthGuard, PermissionGuard)
-  @Permissions('COMPLAINT_VIEW_BRANCH')
+  @Permissions('CASE_VIEW_BRANCH')
   async capa(@Param('caseId') caseId: string, @Req() request: AuthenticatedRequest): Promise<{ items: CapaActionDto[] }> {
     return { items: await this.casesService.listCapaActionsForActor(caseId, actor(request), auditContext(request)) };
   }
 
   @Post(':caseId/capa')
   @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
-  @Permissions('COMPLAINT_COMMENT_INTERNAL')
+  @Permissions('CASE_MANAGE')
   async createCapa(@Param('caseId') caseId: string, @Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<{ capa: CapaActionDto }> {
     return { capa: await this.casesService.createCapaAction(toCreateCapaInput(caseId, parseCreateCapaBody(body)), actor(request), auditContext(request)) };
   }
 
   @Patch(':caseId/assignment')
   @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
-  @Permissions('COMPLAINT_COMMENT_INTERNAL')
+  @Permissions('CASE_MANAGE')
   async assign(@Param('caseId') caseId: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
     return { case: await this.casesService.assignForActor(caseId, parseCaseAssignmentBody(body), assignmentActor(request), auditContext(request)) };
   }
@@ -53,6 +53,7 @@ function actor(request: AuthenticatedRequest) {
     userId: request.principal?.userId ?? '',
     role: request.principal?.roleCode as RoleCode,
     branchId: request.principal?.branchId ?? null,
+    permissions: request.principal?.permissions ?? [],
   };
 }
 

@@ -1,5 +1,4 @@
 import { HttpStatus } from '@nestjs/common';
-import { RoleCode } from '@prisma/client';
 import type { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import type { AssignmentsService } from '../assignments/assignments.service.js';
@@ -9,10 +8,8 @@ import type { CaseReadActor, CaseReadAudit } from './cases.policy.js';
 import type { CasesRepository } from './cases.repository.js';
 import { toCaseResponse } from './cases.response.js';
 
-const writeRoles = new Set<RoleCode>([RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN]);
-
 export function assertCanWriteCase(actor: CaseReadActor): void {
-  if (!writeRoles.has(actor.role)) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+  if (!actor.permissions?.includes('CASE_MANAGE')) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
 }
 
 export async function assignCaseForActor(
@@ -34,7 +31,7 @@ export async function assignCaseForActor(
       assignedDepartmentId: input.assignedDepartmentId, scopeBranchId: updated.branchId,
       reason: input.reason ?? null,
     }, {
-      userId: actor.userId, roleCode: actor.role, branchId: actor.branchId ?? null,
+      userId: actor.userId, roleCode: actor.role, branchId: actor.branchId ?? null, permissions: actor.permissions ?? [],
       ...(actor.departmentId !== undefined ? { departmentId: actor.departmentId } : {}),
     }, audit, client);
     return toCaseResponse(updated);

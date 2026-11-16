@@ -5,7 +5,7 @@ import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import type { CaseRecord } from './cases.repository.js';
 
-export type CaseReadActor = { userId: string; role: RoleCode; branchId?: string | null; departmentId?: string | null };
+export type CaseReadActor = { userId: string; role: RoleCode; branchId?: string | null; departmentId?: string | null; permissions?: string[] };
 export type CaseReadAudit = { correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 
 export async function assertCanReadCase(
@@ -17,10 +17,10 @@ export async function assertCanReadCase(
   const participant = record.participants.find((item) => item.userId === actor.userId);
   if (participant?.role === CaseParticipantRole.ACCUSED) await deny(record, actor, audit, 'accused_conflict', auditService);
   if (record.confidentialityLevel !== CaseConfidentialityLevel.CONFIDENTIAL) {
-    if (actor.role === RoleCode.ADMIN || actor.branchId === record.branchId) return;
+    if (actor.permissions?.includes('CASE_VIEW_ALL') || actor.branchId === record.branchId) return;
     await deny(record, actor, audit, 'branch_scope', auditService);
   }
-  if (actor.role === RoleCode.ADMIN || actor.userId === record.ownerId || participant) return;
+  if (actor.permissions?.includes('CASE_VIEW_ALL') || actor.userId === record.ownerId || participant) return;
   await deny(record, actor, audit, 'not_participant', auditService);
 }
 

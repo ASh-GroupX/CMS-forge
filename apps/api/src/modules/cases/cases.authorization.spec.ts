@@ -9,6 +9,7 @@ import { PermissionGuard, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../core/auth.guard.js';
 import { AppException } from '../../core/http-kernel.js';
 import { CasesController } from './cases.controller.js';
+import { assertCanWriteCase } from './cases.assignment.js';
 import { CasesModule } from './cases.module.js';
 
 test('case routes require permissions and CSRF for CAPA and assignment writes', async () => {
@@ -20,9 +21,9 @@ test('case routes require permissions and CSRF for CAPA and assignment writes', 
 
   const auditRecords: AuditRecordInput[] = [];
   const guard = new PermissionGuard(new Reflector(), { record: async (input: AuditRecordInput) => auditRecords.push(input) } as unknown as AuditService);
-  assert.equal(await guard.canActivate(context(request(['COMPLAINT_VIEW_BRANCH']), 'timeline')), true);
-  assert.equal(await guard.canActivate(context(request(['COMPLAINT_COMMENT_INTERNAL']), 'createCapa')), true);
-  assert.equal(await guard.canActivate(context(request(['COMPLAINT_COMMENT_INTERNAL']), 'assign')), true);
+  assert.equal(await guard.canActivate(context(request(['CASE_VIEW_BRANCH']), 'timeline')), true);
+  assert.equal(await guard.canActivate(context(request(['CASE_MANAGE']), 'createCapa')), true);
+  assert.equal(await guard.canActivate(context(request(['CASE_MANAGE']), 'assign')), true);
 
   await assert.rejects(
     guard.canActivate(context(request([]), 'createCapa')),
@@ -30,7 +31,12 @@ test('case routes require permissions and CSRF for CAPA and assignment writes', 
   );
   assert.equal(auditRecords[0]?.eventType, 'SECURITY');
   assert.equal(auditRecords[0]?.action, 'permission_forbidden');
-  assert.deepEqual((auditRecords[0]?.metadata as { requiredPermissions?: string[] })?.requiredPermissions, ['COMPLAINT_COMMENT_INTERNAL']);
+  assert.deepEqual((auditRecords[0]?.metadata as { requiredPermissions?: string[] })?.requiredPermissions, ['CASE_MANAGE']);
+});
+
+test('case management follows assigned permission', () => {
+  assert.doesNotThrow(() => assertCanWriteCase({ userId: 'custom_user', role: 'CUSTOM_ROLE' as RoleCode, branchId: 'branch_1', permissions: ['CASE_MANAGE'] }));
+  assert.throws(() => assertCanWriteCase({ userId: 'old_manager', role: RoleCode.CR_MANAGER, branchId: 'branch_1', permissions: [] }), (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN');
 });
 
 test('cases module wires permission guard for runtime denies', () => {

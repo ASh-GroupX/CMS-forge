@@ -142,7 +142,7 @@ test('case CAPA action validates and returns accountability fields', async () =>
     preventiveAction: 'Daily parts delay review',
     dueAt: '2026-06-25T09:00:00.000Z',
     status: CapaActionStatus.IN_PROGRESS,
-  }, { userId: 'usr_actor', role: RoleCode.CR_MANAGER, branchId: 'branch_1' }, { correlationId: 'req_capa' });
+  }, { userId: 'usr_actor', role: RoleCode.CR_MANAGER, branchId: 'branch_1', permissions: ['CASE_MANAGE'] }, { correlationId: 'req_capa' });
 
   assert.deepEqual(assignable, { actor: { userId: 'usr_actor', roleCode: RoleCode.CR_MANAGER, branchId: 'branch_1' }, userId: 'owner_2' });
   assert.equal(captured?.ownerId, 'owner_2');
@@ -167,7 +167,7 @@ test('case CAPA owner picker rejects out-of-scope staff before create', async ()
       correctiveAction: 'Call customer',
       preventiveAction: 'Daily review',
       dueAt: '2026-06-25T09:00:00.000Z',
-    }, { userId: 'usr_actor', role: RoleCode.CR_MANAGER, branchId: 'branch_1' }),
+    }, { userId: 'usr_actor', role: RoleCode.CR_MANAGER, branchId: 'branch_1', permissions: ['CASE_MANAGE'] }),
     (error) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
   );
 });
@@ -187,11 +187,11 @@ test('case CAPA action rejects missing required accountability fields and can be
       correctiveAction: 'Call customer',
       preventiveAction: 'Daily review',
       dueAt: '2026-06-25T09:00:00.000Z',
-    }, { userId: 'usr_actor', role: RoleCode.CR_MANAGER, branchId: 'branch_1' }),
+    }, { userId: 'usr_actor', role: RoleCode.CR_MANAGER, branchId: 'branch_1', permissions: ['CASE_MANAGE'] }),
     (error) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
   );
 
-  assert.deepEqual((await service.listCapaActionsForActor('case_1', { userId: 'usr_actor', role: RoleCode.CR_MANAGER, branchId: 'branch_1' })).map((item) => item.id), ['capa_1']);
+  assert.deepEqual((await service.listCapaActionsForActor('case_1', { userId: 'usr_actor', role: RoleCode.CR_MANAGER, branchId: 'branch_1', permissions: ['CASE_MANAGE'] })).map((item) => item.id), ['capa_1']);
 });
 
 test('case CAPA write denies readonly actors before create', async () => {
@@ -234,13 +234,13 @@ test('case assignment dual-writes legacy and generic records in one transaction'
     assignedUserId: null,
     assignedDepartmentId: 'dept_service',
     reason: 'Service review',
-  }, { userId: 'manager_1', role: RoleCode.CR_MANAGER, branchId: 'branch_1', departmentId: 'dept_management' }, { correlationId: 'req_assign' });
+  }, { userId: 'manager_1', role: RoleCode.CR_MANAGER, branchId: 'branch_1', permissions: ['CASE_MANAGE'], departmentId: 'dept_management' }, { correlationId: 'req_assign' });
 
   assert.equal(result.assignedDepartmentId, 'dept_service');
   assert.deepEqual(calls[1], { legacy: { userId: null, departmentId: 'dept_service' }, client: tx });
   assert.deepEqual(calls[2], {
     generic: { entityType: 'CASE', entityId: 'case_1', assignedUserId: null, assignedDepartmentId: 'dept_service', scopeBranchId: 'branch_1', reason: 'Service review' },
-    actor: { userId: 'manager_1', roleCode: RoleCode.CR_MANAGER, branchId: 'branch_1', departmentId: 'dept_management' },
+    actor: { userId: 'manager_1', roleCode: RoleCode.CR_MANAGER, branchId: 'branch_1', permissions: ['CASE_MANAGE'], departmentId: 'dept_management' },
     audit: { correlationId: 'req_assign' }, client: tx,
   });
   assert.deepEqual(calls[3], { notify: { entityType: 'CASE', entityId: 'case_1' } });
@@ -269,7 +269,7 @@ test('case CAPA write denies different branch before create and audits', async (
       correctiveAction: 'Call customer',
       preventiveAction: 'Daily review',
       dueAt: '2026-06-25T09:00:00.000Z',
-    }, { userId: 'usr_other', role: RoleCode.CR_MANAGER, branchId: 'branch_other' }, { correlationId: 'req_branch' }),
+    }, { userId: 'usr_other', role: RoleCode.CR_MANAGER, branchId: 'branch_other', permissions: ['CASE_MANAGE'] }, { correlationId: 'req_branch' }),
     (error) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
   );
 
@@ -365,7 +365,7 @@ test('confidential participant can read restricted notes', async () => {
     countRepeatCustomerRootCause: async () => 0,
   } as unknown as CasesRepository);
 
-  const result = await service.timelineForActor('case_1', { userId: 'hr_owner', role: RoleCode.CR_MANAGER, branchId: 'branch_1' });
+  const result = await service.timelineForActor('case_1', { userId: 'hr_owner', role: RoleCode.CR_MANAGER, branchId: 'branch_1', permissions: ['CASE_MANAGE'] });
 
   assert.deepEqual(result.restrictedNotes.map((note) => note.body), ['Private HR note']);
   assert.deepEqual((await service.timeline('case_1')).restrictedNotes, []);
@@ -412,7 +412,7 @@ test('employee grievance lifecycle rejects invalid confidential moves', async ()
   await assert.rejects(
     service.updateEmployeeGrievanceLifecycle(
       { caseId: 'case_1', toStatus: CaseLifecycleStatus.CLOSED },
-      { userId: 'hr_owner', role: RoleCode.CR_MANAGER, branchId: 'branch_1' },
+      { userId: 'hr_owner', role: RoleCode.CR_MANAGER, branchId: 'branch_1', permissions: ['CASE_MANAGE'] },
     ),
     (error) => error instanceof AppException && error.code === 'CASE_INVALID_LIFECYCLE_TRANSITION',
   );
