@@ -124,10 +124,8 @@ export class RbacGuard implements CanActivate {
       context.getClass(),
     ]);
     const branchId = requestedBranchId(request);
-
     const isComplaintCreate = (!request.method || request.method === 'POST') && Boolean(request.url?.match(/^\/complaints(\?|$)/));
-    const isDealRoute = Boolean(request.url?.match(/^\/deals(?:\/|\?|$)/));
-    const dealGlobal = isDealRoute && Boolean(principal.permissions?.includes('DEAL_VIEW_ALL') || principal.permissions?.includes('DEAL_MANAGE_ALL'));
+    const dealGlobal = Boolean(request.url?.match(/^\/deals(?:\/|\?|$)/) && (principal.permissions?.includes('DEAL_VIEW_ALL') || principal.permissions?.includes('DEAL_MANAGE_ALL')));
     const isExempt = principal.roleCode === 'ADMIN' || principal.roleCode === 'DEPARTMENT_MANAGER' || principal.roleCode === 'DEPARTMENT_MANGER' || (isComplaintCreate && Boolean(principal.permissions?.includes('COMPLAINT_CREATE_CROSS_BRANCH'))) || Boolean(principal.permissions?.includes('COMPLAINT_VIEW_ALL')) || dealGlobal;
     if (branchScoped && branchId && !isExempt && principal.branchId !== branchId) {
       await this.recordSecurityDeny(request, 'branch_scope_forbidden', branchId);
