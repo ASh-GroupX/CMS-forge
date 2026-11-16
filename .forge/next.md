@@ -1,10 +1,10 @@
-# Custom role navigation and view defaults
+# Default direct send for new internal ticket users
 
-Status: Complete; production deployment verified
+Status: Complete; release pending
 Date: 2026-11-16
 Risk: High
-SRS: REQ-RBAC-001, RBAC-MATRIX-001, UI-DESIGN-001, METHOD-AUDIT-001
+SRS: REQ-ADMIN-001, REQ-RBAC-001, METHOD-AUDIT-001
 
-Scope: Add role-selectable view presets and page visibility permissions for new and existing custom roles. Resolve defaults from the server session when a user has no personal override. Preserve built-in role navigation and permission grants. Use existing audited, versioned role permission writes and CSRF guards. Prove allowed and denied role edits, session claims, EN/AR role form behavior, accessibility, and push.
+Scope: New staff users created in Admin Hub receive an explicit internal ticket rule allowing direct send without manager approval. Existing users and their saved rules retain their current behavior. The rule is created atomically with the user and CONFIG audit. No ticket route or authorization logic changes.
 
-Proof: Passed auth API 41/41, admin API 45/45, RBAC 2/2, web 241/241, permission browser EN/AR with no serious/critical Axe findings, Prisma validation, migration SQL sanity, lint, typecheck, OpenAPI, and security check. Browser screenshots reviewed. CI validation and VPS deployment passed for `57f7621`; the live deployment header matched. Live creation of a sample role Not Run.
+Proof: Passed admin API 46/46, internal tickets API 8/8, lint, typecheck, OpenAPI. Security check passed. Live new-user creation Not Run.

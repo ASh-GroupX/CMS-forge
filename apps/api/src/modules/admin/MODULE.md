@@ -16,6 +16,7 @@ tags: [backend, module, agent-context]
 ## Owns tables
 
 - `users`
+- `user_ticket_rules` (initial rule for newly created staff accounts)
 - `roles`
 - `permissions`
 - `role_permissions`

@@ -171,6 +171,29 @@ test('admin user service creates an account with hashed password and CONFIG audi
   assert.equal(JSON.stringify(auditRecords).includes(passwordHash), false);
 });
 
+test('new staff accounts receive direct internal ticket sending in the user creation transaction', async () => {
+  const createCalls: unknown[] = [];
+  const txClient = {
+    user: {
+      create: async (args: unknown) => {
+        createCalls.push(args);
+        return userRecord;
+      },
+    },
+  };
+  const repository = new AdminUsersRepository({} as never);
+
+  await repository.create({
+    email: 'new@cms-auto.test', nameEn: 'New Staff', nameAr: 'موظف جديد',
+    passwordHash: 'hashed', roleId: 'role_cr', branchId: 'branch_main',
+  }, txClient as never);
+
+  assert.equal(createCalls.length, 1);
+  assert.deepEqual((createCalls[0] as { data: { ticketRule: unknown } }).data.ticketRule, {
+    create: { canSendWithoutManagerApproval: true },
+  });
+});
+
 test('admin user service creates an account with optional email and phone', async () => {
   const txClient = {};
   const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];

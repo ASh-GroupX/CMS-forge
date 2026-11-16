@@ -101,7 +101,13 @@ export class AdminUsersRepository {
 
   async create(data: CreateAdminUserData, client: AdminUserClient = this.prisma): Promise<AdminUserRecord> {
     try {
-      return await client.user.create({ data, select: userSelect });
+      return await client.user.create({
+        data: {
+          ...data,
+          ticketRule: { create: { canSendWithoutManagerApproval: true } },
+        },
+        select: userSelect,
+      });
     } catch (error: any) {
       if (error?.code === 'P2002') {
         const target = Array.isArray(error.meta?.target) ? error.meta.target.join(', ') : error.meta?.target ?? 'field';
