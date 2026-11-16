@@ -226,7 +226,7 @@ export class ComplaintsRepository {
       (where.AND as any[]).push({ departmentId: filter.departmentId });
     }
 
-    const isGlobalManager = filter.role === 'CR_MANAGER' || filter.role === 'ADMIN' || filter.permissions?.includes('COMPLAINT_VIEW_ALL');
+    const isGlobalManager = filter.role === 'ADMIN' || filter.permissions?.includes('COMPLAINT_VIEW_ALL');
     const isBranchManager = filter.role === 'BRANCH_MANAGER';
 
     if (isGlobalManager) {
@@ -314,7 +314,7 @@ export class ComplaintsRepository {
   async findDetail(id: string, filter: ListComplaintQueueFilter = {}, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintDetailRecord | null> {
     const where: Prisma.ComplaintWhereInput = { id, AND: [] };
     
-    const isGlobalManager = filter.role === 'CR_MANAGER' || filter.role === 'ADMIN' || filter.permissions?.includes('COMPLAINT_VIEW_ALL');
+    const isGlobalManager = filter.role === 'ADMIN' || filter.permissions?.includes('COMPLAINT_VIEW_ALL');
     const isBranchManager = filter.role === 'BRANCH_MANAGER';
 
     if (isGlobalManager) {

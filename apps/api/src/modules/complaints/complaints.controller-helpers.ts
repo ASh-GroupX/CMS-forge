@@ -7,7 +7,7 @@ import { AppException } from '../../core/http-kernel.js';
 function hasGlobalComplaintView(request: AuthenticatedRequest): boolean {
   const p = request.principal;
   if (!p) return false;
-  if (p.roleCode === RoleCode.ADMIN || p.roleCode === RoleCode.CR_MANAGER) return true;
+  if (p.roleCode === RoleCode.ADMIN) return true;
   return p.permissions?.includes('COMPLAINT_VIEW_ALL') ?? false;
 }
 
@@ -23,7 +23,7 @@ export function transitionPermission(request: AuthenticatedRequest): string[] {
   switch (action) {
     case ComplaintTransitionAction.SUBMIT: return ['COMPLAINT_SUBMIT'];
     case ComplaintTransitionAction.ACCEPT_INTAKE:
-      if (request.principal?.roleCode === RoleCode.CR_OFFICER && !request.principal?.permissions?.includes('COMPLAINT_APPROVE')) {
+      if (!request.principal?.permissions?.includes('COMPLAINT_APPROVE') && request.principal?.permissions?.includes('COMPLAINT_VIEW_ASSIGNED')) {
         return ['COMPLAINT_VIEW_ASSIGNED'];
       }
       return ['COMPLAINT_APPROVE'];

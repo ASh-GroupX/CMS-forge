@@ -18,7 +18,7 @@ export class ComplaintIntakeService {
   constructor(private readonly repository: ComplaintIntakeRepository, private readonly audit: AuditService, private readonly assignments: AssignmentsService, private readonly customers: CustomersService, private readonly catalog: ComplaintFormOptionsService, private readonly sla: SlaService, private readonly configuration: PortalIntakeService) {}
   async access(actor: StaffPrincipal) {
     if (actor.roleCode === 'ADMIN') return true;
-    if (!(actor.roleCode === 'CR_MANAGER' || actor.permissions?.includes('COMPLAINT_MANAGE')) || !await this.configuration.isMember(actor.userId)) {
+    if (!actor.permissions?.includes('COMPLAINT_MANAGE') || !await this.configuration.isMember(actor.userId)) {
       await this.audit.record({ eventType: 'SECURITY', action: 'intake_access_denied', actorId: actor.userId, targetType: 'portal_intake', targetId: null, branchId: actor.branchId });
       throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
     }

@@ -3,7 +3,7 @@ import test from 'node:test';
 import { ComplaintIntakeService } from '../../src/modules/complaints/complaint-intake.service.js';
 import { ComplaintIntakeRepository } from '../../src/modules/complaints/complaint-intake.repository.js';
 import { parseIntakeCorrection } from '../../src/modules/complaints/dto/complaint-intake.dto.js';
-const actor = { userId: 'u1', roleCode: 'CR_MANAGER', branchId: 'b1', permissions: [] } as never;
+const actor = { userId: 'u1', roleCode: 'CR_MANAGER', branchId: 'b1', permissions: ['COMPLAINT_MANAGE'] } as never;
 const original = { id: 'c1', referenceNumber: 'CMS-1', branchId: 'b1', categoryId: 'cat', departmentId: 'dep', ownerId: null, status: 'SUBMITTED', severity: 'MEDIUM', descriptionEn: 'Noise', incidentAt: new Date('2026-11-11'), odometer: null, updatedAt: new Date('2026-11-11'), createdAt: new Date('2026-11-11'), customerNameSnapshot: 'Maya', vehicleVinSnapshot: null, vehicleMakeSnapshot: 'Nissan', vehicleModelSnapshot: 'Patrol', customer: { nameEn: 'Shared name', phone: '+962790000000' }, vehicle: null };
 const correction = () => parseIntakeCorrection({ customerName: 'Corrected', customerPhone: '+962790000001', vehicleMake: 'Nissan', vehicleModel: 'Patrol', vehicleVin: null, odometer: 123, incidentAt: '2026-11-11', description: 'Corrected description', branchId: 'b1', categoryId: 'cat', severity: 'HIGH', departmentId: 'dep', ownerId: null, reason: 'Verified with customer' });
 function fixture() {

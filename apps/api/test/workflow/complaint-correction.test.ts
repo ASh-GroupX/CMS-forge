@@ -130,7 +130,7 @@ test('complaint correction route delegates with server branch and actor context'
     customerSource: 'MANUAL',
     actorId: 'spoofed',
     branchId: 'spoofed',
-  }, request(RoleCode.CR_MANAGER, 'branch_main', ['COMPLAINT_EDIT']));
+  }, request(RoleCode.CR_MANAGER, 'branch_main', ['COMPLAINT_EDIT', 'COMPLAINT_VIEW_ALL']));
 
   assert.deepEqual(response, { correction: { complaintId: 'cmp_1', changedFields: ['customerSource'] } });
   assert.deepEqual(calls[0], { getDetail: { id: 'cmp_1', filter: { branchId: null } } });

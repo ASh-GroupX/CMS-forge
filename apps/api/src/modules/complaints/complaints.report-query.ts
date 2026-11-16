@@ -15,7 +15,7 @@ export function reportWhere(filter: ComplaintReportFilter): Prisma.ComplaintWher
     ...dateRange(filter),
   };
 
-  const isGlobalManager = filter.role === 'CR_MANAGER' || filter.role === 'ADMIN' || filter.permissions?.includes('COMPLAINT_VIEW_ALL');
+  const isGlobalManager = filter.role === 'ADMIN' || filter.permissions?.includes('COMPLAINT_VIEW_ALL');
   const isBranchManager = filter.role === 'BRANCH_MANAGER';
 
   if (isGlobalManager) {
