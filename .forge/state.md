@@ -1,11 +1,10 @@
 # Current State
 
 Date: 2026-11-16
-Status: Amman Notes imported; live notes-only cleanup completed
+Status: Amman periodic maintenance import ready for deployment and live creation
 Risk: High
 
-- The user authorized importing the 378 Amman Notes source entries, keeping 19 review-flagged rows for manual work. A 359-row JSON file is in `outputs/amman-notes-20261115/` and excluded from Git. The latest live catalog maps all 359 clear rows. One stray source fragment was not counted as a booking.
-- The import tab uses existing appointment create/list APIs, server session, CSRF, lane validation, and per-booking transactional audit. The new notes-only cleanup uses the audited appointment PATCH endpoint and matches each imported record to its source before changing just notes. Future imports save only the original source text; idempotency uses exact text and customer/date matching.
-- The earlier live import stopped on the first POST because browser CSRF was absent; authenticated read confirmed zero source-marked appointments. The repair adds browser CSRF, refreshes the catalog, and puts request details under Notes / Customer Requests while retaining exact source text.
-- Passed: 5 focused tests; web shell 238/238; lint, web typecheck, OpenAPI, security check; booking API 43/43; EN desktop/AR mobile browser preview with scoped Axe. CI/VPS deployment of `a3d827f` passed and the live header matched. The signed-in Admin cleanup reported all 356 notes updated without error and no remaining cleanup candidates in page state. A fresh authenticated API read independently confirmed the user's Khadija example has exactly the original source line with no labels. The 19 separately flagged entries remain for human review. Preserve user `tmp/`, `uploads/`, and `outputs/`.
-- QR delegated access release is merged on feature, `waleed`, and `production` through docs commit `a75face`; live UAT Not Verified.
+- Workbook `الصيانات  الدورية` has 64 identifiable bookings from 19 November through 1 December 2026; later date rows contain no bookings. Sixty-two include kilometres and are prepared in ignored `outputs/amman-periodic-20261116/Amman_Periodic_Clear.json`. Two six-month entries without kilometres are in a separate ignored review file. No customer data is committed.
+- Admin booking settings now offer a one-time periodic import into the active Amman General lane. The importer maps all 14 source car families to live active models, selects the closest offered periodic mileage, saves the original entry in Notes, checks duplicates and lane capacity, and uses the existing audited booking API with server-side permissions and CSRF.
+- Passed: focused import tests 6/6, web TypeScript, lint, web tests, booking API 43/43, OpenAPI check, security check, and EN/AR timeline browser proof. Signed-in live API read confirmed General capacity 150/day, 7/hour, 2/slot and all 14 catalog model matches. Deployment, live import, and fresh-read verification remain.
+- Prior Amman Notes import of 356 bookings and exact-text cleanup remain complete. Preserve user `tmp/`, `uploads/`, and `outputs/`.

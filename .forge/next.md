@@ -1,10 +1,10 @@
-# Clean imported Amman Notes text
+# Import Amman periodic maintenance bookings
 
-Status: Live notes cleanup complete
+Status: Implementation verified; live import pending deployment
 Date: 2026-11-16
 Risk: High
 SRS: REQ-BOOK-LANE-001, REQ-RBAC-001, UI-DESIGN-001
 
-Scope: Save only the exact original source text in Notes / Customer Requests for future imports. For the 356 existing imports, use the existing audited appointment PATCH endpoint to replace only notes after matching source key, lane, date, name, phone, and original source text. Preserve idempotency using exact original text and customer/date matching. Deploy, run cleanup, and verify all 356 live notes. Keep the 19 review-flagged entries separate. Do not commit customer data to Git.
+Scope: Prepare the 62 mileage-bearing rows from workbook sheet `الصيانات  الدورية`, map each source mileage to the closest offered periodic mileage, save the original entry text in Notes / Customer Requests, and import to Amman General through the authenticated Admin booking settings flow. Hold two six-month entries lacking kilometres for review. Check existing bookings and lane capacity, deploy, import, and verify. Keep customer data out of Git.
 
-Proof: Passed focused import tests 5/5, web shell 238/238, web TypeScript, lint, OpenAPI, security check, booking API 43/43, EN desktop/AR mobile browser preview with scoped Axe. CI and VPS deployment passed for `a3d827f`; live deployment header matched. The signed-in Admin cleanup reported 356/356 notes updated with no error. A fresh authenticated API read independently confirmed the requested Khadija booking contains only the exact original line, with no import label or duplicate metadata.
+Proof: Passed six focused import tests, web typecheck, lint, web test suite, booking API 43/43, OpenAPI check, security check, and EN/AR timeline browser proof. Live General lane and all 14 car-family catalog matches read from the signed-in service. Production import and fresh-read verification pending.

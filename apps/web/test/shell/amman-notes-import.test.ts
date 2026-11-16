@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildAmmanCustomerNotes, findAmmanNotesToClean, parseAmmanNotesRows, planAmmanNotesImport, sourceMarker } from '../../src/lib/amman-notes-import';
+import { buildAmmanCustomerNotes, closestPeriodicMileage, findAmmanNotesToClean, parseAmmanNotesRows, parseAmmanPeriodicRows, planAmmanNotesImport, sourceMarker } from '../../src/lib/amman-notes-import';
 import type { ServiceAppointment } from '../../src/lib/staff-service-bookings-api';
 import type { ServiceBookingLane } from '../../src/lib/staff-service-booking-lanes-api';
 
@@ -54,4 +54,16 @@ test('cleans only matching imported notes and ignores other appointments', () =>
   assert.deepEqual(findAmmanNotesToClean([row], [item], lane.id), [{ appointmentId: item.id, row }]);
   assert.deepEqual(findAmmanNotesToClean([row], [{ ...item, customerPhone: '0790000000' }], lane.id), []);
   assert.deepEqual(findAmmanNotesToClean([row], [{ ...item, notes: 'Staff edited this note' }], lane.id), []);
+});
+
+test('periodic import requires source mileage and chooses the closest offered service', () => {
+  const rows = Array.from({ length: 62 }, (_, index) => ({ ...base,
+    sourceKey: `2026-11-19-PER-B-${index + 1}`, sourceMileageKm: 19000,
+  }));
+  assert.equal(parseAmmanPeriodicRows(rows).length, 62);
+  assert.throws(() => parseAmmanPeriodicRows(rows.map((row, index) => index === 0 ? { ...row, sourceMileageKm: null } : row)), /Invalid mileage/);
+  assert.equal(closestPeriodicMileage(4000), 5000);
+  assert.equal(closestPeriodicMileage(19000), 20000);
+  assert.equal(closestPeriodicMileage(54000), 50000);
+  assert.equal(closestPeriodicMileage(61000), 60000);
 });

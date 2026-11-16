@@ -1,5 +1,16 @@
 export const ammanNotesImportText = {
   en: {
+    periodic: {
+      tab: 'Import Amman Periodic', title: 'Import Amman periodic maintenance',
+      subtitle: 'One-time import of 62 mileage bookings into Amman General. Original booking text is saved in Notes.',
+      file: 'Amman periodic clear-row JSON file', loading: 'Checking live bookings…', failed: 'Could not prepare the import.',
+      model: 'Car model for', choose: 'Choose a model', ready: 'Ready', imported: 'Already imported',
+      conflicts: 'Needs review', start: 'Create ready bookings', progress: 'Created',
+      clean: '', cleaned: '', cleanFinished: '', noFile: 'Choose the prepared 62-row file to begin.',
+      noLane: 'The active Amman General lane is unavailable.', noType: 'A periodic maintenance type is unavailable.',
+      finished: 'Import finished. Reload the file to verify every result.', issue: 'Issue at',
+      details: 'Source keys needing attention', count: 'The selected file must contain exactly 62 reviewed rows.',
+    },
     tab: 'Import Amman Notes', title: 'Import Amman Notes bookings',
     subtitle: 'One-time import of the reviewed 359-row file. Existing bookings and lane limits are checked before creation.',
     file: 'Amman Notes clear-row JSON file', loading: 'Checking live bookings…', failed: 'Could not prepare the import.',
@@ -12,6 +23,17 @@ export const ammanNotesImportText = {
     count: 'The selected file must contain exactly 359 reviewed rows.',
   },
   ar: {
+    periodic: {
+      tab: 'استيراد الصيانة الدورية', title: 'استيراد الصيانة الدورية في عمان',
+      subtitle: 'استيراد 62 حجزاً مع الكيلومترات إلى مسار عمان العام. يحفظ نص الحجز الأصلي في الملاحظات.',
+      file: 'ملف حجوزات الصيانة الدورية JSON', loading: 'جار فحص الحجوزات الحالية…', failed: 'تعذر تحضير الاستيراد.',
+      model: 'موديل السيارة لـ', choose: 'اختر الموديل', ready: 'جاهز', imported: 'مستورد مسبقاً',
+      conflicts: 'يحتاج مراجعة', start: 'إنشاء الحجوزات الجاهزة', progress: 'تم إنشاء',
+      clean: '', cleaned: '', cleanFinished: '', noFile: 'اختر ملف 62 حجزاً المحضر للبدء.',
+      noLane: 'مسار الحجوزات العامة في عمان غير متاح.', noType: 'نوع الصيانة الدورية غير متاح.',
+      finished: 'اكتمل الاستيراد. أعد تحميل الملف للتحقق من النتائج.', issue: 'مشكلة عند',
+      details: 'مفاتيح الحجوزات التي تحتاج مراجعة', count: 'يجب أن يحتوي الملف المحدد على 62 حجزاً بعد المراجعة.',
+    },
     tab: 'استيراد ملاحظات عمان', title: 'استيراد حجوزات ملاحظات عمان',
     subtitle: 'استيراد ملف 359 حجزاً بعد مراجعته. يتم فحص الحجوزات الموجودة وسعة المسار قبل الإنشاء.',
     file: 'ملف حجوزات ملاحظات عمان JSON', loading: 'جار فحص الحجوزات الحالية…', failed: 'تعذر تحضير الاستيراد.',

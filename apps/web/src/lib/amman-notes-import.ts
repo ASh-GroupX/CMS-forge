@@ -13,6 +13,21 @@ export type AmmanImportRow = {
 };
 
 export type ImportDecision = { row: AmmanImportRow; startTime?: string; reason?: string };
+export type AmmanPeriodicRow = AmmanImportRow & { sourceMileageKm: number };
+export const PERIODIC_MILEAGES = [1000, 5000, ...Array.from({ length: 15 }, (_, index) => (index + 1) * 10000)];
+export function closestPeriodicMileage(value: number): number {
+  return PERIODIC_MILEAGES.reduce((best, next) => Math.abs(next - value) < Math.abs(best - value) ? next : best);
+}
+export function parseAmmanPeriodicRows(value: unknown): AmmanPeriodicRow[] {
+  if (!Array.isArray(value) || value.length !== 62) throw new Error('Invalid Amman Periodic file');
+  const basic = parseAmmanNotesRows(value);
+  return basic.map((row, index) => {
+    const sourceMileageKm = Number((value[index] as Record<string, unknown>).sourceMileageKm);
+    if (!row.sourceKey.includes('-PER-') || !Number.isInteger(sourceMileageKm) || sourceMileageKm < 1000 || sourceMileageKm > 999000)
+      throw new Error(`Invalid mileage: ${row.sourceKey}`);
+    return { ...row, sourceMileageKm };
+  });
+}
 const MARKER = 'Amman Notes source: ';
 
 export function parseAmmanNotesRows(value: unknown): AmmanImportRow[] {
@@ -77,6 +92,7 @@ export function suggestCatalogModel(carType: string, models: CarModel[]): string
     NS1: 'Honda NS1', ID4: 'ID.4', T5: 'Forthing T5 Hybrid Exclusive CCC',
     'BYD Seagull': 'seagull',
     Box: 'DFM BOX E3 EU', BJ30: 'BAIC BJ30e Hybrid GCC',
+    T60: 'MG T60 Pick-up Diesel CCC', YUAN: 'BYD Yuan Plus EV CCC',
     'Song L': 'BYD Song L E1 EV CCC',
   };
   const exact = alias[carType];

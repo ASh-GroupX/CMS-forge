@@ -11,16 +11,17 @@ import {
 } from '../../../../lib/staff-service-bookings-api';
 import type { ServiceBookingLane } from '../../../../lib/staff-service-booking-lanes-api';
 import {
-  buildAmmanCustomerNotes, findAmmanNotesToClean, parseAmmanNotesRows, planAmmanNotesImport, suggestCatalogModel,
-  type AmmanImportRow,
+  buildAmmanCustomerNotes, closestPeriodicMileage, findAmmanNotesToClean, parseAmmanNotesRows,
+  parseAmmanPeriodicRows, planAmmanNotesImport, suggestCatalogModel, type AmmanImportRow, type AmmanPeriodicRow,
 } from '../../../../lib/amman-notes-import';
 import type { Locale } from '../../../../i18n/staff-shell';
 import { ammanNotesImportText } from '../../../../i18n/amman-notes-import';
 
-export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale }: {
-  carModels: CarModel[]; maintenanceTypes: MaintenanceType[]; locale: Locale;
+export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale, mode = 'notes' }: {
+  carModels: CarModel[]; maintenanceTypes: MaintenanceType[]; locale: Locale; mode?: 'notes' | 'periodic';
 }) {
-  const t = ammanNotesImportText[locale];
+  const periodic = mode === 'periodic';
+  const t = periodic ? ammanNotesImportText[locale].periodic : ammanNotesImportText[locale];
   const [rows, setRows] = useState<AmmanImportRow[]>([]);
   const [existing, setExisting] = useState<ServiceAppointment[]>([]);
   const [lane, setLane] = useState<ServiceBookingLane | null>(null);
@@ -37,7 +38,7 @@ export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale }: {
   const ready = plan.filter((item) => item.startTime);
   const imported = plan.filter((item) => item.reason === 'already-imported');
   const conflicts = plan.filter((item) => item.reason && item.reason !== 'already-imported');
-  const toClean = useMemo(() => lane ? findAmmanNotesToClean(rows, existing, lane.id) : [], [rows, existing, lane]);
+  const toClean = useMemo(() => !periodic && lane ? findAmmanNotesToClean(rows, existing, lane.id) : [], [rows, existing, lane, periodic]);
   const options = useMemo(() => catalog.filter((model) => model.isActive).map((model) => ({
     value: model.id, label: `${model.brand} · ${model.nameEn}`,
   })).sort((a, b) => a.label.localeCompare(b.label)), [catalog]);
@@ -46,15 +47,18 @@ export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale }: {
     if (!file) return;
     setBusy(true); setCreated(0); setCleaned(0); setMessage(t.loading); setRows([]);
     try {
-      const parsed = parseAmmanNotesRows(JSON.parse(await file.text()) as unknown);
-      if (parsed.length !== 359) throw new Error(t.count);
+      const parsed = periodic ? parseAmmanPeriodicRows(JSON.parse(await file.text()) as unknown)
+        : parseAmmanNotesRows(JSON.parse(await file.text()) as unknown);
+      if (parsed.length !== (periodic ? 62 : 359)) throw new Error(t.count);
       const [lanes, appointments, freshModels] = await Promise.all([
         fetchServiceBookingLanes('center_main'),
         fetchServiceAppointments({ branchId: 'center_main', fromDate: parsed[0]!.date, toDate: parsed.at(-1)!.date }),
         fetchCarModels(),
       ]);
-      const notesLane = lanes.find((item) => item.isActive && item.nameEn.toLowerCase() === 'notes');
-      const notesType = maintenanceTypes.find((item) => item.isActive && item.nameEn.toLowerCase() === 'notes');
+      const notesLane = lanes.find((item) => item.isActive && (periodic ? item.code === 'GENERAL' : item.nameEn.toLowerCase() === 'notes'));
+      const notesType = maintenanceTypes.find((item) => item.isActive && (periodic
+        ? item.id.startsWith('maint_periodic') || /^Periodic Maintenance\b/i.test(item.nameEn)
+        : item.nameEn.toLowerCase() === 'notes'));
       if (!notesLane) throw new Error(t.noLane);
       if (!notesType) throw new Error(t.noType);
       setLane(notesLane); setTypeId(notesType.id); setExisting(appointments); setCatalog(freshModels);
@@ -75,11 +79,16 @@ export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale }: {
     for (const item of ready) {
       const row = item.row;
       try {
+        const mileage = periodic ? closestPeriodicMileage((row as AmmanPeriodicRow).sourceMileageKm) : null;
+        const selectedType = mileage == null ? maintenanceTypes.find((type) => type.id === typeId)
+          : maintenanceTypes.find((type) => type.isActive && type.id === `maint_periodic_${mileage / 1000}k`)
+            ?? maintenanceTypes.find((type) => type.id === typeId);
         const result = await createAppointmentApi({
-          branchId: 'center_main', bookingLaneId: lane.id, maintenanceTypeId: typeId,
+          branchId: 'center_main', bookingLaneId: lane.id, maintenanceTypeId: selectedType?.id ?? typeId,
+          periodicMileageKm: mileage,
           carModelId: modelByType[row.carType]!, customerName: row.customerName,
           customerPhone: row.customerPhone, date: row.date, startTime: item.startTime!,
-          durationMinutes: 15,
+          durationMinutes: periodic ? selectedType?.estimatedDurationMinutes ?? 30 : 15,
           notes: buildAmmanCustomerNotes(row),
         });
         if (!result.ok) throw new Error(result.message || t.failed);
@@ -116,8 +125,8 @@ export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale }: {
   return (
     <section aria-label={t.title} className="space-y-5 rounded-2xl border border-line-subtle bg-surface p-5">
       <div><h2 className="text-lg font-semibold text-content-strong">{t.title}</h2><p className="text-sm text-content-muted">{t.subtitle}</p></div>
-      <div className="space-y-2"><Label htmlFor="amman-notes-file">{t.file}</Label>
-        <Input id="amman-notes-file" type="file" accept=".json,application/json" disabled={busy}
+      <div className="space-y-2"><Label htmlFor={`amman-${mode}-file`}>{t.file}</Label>
+        <Input id={`amman-${mode}-file`} type="file" accept=".json,application/json" disabled={busy}
           onClick={(event) => { event.currentTarget.value = ''; }}
           onChange={(event) => void load(event.target.files?.[0])} /></div>
       {rows.length > 0 ? <>

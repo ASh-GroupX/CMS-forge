@@ -31,7 +31,7 @@ export function BookingSettingsView({
   t: ServiceBookingCopy;
 }) {
   const isAr = locale === 'ar';
-  const [activeTab, setActiveTab] = useState<'hours' | 'lanes' | 'cars' | 'maintenance' | 'centers' | 'user-rules' | 'sms-reminder' | 'import-notes'>('hours');
+  const [activeTab, setActiveTab] = useState<'hours' | 'lanes' | 'cars' | 'maintenance' | 'centers' | 'user-rules' | 'sms-reminder' | 'import-notes' | 'import-periodic'>('hours');
   const [centersList, setCentersList] = useState(centers);
   const [carList, setCarList] = useState(carModels);
   const [typesList, setTypesList] = useState(maintenanceTypes);
@@ -170,6 +170,10 @@ export function BookingSettingsView({
             onClick={() => setActiveTab('import-notes')} type="button">
             <FileUp className="size-4" /><span>{ammanNotesImportText[locale].tab}</span>
           </button>
+          <button className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'import-periodic' ? 'bg-brand text-primary-foreground shadow-sm' : 'border border-line-subtle bg-surface text-content-muted hover:text-content-strong'}`}
+            onClick={() => setActiveTab('import-periodic')} type="button">
+            <FileUp className="size-4" /><span>{ammanNotesImportText[locale].periodic.tab}</span>
+          </button>
         </div>
       </div>
 
@@ -217,6 +221,7 @@ export function BookingSettingsView({
           <SmsReminderTab locale={locale} t={t} />
         </div>
         {activeTab === 'import-notes' ? <AmmanNotesImportTab carModels={carList} maintenanceTypes={typesList} locale={locale} /> : null}
+        {activeTab === 'import-periodic' ? <AmmanNotesImportTab carModels={carList} maintenanceTypes={typesList} locale={locale} mode="periodic" /> : null}
       </div>
     </div>
   );
