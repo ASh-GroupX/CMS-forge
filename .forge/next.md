@@ -1,10 +1,10 @@
-# Default direct send for new internal ticket users
+# Current maintenance type booking flow
 
-Status: Complete; deployed
+Status: Complete; release pending
 Date: 2026-11-16
 Risk: High
-SRS: REQ-ADMIN-001, REQ-RBAC-001, METHOD-AUDIT-001
+SRS: SR-BOOK-004, REQ-BOOK-LANE-001, REQ-RBAC-001, UI-DESIGN-001, METHOD-AUDIT-001
 
-Scope: New staff users created in Admin Hub receive an explicit internal ticket rule allowing direct send without manager approval. Existing users and their saved rules retain their current behavior. The rule is created atomically with the user and CONFIG audit. No ticket route or authorization logic changes.
+Scope: The booking form uses active maintenance types from Admin Hub, shows each periodic subtype separately, requires mileage for each, and preserves the selected subtype and mileage on new bookings. Inactive types stay available in historical appointment snapshots and may be left unchanged while editing other details. New-install defaults use the five requested types. Existing appointment rows are untouched.
 
-Proof: Passed admin API 46/46, internal tickets API 8/8, lint, typecheck, OpenAPI. Security check passed. CI validation and VPS deployment passed for 8091e15 in run 43838098321. Live new-user creation Not Run.
+Proof: Passed booking API 45/45, web shell 243/243, EN desktop/AR mobile booking edit browser with no serious/critical Axe issues, lint, typecheck, OpenAPI. Security check passed. Live catalog/deactivation verification Not Run.

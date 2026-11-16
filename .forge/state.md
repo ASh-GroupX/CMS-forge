@@ -1,10 +1,11 @@
 # Current State
 
 Date: 2026-11-16
-Status: New staff direct-send default implemented; deployed
+Status: Maintenance type booking flow verified locally; release pending
 Risk: High
 
-- Admin staff user creation writes an explicit `user_ticket_rules` row with `canSendWithoutManagerApproval: true` as part of the existing user creation and CONFIG audit transaction. Existing users and their current ticket rules are untouched.
-- The backend ticket creation service already reads this rule to bypass manager approval for cross-department tickets. Admin Hub's Internal Ticket Rules & Fields page already reads the saved row and can turn direct sending off per user.
-- Passed: admin API 46/46, internal tickets API 8/8, lint, typecheck, OpenAPI. Security check passed. CI validation and VPS deployment passed for 8091e15 in run 43838098321. Live new-user creation Not Run.
+- New bookings use the active maintenance type catalog without reinstating deactivated legacy defaults. All three periodic types expose mileage and preserve their distinct subtype in the appointment snapshot and display.
+- Historical appointments retain saved maintenance names and may be edited without forcing a deactivated type back into an update. The five requested types are the defaults for an empty catalog; the live catalog's active flags remain Admin-controlled.
+- Passed: booking API 45/45, web shell 243/243, EN desktop/AR mobile booking edit browser with no serious/critical Axe issues, lint, typecheck, OpenAPI. Security check passed. Live catalog/deactivation verification Not Run.
+- Role permission audit and grouped descriptions are in progress in the working tree and are not part of this booking release.
 - Preserve untracked `outputs/`, `tmp/`, and `uploads/`.
