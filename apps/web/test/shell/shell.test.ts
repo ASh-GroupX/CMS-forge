@@ -116,6 +116,20 @@ test('navigation routing respects custom viewMode and allowedNavKeys', () => {
   assert.equal(firstAllowedPath(emptyNav, 'en').includes('locale=en'), true);
 });
 
+test('custom role page defaults show selected routes and keep unselected routes closed', () => {
+  const nav = navForPrincipal('SERVICE_LEAD', ['STAFF_LOGIN', 'BOOKING_SETTINGS_MANAGE', 'AUDIT_VIEW'], {
+    viewMode: 'CUSTOM', allowedNavKeys: ['serviceBooking', 'admin:booking-settings', 'admin'],
+  });
+  assert.deepEqual(nav, ['serviceBooking', 'admin']);
+  assert.equal(isRouteForbidden('/service-booking', nav), false);
+  assert.equal(isRouteForbidden('/customers', nav), true);
+  assert.equal(isRouteForbidden('/admin/users', nav, ['serviceBooking', 'admin:booking-settings', 'admin']), true);
+  const auditNav = navForPrincipal('SERVICE_LEAD', ['STAFF_LOGIN', 'AUDIT_VIEW'], {
+    viewMode: 'CUSTOM', allowedNavKeys: ['audit'],
+  });
+  assert.deepEqual(auditNav, ['audit']);
+});
+
 test('department-only board labels remain readable in English and Arabic without an assignee', () => {
   const department = { departmentName: 'Service', departmentNameAr: 'الصيانة' };
   const noAssignee = { assigneeName: null, assigneeNameAr: null };

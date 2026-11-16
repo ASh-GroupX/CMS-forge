@@ -131,7 +131,7 @@ export function navForPrincipal(
   userRules?: { viewMode?: string | null | undefined; allowedNavKeys?: readonly string[] | null | undefined },
 ): readonly StaffNavKey[] {
   const has = (permission: string) => permissions.includes(permission);
-  const base = ROLE_NAV[roleCode] ?? STAFF_NAV;
+  const base = ROLE_NAV[roleCode] ?? (roleCode === 'CR_OFFICER' ? STAFF_NAV : [...STAFF_NAV, 'audit' as const]);
   const hasAdminPerm =
     has('USERS_MANAGE') ||
     has('ROLES_MANAGE') ||

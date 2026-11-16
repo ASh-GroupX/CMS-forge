@@ -72,6 +72,21 @@ test('valid staff session returns safe server-derived claims', async () => {
   });
 });
 
+test('custom role page selection appears in session claims without replacing a user override', async () => {
+  const custom = { ...validSession, user: { ...validSession.user, viewMode: 'BOTH', allowedNavKeys: [],
+    role: { code: 'SERVICE_LEAD', permissions: [
+      { permission: { code: 'ROLE_VIEW_CUSTOM', isActive: true } },
+      { permission: { code: 'ROLE_NAV_SERVICE_BOOKING', isActive: true } },
+      { permission: { code: 'ROLE_NAV_ADMIN_BOOKING_SETTINGS', isActive: true } },
+    ] } } };
+  const claims = await serviceFor(custom).validateStaffSession(token, new Date('2026-06-18T12:00:00.000Z'));
+  assert.equal(claims.viewMode, 'CUSTOM');
+  assert.deepEqual(claims.allowedNavKeys, ['serviceBooking', 'admin:booking-settings', 'admin']);
+  const overridden = await serviceFor({ ...custom, user: { ...custom.user, viewMode: 'CRM', allowedNavKeys: ['complaints'] } })
+    .validateStaffSession(token, new Date('2026-06-18T12:00:00.000Z'));
+  assert.deepEqual(overridden.allowedNavKeys, ['complaints']);
+});
+
 test('missing, unknown, expired, and revoked sessions are denied generically', async () => {
   await assert.rejects(
     serviceFor(validSession).validateStaffSession('', new Date('2026-06-18T12:00:00.000Z')),

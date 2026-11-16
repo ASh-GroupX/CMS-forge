@@ -19,6 +19,11 @@ if (mode === 'runtime-smoke') {
   process.exit(0);
 }
 
+if (mode === 'permissions') {
+  run('node', ['--import', 'tsx', 'tools/role-permissions-browser.mjs']);
+  process.exit(0);
+}
+
 if (mode === 'customer-portal-track') {
   run('node', ['--import', 'tsx', 'tools/customer-portal-track-proof.mjs']);
   process.exit(0);
@@ -59,7 +64,7 @@ if (mode === 'board-drawer') {
   process.exit(0);
 }
 
-console.error('Use one of: visual, accessibility, perf, ui-smoke, reports, runtime-smoke, customer-portal-track, customer-portal-submit, complaint-workflow, attachments, work-queues, task-board-dnd, complaint-board, board-drawer.');
+console.error('Use one of: visual, accessibility, perf, ui-smoke, reports, runtime-smoke, permissions, customer-portal-track, customer-portal-submit, complaint-workflow, attachments, work-queues, task-board-dnd, complaint-board, board-drawer.');
 process.exit(1);
 
 function run(command, args) {

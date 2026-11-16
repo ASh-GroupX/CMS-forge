@@ -54,6 +54,32 @@ test('admin role service rejects reserved, unauthenticated, portal, and unknown 
   }
 });
 
+test('custom roles require one view choice and pages only with Custom view', async () => {
+  const service = new AdminRolesService({ activePermissionIds: async (codes) => codes.map((code) => `per_${code}`),
+    transaction: async <T>(work: (client: never) => Promise<T>) => work({} as never),
+    create: async () => role,
+  } as AdminRolesRepository, noopAudit());
+  for (const permissionCodes of [
+    ['STAFF_LOGIN', 'ROLE_VIEW_CRM', 'ROLE_VIEW_BOTH'],
+    ['STAFF_LOGIN', 'ROLE_VIEW_BOTH', 'ROLE_NAV_SERVICE_BOOKING'],
+    ['STAFF_LOGIN', 'ROLE_VIEW_CUSTOM'],
+  ]) {
+    await assert.rejects(service.create({ code: 'SERVICE_LEAD', nameEn: 'Service lead', nameAr: 'قائد الخدمة', permissionCodes }),
+      (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED');
+  }
+  await service.create({ code: 'SERVICE_LEAD', nameEn: 'Service lead', nameAr: 'قائد الخدمة',
+    permissionCodes: ['STAFF_LOGIN', 'ROLE_VIEW_CUSTOM', 'ROLE_NAV_SERVICE_BOOKING'] });
+});
+
+test('built-in role navigation cannot be changed through role permissions', async () => {
+  const builtIn = { ...role, code: 'ADMIN', isSystem: true };
+  const service = new AdminRolesService({ findById: async () => builtIn } as AdminRolesRepository, noopAudit());
+  await assert.rejects(service.previewPermissions(builtIn.id, {
+    permissionCodes: ['STAFF_LOGIN', 'ROLE_VIEW_CUSTOM', 'ROLE_NAV_DASHBOARD'],
+    expectedUpdatedAt: updatedAt.toISOString(),
+  }), (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED');
+});
+
 test('admin role service replaces selected permissions and audits the change in one transaction', async () => {
   const txClient = {};
   const audits: Array<{ input: AuditRecordInput; client: unknown }> = [];

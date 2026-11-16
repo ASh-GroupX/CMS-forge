@@ -1,10 +1,10 @@
-# Import Amman periodic maintenance bookings
+# Custom role navigation and view defaults
 
-Status: Implementation verified; live import pending deployment
+Status: Verified locally; push and production deployment pending
 Date: 2026-11-16
 Risk: High
-SRS: REQ-BOOK-LANE-001, REQ-RBAC-001, UI-DESIGN-001
+SRS: REQ-RBAC-001, RBAC-MATRIX-001, UI-DESIGN-001, METHOD-AUDIT-001
 
-Scope: Prepare the 62 mileage-bearing rows from workbook sheet `الصيانات  الدورية`, map each source mileage to the closest offered periodic mileage, save the original entry text in Notes / Customer Requests, and import to Amman General through the authenticated Admin booking settings flow. Hold two six-month entries lacking kilometres for review. Check existing bookings and lane capacity, deploy, import, and verify. Keep customer data out of Git.
+Scope: Add role-selectable view presets and page visibility permissions for new and existing custom roles. Resolve defaults from the server session when a user has no personal override. Preserve built-in role navigation and permission grants. Use existing audited, versioned role permission writes and CSRF guards. Prove allowed and denied role edits, session claims, EN/AR role form behavior, accessibility, and push.
 
-Proof: Passed six focused import tests, web typecheck, lint, web test suite, booking API 43/43, OpenAPI check, security check, and EN/AR timeline browser proof. Live General lane and all 14 car-family catalog matches read from the signed-in service. Production import and fresh-read verification pending.
+Proof: Passed auth API 41/41, admin API 45/45, RBAC 2/2, web 241/241, permission browser EN/AR with no serious/critical Axe findings, Prisma validation, migration SQL sanity, lint, typecheck, OpenAPI, and security check. Browser screenshots reviewed. Production migration and live UAT Not Run until push/deployment.

@@ -1,0 +1,32 @@
+-- Custom-role navigation defaults. No built-in role receives these permissions.
+INSERT INTO "permissions" ("id", "code", "name_en", "name_ar", "is_active", "created_at", "updated_at")
+VALUES
+  ('perm_role_view_both', 'ROLE_VIEW_BOTH', 'View: all workspaces', 'العرض: جميع الأقسام', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_view_crm', 'ROLE_VIEW_CRM', 'View: CRM only', 'العرض: نظام العملاء فقط', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_view_tickets', 'ROLE_VIEW_INTERNAL_TICKETS', 'View: internal tickets only', 'العرض: التذاكر الداخلية فقط', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_view_custom', 'ROLE_VIEW_CUSTOM', 'View: selected pages', 'العرض: صفحات محددة', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_redirect', 'ROLE_NAV_REDIRECT_COMPLAINTS', 'Page: redirect complaints', 'الصفحة: توجيه الشكاوى', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_dashboard', 'ROLE_NAV_DASHBOARD', 'Page: dashboard', 'الصفحة: لوحة التحكم', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_tickets', 'ROLE_NAV_INTERNAL_TICKETS', 'Page: internal tickets', 'الصفحة: التذاكر الداخلية', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_booking', 'ROLE_NAV_SERVICE_BOOKING', 'Page: service booking', 'الصفحة: حجوزات الصيانة', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_complaints', 'ROLE_NAV_COMPLAINTS', 'Page: complaints', 'الصفحة: الشكاوى', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_customers', 'ROLE_NAV_CUSTOMERS', 'Page: customers', 'الصفحة: العملاء', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_tasks', 'ROLE_NAV_TASKS', 'Page: tasks', 'الصفحة: المهام', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_communication', 'ROLE_NAV_COMMUNICATION', 'Page: communication', 'الصفحة: التواصل', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_reports', 'ROLE_NAV_REPORTS', 'Page: reports', 'الصفحة: التقارير', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_audit', 'ROLE_NAV_AUDIT', 'Page: audit log', 'الصفحة: سجل العمليات', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_admin_qr', 'ROLE_NAV_ADMIN_PORTAL_INTAKE', 'Admin page: QR intake', 'صفحة الإدارة: استقبال QR', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_admin_users', 'ROLE_NAV_ADMIN_USERS', 'Admin page: users', 'صفحة الإدارة: المستخدمون', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_admin_roles', 'ROLE_NAV_ADMIN_ROLES', 'Admin page: roles', 'صفحة الإدارة: الأدوار', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_admin_branches', 'ROLE_NAV_ADMIN_BRANCHES', 'Admin page: branches', 'صفحة الإدارة: الفروع', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_admin_categories', 'ROLE_NAV_ADMIN_CATEGORIES', 'Admin page: categories', 'صفحة الإدارة: التصنيفات', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_admin_sla', 'ROLE_NAV_ADMIN_SLA', 'Admin page: SLA policies', 'صفحة الإدارة: سياسات SLA', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_admin_notifications', 'ROLE_NAV_ADMIN_NOTIFICATION_TEMPLATES', 'Admin page: notification templates', 'صفحة الإدارة: قوالب الإشعارات', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_admin_problems', 'ROLE_NAV_ADMIN_STANDARD_PROBLEMS', 'Admin page: standard problems', 'صفحة الإدارة: المشكلات الشائعة', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_admin_templates', 'ROLE_NAV_ADMIN_COMPLAINT_TEMPLATES', 'Admin page: complaint templates', 'صفحة الإدارة: قوالب الشكاوى', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_admin_ticket_settings', 'ROLE_NAV_ADMIN_TICKET_SETTINGS', 'Admin page: ticket settings', 'صفحة الإدارة: إعدادات التذاكر', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_admin_tickets', 'ROLE_NAV_ADMIN_INTERNAL_TICKETS', 'Admin page: internal tickets', 'صفحة الإدارة: التذاكر الداخلية', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_admin_complaint_settings', 'ROLE_NAV_ADMIN_COMPLAINT_SETTINGS', 'Admin page: complaint settings', 'صفحة الإدارة: إعدادات الشكاوى', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_admin_booking_settings', 'ROLE_NAV_ADMIN_BOOKING_SETTINGS', 'Admin page: booking settings', 'صفحة الإدارة: إعدادات الحجز', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('perm_role_nav_admin_api', 'ROLE_NAV_ADMIN_API_KEYS', 'Admin page: external data API', 'صفحة الإدارة: واجهة البيانات', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT ("code") DO NOTHING;

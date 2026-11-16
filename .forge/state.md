@@ -1,10 +1,10 @@
 # Current State
 
 Date: 2026-11-16
-Status: Amman periodic maintenance import ready for deployment and live creation
+Status: Custom role navigation and view defaults verified locally; push pending
 Risk: High
 
-- Workbook `الصيانات  الدورية` has 64 identifiable bookings from 19 November through 1 December 2026; later date rows contain no bookings. Sixty-two include kilometres and are prepared in ignored `outputs/amman-periodic-20261116/Amman_Periodic_Clear.json`. Two six-month entries without kilometres are in a separate ignored review file. No customer data is committed.
-- Admin booking settings now offer a one-time periodic import into the active Amman General lane. The importer maps all 14 source car families to live active models, selects the closest offered periodic mileage, saves the original entry in Notes, checks duplicates and lane capacity, and uses the existing audited booking API with server-side permissions and CSRF.
-- Passed: focused import tests 6/6, web TypeScript, lint, web tests, booking API 43/43, OpenAPI check, security check, and EN/AR timeline browser proof. Signed-in live API read confirmed General capacity 150/day, 7/hour, 2/slot and all 14 catalog model matches. Deployment, live import, and fresh-read verification remain.
-- Prior Amman Notes import of 356 bookings and exact-text cleanup remain complete. Preserve user `tmp/`, `uploads/`, and `outputs/`.
+- Custom staff roles can select one view preset or Custom view with specific navigation and Admin Hub pages. These choices are stored as active role permissions; the migration grants none to built-in roles. Server session claims derive role defaults only when the user has no explicit page override. Built-in role navigation remains unchanged.
+- The existing Admin role endpoint still requires `ROLES_MANAGE` and CSRF, checks permission codes and optimistic version, and writes CONFIG audit in the role transaction. New validation rejects conflicting view choices, page selections without Custom view, and role navigation edits on built-in roles.
+- Passed: auth API 41/41, admin API 45/45, RBAC 2/2, web 241/241, EN/AR permission browser flow with no serious/critical Axe findings, Prisma validation, migration SQL sanity, lint, typecheck, OpenAPI and security check. EN desktop/AR mobile screenshots inspected. Production deployment and live UAT remain.
+- Prior Amman periodic import: 62 bookings created in General; import UI showed 62 already imported and no conflicts. A fresh authenticated read confirmed 20 General periodic bookings on 19 November with mileage and original Notes text. Two six-month entries without kilometres remain in ignored local review output. Preserve `outputs/`, `tmp/`, and `uploads/`.

@@ -64,7 +64,7 @@ function CreateRoleForm({ action, data, locale }: { action: RoleAction; data: Ad
     <Field label={t.code} name="code" pattern="[A-Za-z][A-Za-z0-9_]{2,63}" />
     <Field label={t.nameEn} name="nameEn" />
     <Field label={t.nameAr} name="nameAr" />
-    <div className="grid gap-1 md:col-span-2"><Label>{t.permissions}</Label><PermissionChecklist copyEnabled data={data} initialCodes={['STAFF_LOGIN']} locale={locale} /><p className="text-xs text-muted-foreground">{t.selectHelp}</p></div>
+    <div className="grid gap-1 md:col-span-2"><Label>{t.permissions}</Label><PermissionChecklist copyEnabled data={data} initialCodes={['STAFF_LOGIN', 'ROLE_VIEW_BOTH']} locale={locale} /><p className="text-xs text-muted-foreground">{t.selectHelp}</p></div>
     <Button className="md:col-span-2" type="submit">{t.create}</Button>
   </form>;
 }
@@ -78,17 +78,26 @@ function PermissionChecklist({ copyEnabled, data, initialCodes, locale, onSelect
   const [localSelected, setLocalSelected] = useState(initialCodes);
   const selected = controlledSelected ?? localSelected;
   const setSelected = (value: string[]) => { setLocalSelected(value); onSelectedChange?.(value); };
-  const permissions = data.permissions.filter(({ code }) => code !== 'PORTAL_SUBMIT');
+  const permissions = data.permissions.filter(({ code }) => code !== 'PORTAL_SUBMIT'
+    && (!role?.isSystem || !/^ROLE_(VIEW|NAV)_/.test(code)));
   const copyFrom = (roleId: string) => {
     const source = data.roles.find(({ id }) => id === roleId);
-    if (source) setSelected(source.permissions.map(({ code }) => code));
+    if (source) {
+      const codes = source.permissions.map(({ code }) => code).filter((code) => !role?.isSystem || !/^ROLE_(VIEW|NAV)_/.test(code));
+      setSelected(role?.isSystem || codes.some((code) => code.startsWith('ROLE_VIEW_')) ? codes : [...codes, 'ROLE_VIEW_BOTH']);
+    }
   };
   return <div className="grid gap-3 rounded-md border border-input bg-background p-3">
     {copyEnabled ? <label className="grid gap-1 text-sm font-medium">{t.copyPermissions}<FormSelect onValueChange={copyFrom} options={data.roles.filter(({ id, code }) => id !== role?.id && code !== 'CUSTOMER_PORTAL').map((source) => ({ label: localizedName(source, locale), value: source.id }))} placeholder={t.selectRole} /></label> : null}
+    {!role?.isSystem ? <p className="text-xs text-muted-foreground">{t.navigationHelp}</p> : null}
     {Object.entries(permissionGroups(t)).map(([group, codes]) => {
       const groupPermissions = permissions.filter(({ code }) => codes(code));
-      return groupPermissions.length ? <fieldset className="grid gap-2" key={group}><legend className="text-sm font-semibold">{group}</legend><div className="grid gap-2 sm:grid-cols-2">
-        {groupPermissions.map((permission) => <label className="flex items-start gap-2 rounded-sm border border-border p-2 text-sm" key={permission.id}><input checked={selected.includes(permission.code)} className="mt-1 size-4 accent-primary" name="permissionCodes" onChange={(event) => setSelected(event.target.checked ? [...selected, permission.code] : selected.filter((code) => code !== permission.code))} type="checkbox" value={permission.code} /><span><span className="block font-medium">{localizedName(permission, locale)}</span><span className="block text-xs text-muted-foreground"><bdi>{permission.code}</bdi></span></span></label>)}
+      return groupPermissions.length ? <fieldset className="grid gap-2" disabled={group === t.permissionGroups.navigation && !selected.includes('ROLE_VIEW_CUSTOM')} key={group}><legend className="text-sm font-semibold">{group}</legend><div className="grid gap-2 sm:grid-cols-2">
+        {groupPermissions.map((permission) => <label className="flex items-start gap-2 rounded-sm border border-border p-2 text-sm" key={permission.id}><input checked={selected.includes(permission.code)} className="mt-1 size-4 accent-primary" name="permissionCodes" onChange={(event) => {
+          const code = permission.code;
+          if (code.startsWith('ROLE_VIEW_')) setSelected([...selected.filter((item) => !/^ROLE_(VIEW|NAV)_/.test(item)), code]);
+          else setSelected(event.target.checked ? [...selected, code] : selected.filter((item) => item !== code));
+        }} type={permission.code.startsWith('ROLE_VIEW_') ? 'radio' : 'checkbox'} value={permission.code} /><span><span className="block font-medium">{localizedName(permission, locale)}</span><span className="block text-xs text-muted-foreground"><bdi>{permission.code}</bdi></span></span></label>)}
       </div></fieldset> : null;
     })}
   </div>;
@@ -100,6 +109,8 @@ function localizedName(item: { nameAr?: string | null; nameEn: string }, locale:
 
 function permissionGroups(t: (typeof adminRolesText)[Locale]) {
   return {
+    [t.permissionGroups.view]: (code: string) => code.startsWith('ROLE_VIEW_'),
+    [t.permissionGroups.navigation]: (code: string) => code.startsWith('ROLE_NAV_'),
     [t.permissionGroups.complaints]: (code: string) => code === 'STAFF_LOGIN' || code.startsWith('COMPLAINT_'),
     [t.permissionGroups.operations]: (code: string) => code.startsWith('ATTACHMENT_') || code.startsWith('COMPENSATION_'),
     [t.permissionGroups.administration]: (code: string) => /^(USERS|ROLES|MASTER_DATA|SLA|NOTIFICATIONS|INTEGRATIONS)_/.test(code),

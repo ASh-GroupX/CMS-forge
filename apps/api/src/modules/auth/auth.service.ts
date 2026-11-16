@@ -6,6 +6,7 @@ import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { AuthRepository } from './auth.repository.js';
 import type { StaffAuthRecord } from './auth.repository.js';
+import { roleNavigationDefaults } from './role-navigation.js';
 import {
   STAFF_SESSION_TTL_SECONDS,
   hashPasswordResetToken,
@@ -271,10 +272,13 @@ function authDenied(code: 'AUTH_INVALID_CREDENTIALS' | 'AUTH_LOCKED_OR_INACTIVE'
 }
 
 function staffClaims(user: Omit<StaffAuthRecord, 'passwordHash'>): StaffAuthClaims {
+  const permissions = permissionCodes(user);
+  const navigation = roleNavigationDefaults({ roleCode: user.role.code, permissionCodes: permissions,
+    viewMode: user.viewMode, allowedNavKeys: user.allowedNavKeys });
   return {
     userId: user.id, email: user.email, phone: user.phone ?? null,
-    viewMode: user.viewMode ?? 'BOTH', allowedNavKeys: user.allowedNavKeys ?? [],
-    nameEn: user.nameEn, nameAr: user.nameAr, roleCode: user.role.code, permissions: permissionCodes(user),
+    viewMode: navigation.viewMode, allowedNavKeys: navigation.allowedNavKeys,
+    nameEn: user.nameEn, nameAr: user.nameAr, roleCode: user.role.code, permissions,
     branchId: user.branchId, departmentId: user.departmentId ?? null,
     branchName: user.branch?.nameEn ?? null, branchNameAr: user.branch?.nameAr ?? null, branchTimezone: user.branch?.timezone ?? null,
   };

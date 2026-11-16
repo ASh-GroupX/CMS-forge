@@ -34,6 +34,7 @@ export class AdminRolesService {
   async previewPermissions(id: string, input: UpdateAdminRolePermissionsInput, audit: AdminAudit = {}): Promise<AdminRolePermissionPreview> {
     const role = await this.requiredEditableRole(id);
     this.assertVersion(role, input.expectedUpdatedAt);
+    validateRoleNavigation(input.permissionCodes, role.isSystem);
     await this.permissionIds(input.permissionCodes);
     return this.permissionImpact(role, input.permissionCodes, audit.actorId ?? null);
   }
@@ -41,6 +42,7 @@ export class AdminRolesService {
   async updatePermissions(id: string, input: UpdateAdminRolePermissionsInput, audit: AdminAudit = {}): Promise<AdminRoleDto> {
     const role = await this.requiredEditableRole(id);
     this.assertVersion(role, input.expectedUpdatedAt);
+    validateRoleNavigation(input.permissionCodes, role.isSystem);
     const permissionIds = await this.permissionIds(input.permissionCodes);
     return this.repository.transaction(async (client) => {
       const current = await this.repository.findById(role.id, client);
@@ -92,6 +94,7 @@ export class AdminRolesService {
   private async createData(input: CreateAdminRoleInput): Promise<CreateAdminRoleData> {
     const code = nonEmpty(input.code, 'code').toUpperCase();
     if (!/^[A-Z][A-Z0-9_]{2,63}$/.test(code) || reservedCodes.has(code)) throw validation('code', 'code is invalid.');
+    validateRoleNavigation(input.permissionCodes, false);
     const permissionIds = await this.permissionIds(input.permissionCodes);
     return { code, nameEn: nonEmpty(input.nameEn, 'nameEn'), nameAr: nonEmpty(input.nameAr, 'nameAr'), permissionIds };
   }
@@ -107,6 +110,15 @@ export class AdminRolesService {
 }
 
 const reservedCodes = new Set(['CR_OFFICER', 'CR_MANAGER', 'BRANCH_MANAGER', 'ADMIN', 'MGMT_READONLY', 'CUSTOMER_PORTAL']);
+
+function validateRoleNavigation(codes: string[], isSystem: boolean): void {
+  const views = codes.filter((code) => code.startsWith('ROLE_VIEW_'));
+  const nav = codes.filter((code) => code.startsWith('ROLE_NAV_'));
+  if (isSystem && (views.length || nav.length)) throw validation('permissionCodes', 'Built-in role navigation cannot be changed.');
+  if (views.length > 1 || (nav.length > 0) !== views.includes('ROLE_VIEW_CUSTOM')) {
+    throw validation('permissionCodes', 'Choose one view mode; selected pages require Custom view.');
+  }
+}
 
 function permissionDto(permission: AdminPermissionRecord): AdminPermissionDto {
   return { id: permission.id, code: permission.code, nameEn: permission.nameEn, nameAr: permission.nameAr };
