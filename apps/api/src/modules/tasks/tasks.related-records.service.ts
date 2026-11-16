@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { CaseType, ComplaintStatus, DealStage, Prisma, RoleCode, TaskLinkEntityType } from '@prisma/client';
+import { CaseType, ComplaintStatus, DealStage, Prisma, TaskLinkEntityType } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 import type { RelatedRecordDto, RelatedRecordType } from './dto/related-record-lookup.dto.js';
 
-type RelatedRecordActor = { roleCode: string; branchId: string | null };
+type RelatedRecordActor = { roleCode: string; branchId: string | null; permissions?: string[] };
 type Scope = { branchId: string | null; isAdmin: boolean };
 
 @Injectable()
@@ -114,7 +114,7 @@ export class TasksRelatedRecordsService {
 }
 
 function scopeFrom(actor: RelatedRecordActor): Scope {
-  return { branchId: actor.branchId, isAdmin: actor.roleCode === RoleCode.ADMIN || actor.roleCode === RoleCode.CR_MANAGER };
+  return { branchId: actor.branchId, isAdmin: actor.permissions?.includes('TASK_MANAGE_ALL') ?? false };
 }
 
 function branchScope(scope: Scope): { branchId?: string } {

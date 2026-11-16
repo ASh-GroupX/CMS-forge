@@ -1,20 +1,18 @@
-import { RoleCode, TaskLinkEntityType, TaskStatus } from '@prisma/client';
+import { TaskLinkEntityType, TaskStatus } from '@prisma/client';
 import type { PromiseTrackerResponseDto } from './dto/task-response.dto.js';
 import { promiseKeptOnTime } from './tasks.promise.js';
 import type { PromiseTaskRecord } from './tasks.repository.js';
 import { taskToResponse } from './tasks.response.js';
 
-export type PromiseTrackerScope = { userId: string; roleCode: string; branchId: string | null; departmentId?: string | null };
-
-const managerRoles = new Set<string>([RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN, RoleCode.MGMT_READONLY]);
+export type PromiseTrackerScope = { userId: string; roleCode: string; branchId: string | null; departmentId?: string | null; permissions?: string[] };
 
 export function promiseTrackerQuery(scope: PromiseTrackerScope) {
   return {
     userId: scope.userId,
     branchId: scope.branchId,
     departmentId: scope.departmentId ?? null,
-    isAdmin: scope.roleCode === RoleCode.ADMIN,
-    isManager: managerRoles.has(scope.roleCode),
+    isAdmin: scope.permissions?.includes('TASK_MANAGE_ALL') ?? false,
+    isManager: scope.permissions?.some((code) => ['TASK_VIEW_BRANCH', 'TASK_MANAGE_BRANCH', 'TASK_MANAGE_ALL'].includes(code)) ?? false,
   };
 }
 

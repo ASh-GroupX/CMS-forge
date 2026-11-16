@@ -57,10 +57,10 @@ test('employee board query is participant-scoped (no manager or admin reach)', a
 });
 
 test('manager board query carries branch scope; admin board query is unrestricted', async () => {
-  const manager = await captureBoardQuery({ userId: 'user_manager', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a' });
+  const manager = await captureBoardQuery({ userId: 'user_manager', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a', permissions: ['TASK_VIEW_BRANCH', 'TASK_MANAGE_BRANCH'] });
   assert.deepEqual(manager.scope, { userId: 'user_manager', branchId: 'branch_a', departmentId: null, isAdmin: false, isManager: true });
 
-  const admin = await captureBoardQuery({ userId: 'user_admin', roleCode: RoleCode.ADMIN, branchId: null });
+  const admin = await captureBoardQuery({ userId: 'user_admin', roleCode: RoleCode.ADMIN, branchId: null, permissions: ['TASK_MANAGE_ALL'] });
   assert.deepEqual(admin.scope, { userId: 'user_admin', branchId: null, departmentId: null, isAdmin: true, isManager: true });
 });
 

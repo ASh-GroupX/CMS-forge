@@ -51,20 +51,20 @@ export class TasksController {
 
   @Get('manager-rollup')
   @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
-  @Permissions('REPORT_VIEW')
+  @Permissions('TASK_VIEW_BRANCH')
   @BranchScoped()
   async managerRollup(@Req() request: AuthenticatedRequest): Promise<ManagerControlRoomResponseDto> {
     const principal = requirePrincipal(request);
-    return this.tasksService.managerControlRoom({ roleCode: principal.roleCode, branchId: principal.branchId });
+    return this.tasksService.managerControlRoom({ roleCode: principal.roleCode, branchId: principal.branchId, permissions: principal.permissions ?? [] });
   }
 
   @Get('promises')
   @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
-  @Permissions('REPORT_VIEW')
+  @Permissions('TASK_VIEW_BRANCH')
   @BranchScoped()
   async promises(@Req() request: AuthenticatedRequest): Promise<PromiseTrackerResponseDto> {
     const principal = requirePrincipal(request);
-    return this.tasksService.promiseTracker({ userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId });
+    return this.tasksService.promiseTracker({ userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId, permissions: principal.permissions ?? [] });
   }
 
   @Get('related-records')

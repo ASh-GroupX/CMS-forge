@@ -32,7 +32,7 @@ export type UpdateTaskStatusInput = { taskId: string; status: TaskStatus; nextAc
 export type UpdateTaskInput = { taskId: string; status?: TaskStatus; assigneeId?: string | null; dueAt?: Date | string; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; statusNote?: string; assignedDepartmentId?: string | null };
 export type TaskActor = { userId: string; roleCode: string; branchId: string | null; departmentId?: string | null; permissions?: string[] };
 
-type ManagerRollupScope = { roleCode: string; branchId: string | null };
+type ManagerRollupScope = { roleCode: string; branchId: string | null; permissions?: string[] };
 
 @Injectable()
 export class TasksService {

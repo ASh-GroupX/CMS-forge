@@ -17,6 +17,7 @@ import { PermissionGuard, RbacGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
 import { AppException, PrismaService } from '../../src/core/http-kernel.ts';
 import { TasksController } from '../../src/modules/tasks/tasks.controller.ts';
+import { managerBranchId } from '../../src/modules/tasks/tasks.access.ts';
 import { TasksModule } from '../../src/modules/tasks/tasks.module.ts';
 import { promiseKeptOnTime } from '../../src/modules/tasks/tasks.promise.ts';
 import type { TaskRecord, TasksRepository } from '../../src/modules/tasks/tasks.repository.ts';
@@ -36,7 +37,7 @@ test('manager sees branch-scoped rollup derived from task rows', async () => {
     },
   } as unknown as TasksRepository, {} as never);
 
-  const result = await service.managerControlRoom({ roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a' }, new Date('2026-06-20T12:00:00.000Z'));
+  const result = await service.managerControlRoom({ roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a', permissions: ['TASK_VIEW_BRANCH'] }, new Date('2026-06-20T12:00:00.000Z'));
 
   assert.equal(scopedBranch, 'branch_a');
   assert.deepEqual(result.overdueByEmployee, [{ assigneeId: 'user_a', assigneeName: 'Assignee User', count: 1 }]);
@@ -45,6 +46,12 @@ test('manager sees branch-scoped rollup derived from task rows', async () => {
   assert.deepEqual(result.workloadByAssignee, [{ assigneeId: 'user_a', assigneeName: 'Assignee User', count: 3 }, { assigneeId: 'user_b', assigneeName: 'Assignee User', count: 1 }]);
   assert.deepEqual(result.stuck.map((task) => task.id), ['stuck_a']);
   assert.deepEqual(result.promiseKpi, { openPromiseCount: 1, overduePromiseCount: 1 });
+});
+
+test('task oversight follows grants even for a custom role', () => {
+  assert.equal(managerBranchId({ branchId: 'branch_a', permissions: ['TASK_VIEW_BRANCH'] }), 'branch_a');
+  assert.equal(managerBranchId({ branchId: null, permissions: ['TASK_MANAGE_ALL'] }), null);
+  assert.throws(() => managerBranchId({ branchId: 'branch_a', permissions: [] }), (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN');
 });
 
 test('manager rollup route derives scope from the staff session', async () => {
@@ -58,7 +65,7 @@ test('manager rollup route derives scope from the staff session', async () => {
 
   await controller.managerRollup(request(branchManager));
 
-  assert.deepEqual(capturedScope, { roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a' });
+  assert.deepEqual(capturedScope, { roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a', permissions: ['TASK_VIEW_BRANCH', 'TASK_MANAGE_BRANCH'] });
 });
 
 test('promise tracker route derives actor from the staff session', async () => {
@@ -72,7 +79,7 @@ test('promise tracker route derives actor from the staff session', async () => {
 
   await controller.promises(request(branchManager, '/tasks/promises'));
 
-  assert.deepEqual(capturedActor, { userId: 'user_manager', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a' });
+  assert.deepEqual(capturedActor, { userId: 'user_manager', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a', permissions: ['TASK_VIEW_BRANCH', 'TASK_MANAGE_BRANCH'] });
 });
 
 test('task routes require permissions and keep CSRF/branch-scope guards', async () => {
@@ -92,14 +99,14 @@ test('task routes require permissions and keep CSRF/branch-scope guards', async 
   const auditRecords: AuditRecordInput[] = [];
   const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
   assert.equal(await guard.canActivate(context(request({ ...employee, permissions: ['COMPLAINT_COMMENT_INTERNAL'] }, '/tasks/today'), 'today')), true);
-  assert.equal(await guard.canActivate(context(request({ ...branchManager, permissions: ['REPORT_VIEW'] }), 'managerRollup')), true);
+  assert.equal(await guard.canActivate(context(request({ ...branchManager, permissions: ['TASK_VIEW_BRANCH'] }), 'managerRollup')), true);
 
   await assert.rejects(
     guard.canActivate(context(request({ ...branchManager, permissions: [] }), 'managerRollup')),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
   assert.equal(auditRecords[0]?.action, 'permission_forbidden');
-  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['REPORT_VIEW']);
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['TASK_VIEW_BRANCH']);
 });
 
 test('management read-only can open an in-scope normal task without collaboration data', async () => {
@@ -112,7 +119,7 @@ test('management read-only can open an in-scope normal task without collaboratio
   } as unknown as TasksRepository, {} as never);
 
   const result = await service.managerTaskDetail('task_1', {
-    userId: 'user_readonly', roleCode: RoleCode.MGMT_READONLY, branchId: 'branch_a', permissions: ['REPORT_VIEW'],
+    userId: 'user_readonly', roleCode: RoleCode.MGMT_READONLY, branchId: 'branch_a', permissions: ['TASK_VIEW_BRANCH'],
   }, new Date('2026-06-20T12:00:00.000Z'));
 
   assert.deepEqual(calls, [{ id: 'task_1', branchId: 'branch_a', includeConfidential: false }]);
@@ -125,7 +132,7 @@ test('manager detail fails closed when the scoped or confidentiality query finds
   const service = new TasksService({ findManagerDetail: async () => null } as unknown as TasksRepository, {} as never);
 
   await assert.rejects(
-    service.managerTaskDetail('task_other_branch', { userId: 'user_manager', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a' }),
+    service.managerTaskDetail('task_other_branch', { userId: 'user_manager', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a', permissions: ['TASK_VIEW_BRANCH'] }),
     (error: unknown) => error instanceof AppException && error.code === 'TASK_NOT_FOUND',
   );
 });
@@ -140,7 +147,7 @@ test('administrator manager detail may query confidential tasks without a branch
   } as unknown as TasksRepository, {} as never);
 
   await service.managerTaskDetail('task_confidential', {
-    userId: 'user_admin', roleCode: RoleCode.ADMIN, branchId: null, permissions: ['REPORT_VIEW', 'COMPLAINT_COMMENT_INTERNAL'],
+    userId: 'user_admin', roleCode: RoleCode.ADMIN, branchId: null, permissions: ['TASK_MANAGE_ALL', 'COMPLAINT_COMMENT_INTERNAL'],
   });
   assert.deepEqual(received, { id: 'task_confidential', branchId: null, includeConfidential: true });
 });
@@ -199,6 +206,7 @@ const branchManager: StaffPrincipal = {
   nameAr: 'Manager',
   roleCode: RoleCode.BRANCH_MANAGER,
   branchId: 'branch_a',
+  permissions: ['TASK_VIEW_BRANCH', 'TASK_MANAGE_BRANCH'],
 };
 
 const employee: StaffPrincipal = { ...branchManager, userId: 'user_employee', roleCode: RoleCode.CR_OFFICER };

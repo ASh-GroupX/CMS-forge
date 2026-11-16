@@ -1,27 +1,27 @@
 import { HttpStatus } from '@nestjs/common';
-import { RoleCode, TaskConfidentialityLevel, TaskParticipantRole } from '@prisma/client';
+import { TaskConfidentialityLevel, TaskParticipantRole } from '@prisma/client';
 import { AppException } from '../../core/http-kernel.js';
 import type { TaskRecord } from './tasks.repository.js';
 import type { TaskActor } from './tasks.service.js';
 
-type ManagerRollupScope = { roleCode: string; branchId: string | null };
+type ManagerRollupScope = { branchId: string | null; permissions?: string[] };
 
-const managerRoles = new Set<string>([RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN, RoleCode.MGMT_READONLY]);
+const has = (actor: ManagerRollupScope, code: string) => actor.permissions?.includes(code) ?? false;
 
 export function managerBranchId(scope: ManagerRollupScope): string | null {
-  if (!managerRoles.has(scope.roleCode)) {
+  if (!has(scope, 'TASK_VIEW_BRANCH') && !has(scope, 'TASK_MANAGE_ALL')) {
     throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
   }
-  if (scope.roleCode === RoleCode.ADMIN || scope.roleCode === RoleCode.CR_MANAGER) return null;
+  if (has(scope, 'TASK_MANAGE_ALL')) return null;
   if (!scope.branchId) throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
   return scope.branchId;
 }
 
 export function assertCanView(task: TaskRecord, actor: TaskActor): void {
-  if (actor.roleCode === RoleCode.ADMIN || actor.roleCode === RoleCode.CR_MANAGER) return;
+  if (has(actor, 'TASK_MANAGE_ALL')) return;
   if (isParticipant(task, actor.userId)) return;
   if (isDepartmentMember(task, actor)) return;
-  if (!managerRoles.has(actor.roleCode) || !actor.branchId) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+  if (!has(actor, 'TASK_VIEW_BRANCH') || !actor.branchId) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
   if (task.confidentialityLevel !== TaskConfidentialityLevel.NORMAL) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
   const taskBranches = new Set([task.owner?.branchId, task.assignee?.branchId, task.nextActionWho?.branchId].filter(Boolean));
   if (!taskBranches.has(actor.branchId)) throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
@@ -32,11 +32,11 @@ export function assertCanComment(task: TaskRecord, actor: TaskActor): void {
 }
 
 export function assertCanManage(task: TaskRecord, actor: TaskActor): void {
-  if (actor.roleCode === RoleCode.ADMIN || actor.roleCode === RoleCode.CR_MANAGER) return;
+  if (has(actor, 'TASK_MANAGE_ALL')) return;
   const membership = task.participants.find((participant) => participant.userId === actor.userId);
   if (task.ownerId === actor.userId || task.assigneeId === actor.userId || task.nextActionWhoId === actor.userId || membership?.role === TaskParticipantRole.PARTICIPANT) return;
   if (isDepartmentMember(task, actor)) return;
-  if (!managerRoles.has(actor.roleCode) || !actor.branchId) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+  if (!has(actor, 'TASK_MANAGE_BRANCH') || !actor.branchId) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
   if (task.confidentialityLevel !== TaskConfidentialityLevel.NORMAL) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
   const taskBranches = new Set([task.owner?.branchId, task.assignee?.branchId, task.nextActionWho?.branchId].filter(Boolean));
   if (!taskBranches.has(actor.branchId)) throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
