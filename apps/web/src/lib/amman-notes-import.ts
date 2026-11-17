@@ -18,8 +18,8 @@ export const PERIODIC_MILEAGES = [1000, 5000, ...Array.from({ length: 15 }, (_, 
 export function closestPeriodicMileage(value: number): number {
   return PERIODIC_MILEAGES.reduce((best, next) => Math.abs(next - value) < Math.abs(best - value) ? next : best);
 }
-export function parseAmmanPeriodicRows(value: unknown): AmmanPeriodicRow[] {
-  if (!Array.isArray(value) || value.length !== 62) throw new Error('Invalid Amman Periodic file');
+export function parseAmmanPeriodicRows(value: unknown, expectedCount = 62): AmmanPeriodicRow[] {
+  if (!Array.isArray(value) || value.length !== expectedCount) throw new Error('Invalid Periodic import file');
   const basic = parseAmmanNotesRows(value);
   return basic.map((row, index) => {
     const sourceMileageKm = Number((value[index] as Record<string, unknown>).sourceMileageKm);
@@ -94,11 +94,17 @@ export function suggestCatalogModel(carType: string, models: CarModel[]): string
     Box: 'DFM BOX E3 EU', BJ30: 'BAIC BJ30e Hybrid GCC',
     T60: 'MG T60 Pick-up Diesel CCC', YUAN: 'BYD Yuan Plus EV CCC',
     'Song L': 'BYD Song L E1 EV CCC',
+    'Aeolus Mage': 'Dongfeng Mage ICE', JAC: 'E30X',
+    'BAIC BJ30': 'BAIC BJ30e Hybrid GCC',
   };
   const exact = alias[carType];
   if (exact) return models.find((model) => model.isActive && model.nameEn === exact)?.id ?? '';
   const matches = models.filter((model) => model.isActive && model.nameEn.toLowerCase() === carType.toLowerCase());
-  return matches.length === 1 ? matches[0]!.id : '';
+  if (matches.length === 1) return matches[0]!.id;
+  const normalized = carType.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const contained = models.filter((model) => model.isActive
+    && model.nameEn.toLowerCase().replace(/[^a-z0-9]+/g, ' ').includes(normalized));
+  return contained.length === 1 ? contained[0]!.id : '';
 }
 
 export function planAmmanNotesImport(

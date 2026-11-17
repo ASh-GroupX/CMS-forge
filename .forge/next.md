@@ -1,31 +1,28 @@
-# Internal ticket context and dashboard drill-down
+# One-time Irbid periodic booking import
 
-Status: Complete; deployed and verified
+Status: In Progress
 Date: 2026-11-17
 Risk: High
-SRS: REQ-NOTIFY-001, REQ-REPORT-001, REQ-RBAC-001, METHOD-AUDIT-001, UI-DESIGN-001
+SRS: REQ-BOOK-LANE-001, REQ-RBAC-001, METHOD-AUDIT-001, UI-DESIGN-001
 
-Scope is delivered as three small proof slices so each remains reviewable:
+Prepare and execute a reviewed one-time import from the `اربد` worksheet for
+the North/Irbid service center General lane. Each clear source booking keeps its
+full original cell entry in Notes, maps its mileage to the closest active
+periodic-maintenance option, resolves an active catalog model, and is spread
+across available 15-minute slots within the source hour.
 
-1. Show the saved waiting, resolution, and rejection explanation on the full
-   internal-ticket page, and preserve a human-readable reason snapshot in new
-   status-history entries.
-2. After commit, enqueue deduplicated in-app notifications to the ticket's
-   creator, assignee/requested employee, and active target-department staff when
-   a ticket is created or receives a note; never notify the actor.
-3. Turn dashboard justification and satisfaction summary cards into scoped
-   complaint-list drill-down links backed by validated API filters.
+Scope:
 
-Proof: focused internal-ticket, complaint/report, and web tests; typecheck,
-lint, OpenAPI drift check; English and Arabic Playwright screenshot review.
+1. Extract every booking from the Irbid worksheet and produce clear/review JSON
+   artifacts without modifying the source workbook.
+2. Generalize the existing authenticated periodic import panel so an admin can
+   target `center_north` with an exact reviewed-row count; keep Amman behavior
+   unchanged.
+3. Prove parsing, duplicate protection, catalog mapping, lane capacity, RBAC,
+   API audit behavior, bilingual UI, and rendered import states.
+4. Deploy, then use the signed-in admin flow to import only ready Irbid rows and
+   report any remaining manual-review entries honestly.
 
-Result: Passed internal-tickets 11/11, complaints 103/103, web shell 244/244,
-focused queue/UI 2/2, typecheck, lint, OpenAPI, security, diff check, and the
-English/Arabic hydrated browser proof. Screenshots were inspected. Commit
-`eade7f7` reached the feature, `waleed`, and `production` branches; GitHub run
-44034927092 passed validation and VPS deployment, including public revision and
-health gates. Signed-in live ticket/notification UAT remains Needs Human Review.
-
-Do not change legacy ticket records, complaint workflow authority, role grants,
-branch scope, or portal exposure. Preserve untracked `outputs/`, `tmp/`, and
-`uploads/`.
+Do not bypass the existing create-appointment API, server-session permissions,
+lane capacity, branch ownership, duplicate checks, or transactional audit.
+Preserve untracked `outputs/`, `tmp/`, and `uploads/`.

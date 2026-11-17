@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildAmmanCustomerNotes, closestPeriodicMileage, findAmmanNotesToClean, parseAmmanNotesRows, parseAmmanPeriodicRows, planAmmanNotesImport, sourceMarker } from '../../src/lib/amman-notes-import';
+import { buildAmmanCustomerNotes, closestPeriodicMileage, findAmmanNotesToClean, parseAmmanNotesRows, parseAmmanPeriodicRows, planAmmanNotesImport, sourceMarker, suggestCatalogModel } from '../../src/lib/amman-notes-import';
 import type { ServiceAppointment } from '../../src/lib/staff-service-bookings-api';
 import type { ServiceBookingLane } from '../../src/lib/staff-service-booking-lanes-api';
 
@@ -61,9 +61,23 @@ test('periodic import requires source mileage and chooses the closest offered se
     sourceKey: `2026-11-19-PER-B-${index + 1}`, sourceMileageKm: 19000,
   }));
   assert.equal(parseAmmanPeriodicRows(rows).length, 62);
+  assert.equal(parseAmmanPeriodicRows(rows.slice(0, 2), 2).length, 2);
   assert.throws(() => parseAmmanPeriodicRows(rows.map((row, index) => index === 0 ? { ...row, sourceMileageKm: null } : row)), /Invalid mileage/);
   assert.equal(closestPeriodicMileage(4000), 5000);
   assert.equal(closestPeriodicMileage(19000), 20000);
   assert.equal(closestPeriodicMileage(54000), 50000);
   assert.equal(closestPeriodicMileage(61000), 60000);
+});
+
+test('maps Irbid source families to one active catalog model without guessing ambiguous matches', () => {
+  const models = [
+    { id: 's60', nameEn: 'Forthing S60 EV', nameAr: '', brand: 'Forthing', isActive: true },
+    { id: 'rox', nameEn: 'ROX 01', nameAr: '', brand: 'ROX', isActive: true },
+    { id: 'song', nameEn: 'BYD Song Plus DM-i', nameAr: '', brand: 'BYD', isActive: true },
+    { id: 'inactive', nameEn: 'S60 Legacy', nameAr: '', brand: 'Forthing', isActive: false },
+  ];
+  assert.equal(suggestCatalogModel('S60', models), 's60');
+  assert.equal(suggestCatalogModel('ROX', models), 'rox');
+  assert.equal(suggestCatalogModel('Song Plus', models), 'song');
+  assert.equal(suggestCatalogModel('Unknown', models), '');
 });

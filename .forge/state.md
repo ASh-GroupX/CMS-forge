@@ -1,21 +1,18 @@
 # Current State
 
 Date: 2026-11-17
-Status: Ticket context and dashboard drill-down deployed and verified
+Status: Irbid periodic booking import prepared; deployment and live import pending
 Risk: High
 
-- Internal ticket detail loads and displays saved waiting, resolution, and
-  rejection reasons. New transitions snapshot localized reason text in activity
-  history without rewriting legacy tickets.
-- Ticket creation and notes enqueue deduplicated in-app notifications after
-  commit for visible participants; the actor is excluded and links target the
-  exact ticket.
-- Dashboard justification and satisfaction cards open a validated, server-scoped
-  complaint queue. Branch and role authority remain session-derived.
-- Passed internal tickets 11/11, complaints 103/103, web shell 244/244, focused
-  queue/UI 2/2, typecheck, lint, OpenAPI, security, diff check, and inspected
-  English/Arabic browser screenshots. Commit `eade7f7` reached the feature,
-  `waleed`, and `production`; GitHub run 44034927092 passed validation, VPS
-  deployment, public revision, and health gates. Signed-in live ticket and
-  notification UAT remains Needs Human Review.
+- The `اربد` worksheet A1:K59 contains 170 extracted bookings on 19 active dates.
+  A private untracked artifact has 160 validated rows; 10 ambiguous rows remain
+  isolated for manual review.
+- The bilingual Admin Booking Settings importer can target `center_north` General
+  with an exact 160-row batch. Amman import behavior remains unchanged.
+- Original booking text becomes Notes, source mileage maps to the closest active
+  periodic option, and the planner checks duplicates plus lane day/hour/slot
+  capacity before using the existing authenticated create API.
+- Passed actual batch validation, focused import tests 7/7, web 245/245,
+  service-bookings API, typecheck, lint, OpenAPI, security, and diff check.
+- Deployment, rendered live UI review, and production creation are still pending.
 - Preserve untracked `outputs/`, `tmp/`, and `uploads/`.

@@ -17,11 +17,16 @@ import {
 import type { Locale } from '../../../../i18n/staff-shell';
 import { ammanNotesImportText } from '../../../../i18n/amman-notes-import';
 
-export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale, mode = 'notes' }: {
+export function AmmanNotesImportTab({
+  carModels, maintenanceTypes, locale, mode = 'notes', centerId = 'center_main', expectedCount, variant = 'amman',
+}: {
   carModels: CarModel[]; maintenanceTypes: MaintenanceType[]; locale: Locale; mode?: 'notes' | 'periodic';
+  centerId?: string; expectedCount?: number; variant?: 'amman' | 'irbid';
 }) {
   const periodic = mode === 'periodic';
-  const t = periodic ? ammanNotesImportText[locale].periodic : ammanNotesImportText[locale];
+  const t = variant === 'irbid' ? ammanNotesImportText[locale].irbidPeriodic
+    : periodic ? ammanNotesImportText[locale].periodic : ammanNotesImportText[locale];
+  const requiredCount = expectedCount ?? (periodic ? 62 : 359);
   const [rows, setRows] = useState<AmmanImportRow[]>([]);
   const [existing, setExisting] = useState<ServiceAppointment[]>([]);
   const [lane, setLane] = useState<ServiceBookingLane | null>(null);
@@ -47,12 +52,12 @@ export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale, mode 
     if (!file) return;
     setBusy(true); setCreated(0); setCleaned(0); setMessage(t.loading); setRows([]);
     try {
-      const parsed = periodic ? parseAmmanPeriodicRows(JSON.parse(await file.text()) as unknown)
+      const parsed = periodic ? parseAmmanPeriodicRows(JSON.parse(await file.text()) as unknown, requiredCount)
         : parseAmmanNotesRows(JSON.parse(await file.text()) as unknown);
-      if (parsed.length !== (periodic ? 62 : 359)) throw new Error(t.count);
+      if (parsed.length !== requiredCount) throw new Error(t.count);
       const [lanes, appointments, freshModels] = await Promise.all([
-        fetchServiceBookingLanes('center_main'),
-        fetchServiceAppointments({ branchId: 'center_main', fromDate: parsed[0]!.date, toDate: parsed.at(-1)!.date }),
+        fetchServiceBookingLanes(centerId),
+        fetchServiceAppointments({ branchId: centerId, fromDate: parsed[0]!.date, toDate: parsed.at(-1)!.date }),
         fetchCarModels(),
       ]);
       const notesLane = lanes.find((item) => item.isActive && (periodic ? item.code === 'GENERAL' : item.nameEn.toLowerCase() === 'notes'));
@@ -84,7 +89,7 @@ export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale, mode 
           : maintenanceTypes.find((type) => type.isActive && type.id === `maint_periodic_${mileage / 1000}k`)
             ?? maintenanceTypes.find((type) => type.id === typeId);
         const result = await createAppointmentApi({
-          branchId: 'center_main', bookingLaneId: lane.id, maintenanceTypeId: selectedType?.id ?? typeId,
+          branchId: centerId, bookingLaneId: lane.id, maintenanceTypeId: selectedType?.id ?? typeId,
           periodicMileageKm: mileage,
           carModelId: modelByType[row.carType]!, customerName: row.customerName,
           customerPhone: row.customerPhone, date: row.date, startTime: item.startTime!,
@@ -125,8 +130,8 @@ export function AmmanNotesImportTab({ carModels, maintenanceTypes, locale, mode 
   return (
     <section aria-label={t.title} className="space-y-5 rounded-2xl border border-line-subtle bg-surface p-5">
       <div><h2 className="text-lg font-semibold text-content-strong">{t.title}</h2><p className="text-sm text-content-muted">{t.subtitle}</p></div>
-      <div className="space-y-2"><Label htmlFor={`amman-${mode}-file`}>{t.file}</Label>
-        <Input id={`amman-${mode}-file`} type="file" accept=".json,application/json" disabled={busy}
+      <div className="space-y-2"><Label htmlFor={`${variant}-${mode}-file`}>{t.file}</Label>
+        <Input id={`${variant}-${mode}-file`} type="file" accept=".json,application/json" disabled={busy}
           onClick={(event) => { event.currentTarget.value = ''; }}
           onChange={(event) => void load(event.target.files?.[0])} /></div>
       {rows.length > 0 ? <>

@@ -1,5 +1,16 @@
 export const ammanNotesImportText = {
   en: {
+    irbidPeriodic: {
+      tab: 'Import Irbid Periodic', title: 'Import Irbid periodic maintenance',
+      subtitle: 'One-time import of 160 reviewed mileage bookings into Irbid General. Original booking text is saved in Notes.',
+      file: 'Irbid periodic clear-row JSON file', loading: 'Checking live bookings…', failed: 'Could not prepare the import.',
+      model: 'Car model for', choose: 'Choose a model', ready: 'Ready', imported: 'Already imported',
+      conflicts: 'Needs review', start: 'Create ready bookings', progress: 'Created',
+      clean: '', cleaned: '', cleanFinished: '', noFile: 'Choose the prepared 160-row file to begin.',
+      noLane: 'The active Irbid General lane is unavailable.', noType: 'A periodic maintenance type is unavailable.',
+      finished: 'Import finished. Reload the file to verify every result.', issue: 'Issue at',
+      details: 'Source keys needing attention', count: 'The selected file must contain exactly 160 reviewed rows.',
+    },
     periodic: {
       tab: 'Import Amman Periodic', title: 'Import Amman periodic maintenance',
       subtitle: 'One-time import of 62 mileage bookings into Amman General. Original booking text is saved in Notes.',
@@ -23,6 +34,17 @@ export const ammanNotesImportText = {
     count: 'The selected file must contain exactly 359 reviewed rows.',
   },
   ar: {
+    irbidPeriodic: {
+      tab: 'استيراد صيانة إربد', title: 'استيراد الصيانة الدورية في إربد',
+      subtitle: 'استيراد 160 حجزاً مراجعاً مع الكيلومترات إلى مسار إربد العام. يحفظ نص الحجز الأصلي في الملاحظات.',
+      file: 'ملف حجوزات صيانة إربد JSON', loading: 'جار فحص الحجوزات الحالية…', failed: 'تعذر تحضير الاستيراد.',
+      model: 'موديل السيارة لـ', choose: 'اختر الموديل', ready: 'جاهز', imported: 'مستورد مسبقاً',
+      conflicts: 'يحتاج مراجعة', start: 'إنشاء الحجوزات الجاهزة', progress: 'تم إنشاء',
+      clean: '', cleaned: '', cleanFinished: '', noFile: 'اختر ملف 160 حجزاً المحضر للبدء.',
+      noLane: 'مسار الحجوزات العامة في إربد غير متاح.', noType: 'نوع الصيانة الدورية غير متاح.',
+      finished: 'اكتمل الاستيراد. أعد تحميل الملف للتحقق من النتائج.', issue: 'مشكلة عند',
+      details: 'مفاتيح الحجوزات التي تحتاج مراجعة', count: 'يجب أن يحتوي الملف المحدد على 160 حجزاً بعد المراجعة.',
+    },
     periodic: {
       tab: 'استيراد الصيانة الدورية', title: 'استيراد الصيانة الدورية في عمان',
       subtitle: 'استيراد 62 حجزاً مع الكيلومترات إلى مسار عمان العام. يحفظ نص الحجز الأصلي في الملاحظات.',
