@@ -671,7 +671,11 @@ function CrmDashboardView({ isRtl, crmData, locale }: { isRtl: boolean; crmData?
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 p-4">
+                  <Link
+                    href={`/complaints?isJustified=true&locale=${locale}`}
+                    aria-label={isRtl ? 'عرض الشكاوى المبررة' : 'View justified complaints'}
+                    className="rounded-xl border border-emerald-500/20 bg-emerald-50/50 p-4 transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:bg-emerald-950/20"
+                  >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
                         {isRtl ? '✅ شكاوى مبررة' : '✅ Justified'}
@@ -683,9 +687,13 @@ function CrmDashboardView({ isRtl, crmData, locale }: { isRtl: boolean; crmData?
                     <p className="text-2xl font-black text-emerald-800 dark:text-emerald-200">
                       {crm.justifiedCount}
                     </p>
-                  </div>
+                  </Link>
 
-                  <div className="rounded-xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 p-4">
+                  <Link
+                    href={`/complaints?isJustified=false&locale=${locale}`}
+                    aria-label={isRtl ? 'عرض الشكاوى غير المبررة' : 'View unjustified complaints'}
+                    className="rounded-xl border border-rose-500/20 bg-rose-50/50 p-4 transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:bg-rose-950/20"
+                  >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-bold text-rose-700 dark:text-rose-300">
                         {isRtl ? '❌ غير مبررة' : '❌ Unjustified'}
@@ -697,7 +705,7 @@ function CrmDashboardView({ isRtl, crmData, locale }: { isRtl: boolean; crmData?
                     <p className="text-2xl font-black text-rose-800 dark:text-rose-200">
                       {crm.unjustifiedCount}
                     </p>
-                  </div>
+                  </Link>
                 </div>
               </>
             ) : (
@@ -731,7 +739,7 @@ function CrmDashboardView({ isRtl, crmData, locale }: { isRtl: boolean; crmData?
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 text-center">
+                  <Link href={`/complaints?satisfactionStatus=SATISFIED&locale=${locale}`} aria-label={isRtl ? 'عرض شكاوى العملاء الراضين' : 'View satisfied customer complaints'} className="rounded-xl border border-emerald-500/20 bg-emerald-50/50 p-3 text-center transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:bg-emerald-950/20">
                     <p className="text-xl font-bold mb-1">😊</p>
                     <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
                       {isRtl ? 'راضٍ' : 'Satisfied'}
@@ -740,9 +748,9 @@ function CrmDashboardView({ isRtl, crmData, locale }: { isRtl: boolean; crmData?
                       {crm.satisfaction?.satisfied || 0}
                     </p>
                     <span className="text-[10px] text-content-muted">{satRate}%</span>
-                  </div>
+                  </Link>
 
-                  <div className="rounded-xl border border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/20 p-3 text-center">
+                  <Link href={`/complaints?satisfactionStatus=NEUTRAL&locale=${locale}`} aria-label={isRtl ? 'عرض شكاوى العملاء المحايدين' : 'View neutral customer complaints'} className="rounded-xl border border-blue-500/20 bg-blue-50/50 p-3 text-center transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:bg-blue-950/20">
                     <p className="text-xl font-bold mb-1">😐</p>
                     <p className="text-xs font-bold text-blue-700 dark:text-blue-300">
                       {isRtl ? 'محايد' : 'Neutral'}
@@ -751,9 +759,9 @@ function CrmDashboardView({ isRtl, crmData, locale }: { isRtl: boolean; crmData?
                       {crm.satisfaction?.neutral || 0}
                     </p>
                     <span className="text-[10px] text-content-muted">{neuRate}%</span>
-                  </div>
+                  </Link>
 
-                  <div className="rounded-xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 p-3 text-center">
+                  <Link href={`/complaints?satisfactionStatus=UNSATISFIED&locale=${locale}`} aria-label={isRtl ? 'عرض شكاوى العملاء غير الراضين' : 'View unsatisfied customer complaints'} className="rounded-xl border border-rose-500/20 bg-rose-50/50 p-3 text-center transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:bg-rose-950/20">
                     <p className="text-xl font-bold mb-1">😞</p>
                     <p className="text-xs font-bold text-rose-700 dark:text-rose-300">
                       {isRtl ? 'غير راضٍ' : 'Unsatisfied'}
@@ -762,7 +770,7 @@ function CrmDashboardView({ isRtl, crmData, locale }: { isRtl: boolean; crmData?
                       {crm.satisfaction?.unsatisfied || 0}
                     </p>
                     <span className="text-[10px] text-content-muted">{unsatRate}%</span>
-                  </div>
+                  </Link>
                 </div>
               </>
             ) : (

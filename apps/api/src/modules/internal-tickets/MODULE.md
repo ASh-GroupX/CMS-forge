@@ -33,12 +33,14 @@ module's boundary so you can work in a fresh context without scanning the tree.
 - `core/*` (prisma, errors, audit, rbac, correlation).
 - `modules/auth`
 - `modules/attachments`
+- `modules/notifications` (post-commit in-app dispatch only)
 - Other modules' public services only. Never import another module repository,
   `dto/`, or Prisma model type.
 
 ## SRS
 
 - REQ-FILES-001
+- REQ-NOTIFY-001
 - METHOD-AUDIT-001
 - METHOD-API-001
 - METHOD-TEST-001

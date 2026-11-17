@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, HttpStatus } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, HttpStatus, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import * as path from 'node:path';
 import { AppException } from '../../core/http-kernel.js';
@@ -9,6 +9,7 @@ import { TransferTicketDto, AssignTicketDto, ResolveTicketDto, WaitTicketDto, Re
 import { AttachmentsService } from '../attachments/attachments.service.js';
 import { UploadTicketAttachmentDto } from './dto/upload-attachment.dto.js';
 import { auditPhoneTicketCreate, enforcePhoneRule, normalizeTicketPhone, phoneMatches } from './internal-ticket-phone-rule.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
 
@@ -32,9 +33,12 @@ export function validateTicketImageAttachment(attachment: UploadTicketAttachment
 
 @Injectable()
 export class InternalTicketsService {
+  private readonly logger = new Logger(InternalTicketsService.name);
+
   constructor(
     private readonly repository: InternalTicketsRepository,
     private readonly attachmentsService: AttachmentsService,
+    @Inject(NotificationsService) private readonly notificationsService?: NotificationsService,
   ) {}
 
   async exportPage(branchIds: string[] | null, limit: number, cursor?: string) {
@@ -117,9 +121,37 @@ export class InternalTicketsService {
     });
   }
 
+  private async notifyParticipants(ticketId: string, actorId: string, event: 'created' | 'note', eventId: string) {
+    const notificationsService = this.notificationsService;
+    if (!notificationsService || typeof this.repository.notificationContext !== 'function') return;
+    try {
+      const context = await this.repository.notificationContext(ticketId);
+      if (!context) return;
+      const recipients = new Set([
+        context.requestedById,
+        context.assignedEmployeeId,
+        context.requestedEmployeeId,
+        ...context.targetDepartment.users.map((user) => user.id),
+      ].filter((id): id is string => Boolean(id) && id !== actorId));
+      const title = event === 'created' ? 'New internal ticket · تذكرة داخلية جديدة' : 'New ticket note · ملاحظة جديدة على التذكرة';
+      const message = event === 'created'
+        ? `${context.referenceNumber}: ${context.title}`
+        : `${context.referenceNumber}: a new note needs your attention · توجد ملاحظة جديدة بانتظار ردك`;
+      await Promise.all([...recipients].map((recipientUserId) => notificationsService.queueInternal({
+        recipientUserId,
+        templateCode: event === 'created' ? 'internal_ticket.created' : 'internal_ticket.note_added',
+        locale: 'ar',
+        idempotencyKey: `internal-ticket:${event}:${eventId}:${recipientUserId}`,
+        payload: { href: `/internal-tickets/${ticketId}`, title, message, referenceNumber: context.referenceNumber },
+      })));
+    } catch (error) {
+      this.logger.error(`Failed to enqueue internal-ticket ${event} notifications for ${ticketId}`, error instanceof Error ? error.stack : undefined);
+    }
+  }
+
   async create(principal: any, dto: CreateInternalTicketDto) {
     const actorId = principal.userId;
-    return this.repository.transaction(async (tx) => {
+    const ticket = await this.repository.transaction(async (tx) => {
       const refNumber = `TKT-${Date.now()}`;
       
       if (principal.roleCode !== 'ADMIN' && principal.departmentId) {
@@ -209,6 +241,8 @@ export class InternalTicketsService {
 
       return ticket;
     });
+    await this.notifyParticipants(ticket.id, actorId, 'created', ticket.id);
+    return ticket;
   }
 
   async transfer(ticketId: string, actorId: string, dto: TransferTicketDto) {
@@ -331,6 +365,7 @@ export class InternalTicketsService {
 
   async wait(ticketId: string, actorId: string, dto: WaitTicketDto) {
     return this.repository.transaction(async (tx) => {
+      const reason = dto.waitingReasonId ? await tx.ticketWaitingReason.findUnique({ where: { id: dto.waitingReasonId } }) : null;
       const ticket = await tx.internalTicket.update({
         where: { id: ticketId },
         data: { 
@@ -339,13 +374,19 @@ export class InternalTicketsService {
           customWaitingReason: dto.customWaitingReason || null,
         }
       });
-      await this.logActivity(tx, ticketId, actorId, 'WAITING_FOR_RESPONSE', dto);
+      await this.logActivity(tx, ticketId, actorId, 'WAITING_FOR_RESPONSE', {
+        ...dto,
+        reason: dto.customWaitingReason || reason?.reasonEn || reason?.reasonAr || null,
+        reasonEn: reason?.reasonEn || null,
+        reasonAr: reason?.reasonAr || null,
+      });
       return ticket;
     });
   }
 
   async resolve(ticketId: string, actorId: string, dto: ResolveTicketDto) {
     return this.repository.transaction(async (tx) => {
+      const reason = await tx.ticketResolutionReason.findUnique({ where: { id: dto.resolutionReasonId } });
       const ticket = await tx.internalTicket.update({
         where: { id: ticketId },
         data: { 
@@ -355,7 +396,13 @@ export class InternalTicketsService {
           resolutionDetails: dto.resolutionDetails
         }
       });
-      await this.logActivity(tx, ticketId, actorId, 'STATUS_CHANGED_RESOLVED', dto);
+      await this.logActivity(tx, ticketId, actorId, 'STATUS_CHANGED_RESOLVED', {
+        ...dto,
+        reason: reason?.reasonEn || reason?.reasonAr || null,
+        reasonEn: reason?.reasonEn || null,
+        reasonAr: reason?.reasonAr || null,
+        details: dto.resolutionDetails,
+      });
       return ticket;
     });
   }
@@ -367,6 +414,7 @@ export class InternalTicketsService {
         include: { requestedBy: true },
       });
       if (!existing) throw new NotFoundException('Ticket not found');
+      const reason = await tx.ticketRejectReason.findUnique({ where: { id: dto.rejectReasonId } });
 
       if (principal && principal.roleCode !== 'ADMIN') {
         const isTargetDept = Boolean(principal.departmentId && principal.departmentId === existing.targetDepartmentId);
@@ -384,7 +432,13 @@ export class InternalTicketsService {
           rejectDetails: dto.rejectDetails || null
         }
       });
-      await this.logActivity(tx, ticketId, actorId, 'REJECTED_NEEDS_WORK', dto);
+      await this.logActivity(tx, ticketId, actorId, 'REJECTED_NEEDS_WORK', {
+        ...dto,
+        reason: reason?.reasonEn || reason?.reasonAr || null,
+        reasonEn: reason?.reasonEn || null,
+        reasonAr: reason?.reasonAr || null,
+        details: dto.rejectDetails || null,
+      });
       return ticket;
     });
   }
@@ -880,6 +934,9 @@ export class InternalTicketsService {
         },
       },
       category: true,
+      waitingReason: true,
+      resolutionReason: true,
+      rejectReason: true,
       rating: true,
       activities: {
         include: { actor: true },
@@ -907,7 +964,7 @@ export class InternalTicketsService {
   }
 
   async addNote(ticketId: string, authorId: string, dto: AddNoteDto) {
-    return this.repository.transaction(async (tx) => {
+    const note = await this.repository.transaction(async (tx) => {
       const ticket = await tx.internalTicket.findUnique({ where: { id: ticketId } });
       if (!ticket) throw new NotFoundException('Ticket not found');
 
@@ -926,6 +983,8 @@ export class InternalTicketsService {
       await this.logActivity(tx, ticketId, authorId, 'NOTE_ADDED', { noteId: note.id });
       return note;
     });
+    await this.notifyParticipants(ticketId, authorId, 'note', note.id);
+    return note;
   }
 
   async acceptTicket(ticketId: string, employeeId: string) {

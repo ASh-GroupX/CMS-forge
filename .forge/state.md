@@ -1,10 +1,19 @@
 # Current State
 
 Date: 2026-11-17
-Status: Role capability change deployed and verified
+Status: Ticket context and dashboard drill-down complete locally; release pending
 Risk: High
 
-- Booking maintenance types release `3b93b09` reached `production`; GitHub run 43868804967 completed validation and VPS deployment successfully. The live catalog's active flags and a signed-in booking were not checked.
-- Assignable permissions now cover CR manager/officer workflow and related task, deal, case, assignment, search, and report capabilities. The role editor has grouped English and Arabic explanations; built-in role grants are seeded by audited migration. Server sessions remain the authority.
-- Passed the focused API suites (auth 41, admin 46, RBAC 2, portal 32, internal tickets 8, search 5, reports 46, tasks 46, deals 10, cases 29, assignments 9, complaints 101), web 243, EN/AR role editor browser proof, lint, typecheck, OpenAPI, security check. Production deployment, migration, public revision header, and public health API passed in run 43874294152. Signed-in live role UAT Not Run.
+- Internal ticket detail loads and displays saved waiting, resolution, and
+  rejection reasons. New transitions snapshot localized reason text in activity
+  history without rewriting legacy tickets.
+- Ticket creation and notes enqueue deduplicated in-app notifications after
+  commit for visible participants; the actor is excluded and links target the
+  exact ticket.
+- Dashboard justification and satisfaction cards open a validated, server-scoped
+  complaint queue. Branch and role authority remain session-derived.
+- Passed internal tickets 11/11, complaints 103/103, web shell 244/244, focused
+  queue/UI 2/2, typecheck, lint, OpenAPI, security, diff check, and inspected
+  English/Arabic browser screenshots. Production deployment and signed-in UAT
+  are pending release.
 - Preserve untracked `outputs/`, `tmp/`, and `uploads/`.

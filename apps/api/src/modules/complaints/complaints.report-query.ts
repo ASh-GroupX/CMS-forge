@@ -11,6 +11,8 @@ export function reportWhere(filter: ComplaintReportFilter): Prisma.ComplaintWher
     ...(filter.departmentId ? { departmentId: filter.departmentId } : {}),
     ...(filter.severity ? { severity: filter.severity } : {}),
     ...(filter.rootCauseCategory ? { rootCauseCategory: filter.rootCauseCategory } : {}),
+    ...(typeof filter.isJustified === 'boolean' ? { isJustified: filter.isJustified } : {}),
+    ...(filter.satisfactionStatus ? { satisfactionStatus: filter.satisfactionStatus } : {}),
     ...(filter.ownerUnassigned ? { ownerId: null, departmentId: null } : filter.ownerId ? { ownerId: filter.ownerId } : {}),
     ...dateRange(filter),
   };

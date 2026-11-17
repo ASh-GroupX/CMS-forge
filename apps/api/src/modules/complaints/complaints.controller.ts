@@ -5,7 +5,7 @@ import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
 import { ComplaintFormOptionsService } from './complaint-form-options.service.js';
-import { auditContext, commentPermission, optionalDirection, optionalSeverity, optionalSlaState, optionalStatus, optionalText, pageNumber, queueBranchId, requestRole, requiredQuery, searchBranchId, targetComplaintId, transitionPermission } from './complaints.controller-helpers.js';
+import { auditContext, commentPermission, optionalBoolean, optionalDirection, optionalSatisfactionStatus, optionalSeverity, optionalSlaState, optionalStatus, optionalText, pageNumber, queueBranchId, requestRole, requiredQuery, searchBranchId, targetComplaintId, transitionPermission } from './complaints.controller-helpers.js';
 import { ComplaintRelationsService } from './complaint-relations.service.js';
 import { ComplaintsBoardService } from './complaints.board.service.js';
 import { ComplaintsService } from './complaints.service.js';
@@ -57,6 +57,8 @@ export class ComplaintsController {
       severity: optionalSeverity(query.severity),
       ...(query.departmentId ? { departmentId: optionalText(query.departmentId) } : {}),
       ...(query.rootCauseCategory ? { rootCauseCategory: optionalText(query.rootCauseCategory) } : {}),
+      ...(query.isJustified ? { isJustified: optionalBoolean(query.isJustified, 'isJustified') } : {}),
+      ...(query.satisfactionStatus ? { satisfactionStatus: optionalSatisfactionStatus(query.satisfactionStatus) } : {}),
       ...(query.direction ? { direction: optionalDirection(query.direction) } : {}),
       ...(sla ? { sla } : {}),
       ...owner,

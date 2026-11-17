@@ -77,6 +77,28 @@ export class InternalTicketsRepository {
     return this.prisma.internalTicket.findMany(params);
   }
 
+  async notificationContext(id: string) {
+    return this.prisma.internalTicket.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        referenceNumber: true,
+        title: true,
+        requestedById: true,
+        assignedEmployeeId: true,
+        requestedEmployeeId: true,
+        targetDepartment: {
+          select: {
+            users: {
+              where: { isActive: true },
+              select: { id: true },
+            },
+          },
+        },
+      },
+    });
+  }
+
   async update(id: string, data: Prisma.InternalTicketUpdateInput): Promise<InternalTicket> {
     return this.prisma.internalTicket.update({
       where: { id },

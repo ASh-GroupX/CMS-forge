@@ -16,6 +16,8 @@ export type StaffQueueQuery = {
   direction?: 'RECEIVED' | 'SENT' | 'ALL' | null;
   rootCauseCategory?: string | null;
   ownerId?: string | null;
+  isJustified?: 'true' | 'false' | null;
+  satisfactionStatus?: 'SATISFIED' | 'NEUTRAL' | 'UNSATISFIED' | null;
 };
 
 export type StaffQueueResult = {
@@ -91,6 +93,8 @@ export async function getStaffQueueLoadResult({
     append(url.searchParams, 'direction', query.direction);
     append(url.searchParams, 'rootCauseCategory', query.rootCauseCategory);
     append(url.searchParams, 'ownerId', query.ownerId);
+    append(url.searchParams, 'isJustified', query.isJustified);
+    append(url.searchParams, 'satisfactionStatus', query.satisfactionStatus);
     if (search) url.searchParams.set(isReferenceSearch(search) ? 'referenceNumber' : 'customer', search);
 
     const response = await fetchImpl(url, {

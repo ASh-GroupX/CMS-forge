@@ -47,6 +47,8 @@ export default async function ComplaintsPage({ searchParams, cookieHeader: propC
   if (typeof params?.ownerId === 'string') query.ownerId = params.ownerId;
   if (typeof params?.page === 'string') query.page = parseInt(params.page, 10);
   if (typeof params?.branchId === 'string') query.branchId = params.branchId;
+  if (params?.isJustified === 'true' || params?.isJustified === 'false') query.isJustified = params.isJustified;
+  if (params?.satisfactionStatus === 'SATISFIED' || params?.satisfactionStatus === 'NEUTRAL' || params?.satisfactionStatus === 'UNSATISFIED') query.satisfactionStatus = params.satisfactionStatus;
 
   const [queueResult, options] = await Promise.all([
     getStaffQueueLoadResult({ apiUrl, cookieHeader, query, ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),

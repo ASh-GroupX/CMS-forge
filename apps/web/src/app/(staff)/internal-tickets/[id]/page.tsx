@@ -12,6 +12,7 @@ import { staffNavigationText } from '../../../../i18n/staff-navigation';
 import { TicketActionButtons } from './ticket-action-buttons';
 import { TicketNoteForm } from './ticket-note-form';
 import { TicketStopwatch } from '../ticket-stopwatch';
+import { TicketStatusExplanation } from './ticket-status-explanation';
 
 export default async function TicketDetailPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
@@ -119,6 +120,7 @@ export default async function TicketDetailPage({ params, searchParams }: {
             <div className="prose prose-sm max-w-none text-content-strong leading-relaxed bg-surface-canvas/30 p-4 rounded-xl border border-line-subtle">
               <p>{ticket.description || 'No description provided.'}</p>
             </div>
+            <TicketStatusExplanation locale={locale} ticket={ticket} />
             {ticket.attachments && ticket.attachments.length > 0 && (
               <div className="mt-4 flex flex-col gap-2">
                 <span className="text-sm font-bold text-content-strong flex items-center gap-1.5"><Paperclip className="size-4" /> Attachments</span>
@@ -247,9 +249,13 @@ export default async function TicketDetailPage({ params, searchParams }: {
             ) : (
               <div className="relative border-l-2 border-line-subtle ml-4 pl-6 pb-2">
                 {ticket.activities.map((activity: any, idx: number) => {
-                  const isStatusChange = activity.action.startsWith('STATUS_CHANGED');
+                  const isStatusChange = activity.action.startsWith('STATUS_CHANGED') || activity.action === 'WAITING_FOR_RESPONSE' || activity.action === 'REJECTED_NEEDS_WORK';
                   let actionText = activity.action.replace(/_/g, ' ').toLowerCase();
-                  if (isStatusChange) {
+                  if (activity.action === 'WAITING_FOR_RESPONSE') {
+                    actionText = isAr ? 'تم تغيير الحالة إلى: بانتظار الرد' : 'status changed to waiting';
+                  } else if (activity.action === 'REJECTED_NEEDS_WORK') {
+                    actionText = isAr ? 'تم رفض الحل وإعادته للعمل' : 'resolution rejected and returned for work';
+                  } else if (isStatusChange) {
                     const statusCode = activity.action.replace(/^STATUS_CHANGED_?/, '');
                     const localizedStatus = internalTicketStatusLabel(locale, statusCode);
                     actionText = isAr ? `تغيير الحالة إلى: ${localizedStatus}` : `status changed to ${localizedStatus}`;
@@ -270,9 +276,12 @@ export default async function TicketDetailPage({ params, searchParams }: {
                         </p>
                         {activity.details?.reason && (
                           <div className="rounded-md bg-surface-canvas/50 border border-line-subtle p-2 text-xs text-content-strong">
-                            <span className="font-semibold text-content-muted mr-1">Reason:</span>
-                            {activity.details.reason}
+                            <span className="font-semibold text-content-muted me-1">{isAr ? 'السبب:' : 'Reason:'}</span>
+                            {isAr ? activity.details.reasonAr || activity.details.reason : activity.details.reasonEn || activity.details.reason}
                           </div>
+                        )}
+                        {activity.details?.details && (
+                          <p className="mt-1 whitespace-pre-wrap rounded-md border border-line-subtle bg-surface-canvas/50 p-2 text-xs text-content-strong">{activity.details.details}</p>
                         )}
                       </div>
                     </div>

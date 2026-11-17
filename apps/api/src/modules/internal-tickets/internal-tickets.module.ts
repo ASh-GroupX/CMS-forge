@@ -5,11 +5,12 @@ import { InternalTicketsService } from './internal-tickets.service.js';
 import { PrismaService } from '../../core/http-kernel.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { AttachmentsModule } from '../attachments/attachments.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 import { AuthService } from '../auth/auth.service.js';
 import { SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../core/auth.guard.js';
 
 @Module({
-  imports: [AuthModule, AttachmentsModule],
+  imports: [AuthModule, AttachmentsModule, NotificationsModule],
   controllers: [InternalTicketsController],
   providers: [
     InternalTicketsRepository, 

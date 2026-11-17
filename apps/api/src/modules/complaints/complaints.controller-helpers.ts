@@ -94,6 +94,17 @@ export function optionalDirection(value: string | undefined): 'RECEIVED' | 'SENT
   throw new AppException('VALIDATION_FAILED', 'Invalid complaint search query', HttpStatus.BAD_REQUEST, [{ field: 'direction', code: 'INVALID', message: 'direction must be RECEIVED or SENT.' }]);
 }
 
+export function optionalBoolean(value: string | undefined, field: string): boolean | null {
+  if (!value?.trim()) return null;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  throw new AppException('VALIDATION_FAILED', 'Invalid complaint search query', HttpStatus.BAD_REQUEST, [{ field, code: 'INVALID', message: `${field} must be true or false.` }]);
+}
+
+export function optionalSatisfactionStatus(value: string | undefined): 'SATISFIED' | 'NEUTRAL' | 'UNSATISFIED' | null {
+  return optionalEnum(value, { SATISFIED: 'SATISFIED', NEUTRAL: 'NEUTRAL', UNSATISFIED: 'UNSATISFIED' }, 'satisfactionStatus') as 'SATISFIED' | 'NEUTRAL' | 'UNSATISFIED' | null;
+}
+
 export function pageNumber(value: string | undefined, field: 'limit' | 'offset', fallback: number, max?: number): number {
   if (!value?.trim()) return fallback;
   const parsed = Number(value);
