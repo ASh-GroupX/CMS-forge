@@ -73,6 +73,8 @@ export function findAmmanNotesToClean(rows: AmmanImportRow[], existing: ServiceA
 }
 
 export function suggestCatalogModel(carType: string, models: CarModel[]): string {
+  const direct = models.filter((model) => model.isActive && model.nameEn.toLowerCase() === carType.toLowerCase());
+  if (direct.length === 1) return direct[0]!.id;
   const alias: Record<string, string> = {
     Mage: 'Dongfeng Mage ICE', Nami: 'Dongfeng Nammi-01 EV 430 KM Plus CCC',
     Vigo: 'Dongfeng Nammi-06 VIGO EV 410 KM E1 GCC', Friday: 'Forthing Friday EV',
@@ -93,14 +95,15 @@ export function suggestCatalogModel(carType: string, models: CarModel[]): string
     'BYD Seagull': 'seagull',
     Box: 'DFM BOX E3 EU', BJ30: 'BAIC BJ30e Hybrid GCC',
     T60: 'MG T60 Pick-up Diesel CCC', YUAN: 'BYD Yuan Plus EV CCC',
-    'Song L': 'BYD Song L E1 EV CCC',
+    'Song L': 'BYD Song L E1 EV CCC', 'Song Plus': 'BYD Song L E1 EV CCC',
     'Aeolus Mage': 'Dongfeng Mage ICE', JAC: 'E30X',
     'BAIC BJ30': 'BAIC BJ30e Hybrid GCC',
   };
   const exact = alias[carType];
-  if (exact) return models.find((model) => model.isActive && model.nameEn === exact)?.id ?? '';
-  const matches = models.filter((model) => model.isActive && model.nameEn.toLowerCase() === carType.toLowerCase());
-  if (matches.length === 1) return matches[0]!.id;
+  if (exact) {
+    const aliased = models.find((model) => model.isActive && model.nameEn === exact);
+    if (aliased) return aliased.id;
+  }
   const normalized = carType.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   const contained = models.filter((model) => model.isActive
     && model.nameEn.toLowerCase().replace(/[^a-z0-9]+/g, ' ').includes(normalized));

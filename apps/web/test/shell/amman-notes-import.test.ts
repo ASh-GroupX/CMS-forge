@@ -79,5 +79,8 @@ test('maps Irbid source families to one active catalog model without guessing am
   assert.equal(suggestCatalogModel('S60', models), 's60');
   assert.equal(suggestCatalogModel('ROX', models), 'rox');
   assert.equal(suggestCatalogModel('Song Plus', models), 'song');
+  assert.equal(suggestCatalogModel('Song Plus', [
+    { id: 'song-l', nameEn: 'BYD Song L E1 EV CCC', nameAr: '', brand: 'BYD', isActive: true },
+  ]), 'song-l');
   assert.equal(suggestCatalogModel('Unknown', models), '');
 });
