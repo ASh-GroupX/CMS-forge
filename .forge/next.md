@@ -1,6 +1,6 @@
 # Internal ticket context and dashboard drill-down
 
-Status: Complete locally; release pending
+Status: Complete; deployed and verified
 Date: 2026-11-17
 Risk: High
 SRS: REQ-NOTIFY-001, REQ-REPORT-001, REQ-RBAC-001, METHOD-AUDIT-001, UI-DESIGN-001
@@ -21,8 +21,10 @@ lint, OpenAPI drift check; English and Arabic Playwright screenshot review.
 
 Result: Passed internal-tickets 11/11, complaints 103/103, web shell 244/244,
 focused queue/UI 2/2, typecheck, lint, OpenAPI, security, diff check, and the
-English/Arabic hydrated browser proof. Screenshots were inspected. Production
-deployment and signed-in live UAT are pending the repository release.
+English/Arabic hydrated browser proof. Screenshots were inspected. Commit
+`eade7f7` reached the feature, `waleed`, and `production` branches; GitHub run
+44034927092 passed validation and VPS deployment, including public revision and
+health gates. Signed-in live ticket/notification UAT remains Needs Human Review.
 
 Do not change legacy ticket records, complaint workflow authority, role grants,
 branch scope, or portal exposure. Preserve untracked `outputs/`, `tmp/`, and

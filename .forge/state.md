@@ -1,7 +1,7 @@
 # Current State
 
 Date: 2026-11-17
-Status: Ticket context and dashboard drill-down complete locally; release pending
+Status: Ticket context and dashboard drill-down deployed and verified
 Risk: High
 
 - Internal ticket detail loads and displays saved waiting, resolution, and
@@ -14,6 +14,8 @@ Risk: High
   complaint queue. Branch and role authority remain session-derived.
 - Passed internal tickets 11/11, complaints 103/103, web shell 244/244, focused
   queue/UI 2/2, typecheck, lint, OpenAPI, security, diff check, and inspected
-  English/Arabic browser screenshots. Production deployment and signed-in UAT
-  are pending release.
+  English/Arabic browser screenshots. Commit `eade7f7` reached the feature,
+  `waleed`, and `production`; GitHub run 44034927092 passed validation, VPS
+  deployment, public revision, and health gates. Signed-in live ticket and
+  notification UAT remains Needs Human Review.
 - Preserve untracked `outputs/`, `tmp/`, and `uploads/`.
