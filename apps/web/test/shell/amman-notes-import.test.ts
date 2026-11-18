@@ -62,6 +62,10 @@ test('periodic import requires source mileage and chooses the closest offered se
   }));
   assert.equal(parseAmmanPeriodicRows(rows).length, 62);
   assert.equal(parseAmmanPeriodicRows(rows.slice(0, 2), 2).length, 2);
+  const finalBatch = Array.from({ length: 128 }, (_, index) => ({ ...base,
+    sourceKey: `2026-11-19-PER-FINAL-${index + 1}`, sourceMileageKm: 5000,
+  }));
+  assert.equal(parseAmmanPeriodicRows(finalBatch, 128).length, 128);
   assert.throws(() => parseAmmanPeriodicRows(rows.map((row, index) => index === 0 ? { ...row, sourceMileageKm: null } : row)), /Invalid mileage/);
   assert.equal(closestPeriodicMileage(4000), 5000);
   assert.equal(closestPeriodicMileage(19000), 20000);
@@ -83,4 +87,10 @@ test('maps Irbid source families to one active catalog model without guessing am
     { id: 'song-l', nameEn: 'BYD Song L E1 EV CCC', nameAr: '', brand: 'BYD', isActive: true },
   ]), 'song-l');
   assert.equal(suggestCatalogModel('Unknown', models), '');
+});
+
+test('maps the reviewed Amman JAC E10X override to the active E10X catalog model', () => {
+  assert.equal(suggestCatalogModel('JAC E10X', [
+    { id: 'e10x', nameEn: 'E10X', nameAr: '', brand: 'JAC', isActive: true },
+  ]), 'e10x');
 });

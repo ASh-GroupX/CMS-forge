@@ -1,30 +1,27 @@
-# One-time Irbid periodic booking import
+# Final Amman periodic booking import
 
-Status: Complete
-Date: 2026-11-17
+Status: In Progress
+Date: 2026-11-18
 Risk: High
 SRS: REQ-BOOK-LANE-001, REQ-RBAC-001, METHOD-AUDIT-001, UI-DESIGN-001
 
-Prepare and execute a reviewed one-time import from the `اربد` worksheet for
-the North/Irbid service center General lane. Each clear source booking keeps its
-full original cell entry in Notes, maps its mileage to the closest active
-periodic-maintenance option, resolves an active catalog model, and is spread
-across available 15-minute slots within the source hour.
+Import every reconciled periodic-maintenance booking from the final Amman
+workbook into the Amman General lane. The reviewed batch has 128 unique rows,
+including all five entries in the 19 November 10:00 source cell.
 
 Scope:
 
-1. Extract every booking from the Irbid worksheet and produce clear/review JSON
-   artifacts without modifying the source workbook.
-2. Generalize the existing authenticated periodic import panel so an admin can
-   target `center_north` with an exact reviewed-row count; keep Amman behavior
-   unchanged.
-3. Prove parsing, duplicate protection, catalog mapping, lane capacity, RBAC,
-   API audit behavior, bilingual UI, and rendered import states.
-4. Deployed and used the signed-in admin flow to import all 160 ready Irbid rows.
-   The completion readback showed Created 160, Already imported 160, Ready 0,
-   and Needs review 0. The separate 10 ambiguous source rows remain isolated for
-   manual review and were not imported.
+1. Preserve each source entry exactly in Notes / Customer Requests.
+2. Apply the user's explicit missing-data overrides: 5,000 km for the two
+   six-month entries and JAC E10X for the single `jac ex10` entry.
+3. Require the importer to accept exactly 128 rows, resolve active catalog
+   models, select the closest periodic-maintenance mileage, and preflight
+   duplicate and capacity conflicts before any write.
+4. Deploy and inspect the signed-in live preflight. Obtain final user
+   confirmation immediately before creating production appointments.
+5. After creation, re-run the preflight and record created, already-imported,
+   ready, and review counts.
 
-Do not bypass the existing create-appointment API, server-session permissions,
-lane capacity, branch ownership, duplicate checks, or transactional audit.
-Preserve untracked `outputs/`, `tmp/`, and `uploads/`.
+Do not bypass the existing authenticated appointment API, server-session RBAC,
+lane capacity, duplicate checks, or transactional audit. Preserve untracked
+`outputs/`, `tmp/`, and `uploads/`; customer data must not enter Git.

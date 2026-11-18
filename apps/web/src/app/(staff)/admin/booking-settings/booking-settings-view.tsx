@@ -225,7 +225,8 @@ export function BookingSettingsView({
           <SmsReminderTab locale={locale} t={t} />
         </div>
         {activeTab === 'import-notes' ? <AmmanNotesImportTab carModels={carList} maintenanceTypes={typesList} locale={locale} /> : null}
-        {activeTab === 'import-periodic' ? <AmmanNotesImportTab carModels={carList} maintenanceTypes={typesList} locale={locale} mode="periodic" /> : null}
+        {activeTab === 'import-periodic' ? <AmmanNotesImportTab carModels={carList} maintenanceTypes={typesList} locale={locale}
+          mode="periodic" expectedCount={128} /> : null}
         {activeTab === 'import-irbid-periodic' ? <AmmanNotesImportTab carModels={carList} maintenanceTypes={typesList} locale={locale}
           mode="periodic" centerId="center_north" expectedCount={160} variant="irbid" /> : null}
       </div>

@@ -80,6 +80,7 @@ export function suggestCatalogModel(carType: string, models: CarModel[]): string
     Vigo: 'Dongfeng Nammi-06 VIGO EV 410 KM E1 GCC', Friday: 'Forthing Friday EV',
     A30: 'Dongfeng A30 Shine', Nano: 'Dongfeng Nano Box EV 351 KM CCC',
     'JAC E30X': 'E30X', EX1: 'Dongfeng Nano Box EX1 EV 330 KM CCC',
+    'JAC E10X': 'E10X',
     E70: 'Dongfeng E70 EV 400 KM CCC', 'E70 Pro': 'Dongfeng E70 EV 400 KM CCC',
     S7: 'Forthing S7 EV 550 KM Standard CCC', Shine: 'Dongfeng A30 Shine',
     '007': 'Dongfeng E-PI 007 REV E1 GCC',
