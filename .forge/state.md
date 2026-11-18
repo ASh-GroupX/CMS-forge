@@ -1,20 +1,18 @@
 # Current State
 
 Date: 2026-11-18
-Status: Final Amman periodic import prepared; live confirmation pending
-Risk: High
+Status: Booking timeline working-hour range complete; release pending
+Risk: Medium
 
-- The final `الصيانات  الدورية` source range contains 128 reconciled Amman
-  bookings. Every populated source date/hour cell matches the prepared batch;
-  the 19 November 10:00 source cell contributes all five entries.
-- The private untracked JSON validates as 128 unique rows. Its two missing
-  mileage values are explicitly set to 5,000 km and its one unclear `jac ex10`
-  model is explicitly set to JAC E10X, per the user's instruction.
-- Admin Booking Settings now requires exactly 128 rows for Amman periodic
-  import and recognizes JAC E10X against an active E10X catalog entry.
-- Passed web 246/246, typecheck, lint, OpenAPI check, security check, and diff
-  check. Live rendered preflight and production creation are pending deployment.
-- The final live Create action requires user confirmation after the exact
-  ready/already-imported/review counts are visible.
-- Preserve untracked `outputs/`, `tmp/`, and `uploads/`; they contain private
-  import/reconciliation artifacts and are not committed.
+- The day timeline derives visible hour rows from the selected lanes' live
+  availability. A 09:00–17:00 center now shows 09:00 through 16:45 and does not
+  show the unusable 08:00 or 17:00 rows.
+- Multiple selected centers use the earliest opening and latest closing; invalid
+  or not-yet-loaded availability retains the existing safe 08:00–18:00 fallback.
+- Current-time placement and collapsed past-hour counts use the same derived range.
+- Passed web 247/247, typecheck, lint, security check, diff check, and the EN/AR
+  booking timeline browser/accessibility proof. Desktop and mobile screenshots
+  were inspected.
+- The Amman periodic live preflight remains untouched: 69 ready, 59 already
+  imported, 0 review. No production booking was created in this task.
+- Preserve untracked `outputs/`, `tmp/`, and `uploads/`.

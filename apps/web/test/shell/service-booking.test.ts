@@ -6,9 +6,10 @@ import {
   getTodayDateString,
   maintenanceLabel,
   matchesBranch,
+  timelineHoursFromAvailability,
 } from '../../src/app/(staff)/service-booking/service-booking-utils';
 import { isPeriodicMaintenanceType } from '../../src/app/(staff)/service-booking/maintenance-type-selector';
-import type { ServiceAppointment } from '../../src/lib/staff-service-bookings-api';
+import type { DayAvailability, ServiceAppointment } from '../../src/lib/staff-service-bookings-api';
 
 test('getTodayDateString returns a valid YYYY-MM-DD date format', () => {
   const today = getTodayDateString('Asia/Amman');
@@ -19,6 +20,16 @@ test('getNowTimeParts returns valid numeric hour and minute', () => {
   const { hour, minute } = getNowTimeParts('Asia/Amman');
   assert.ok(typeof hour === 'number' && hour >= 0 && hour <= 23);
   assert.ok(typeof minute === 'number' && minute >= 0 && minute <= 59);
+});
+
+test('timeline hours follow configured service-center openings and closings', () => {
+  const availability = (startTime: string, endTime: string): DayAvailability => ({
+    date: '2026-11-19', dayOfWeek: 4, branchId: 'center_main', isOpen: true,
+    startTime, endTime, maxDailyAppointments: 20, bookedDailyCount: 0, slots: [],
+  });
+  assert.deepEqual(timelineHoursFromAvailability([availability('09:00', '17:00')]), [9, 10, 11, 12, 13, 14, 15, 16]);
+  assert.deepEqual(timelineHoursFromAvailability([availability('09:30', '17:30'), availability('08:00', '16:00')]), [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
+  assert.deepEqual(timelineHoursFromAvailability([]), [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
 });
 
 test('matchesBranch matches branches by ID and standard center codes', () => {

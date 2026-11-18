@@ -54,8 +54,8 @@ try {
         return route.fulfill({
         status: 200, contentType: 'application/json', body: JSON.stringify({
           date: proofDate, dayOfWeek: new Date(`${proofDate}T00:00:00Z`).getUTCDay(), branchId, isOpen: true,
-          startTime: '08:00', endTime: '18:00', maxDailyAppointments: full ? (main ? 2 : 0) : 20, bookedDailyCount: main ? 2 : 0,
-          slots: Array.from({ length: 10 }, (_, hourOffset) => 8 + hourOffset).flatMap((hour) =>
+          startTime: '09:00', endTime: '17:00', maxDailyAppointments: full ? (main ? 2 : 0) : 20, bookedDailyCount: main ? 2 : 0,
+          slots: Array.from({ length: 8 }, (_, hourOffset) => 9 + hourOffset).flatMap((hour) =>
             ['00', '15', '30', '45'].map((minute) => {
               const isBooked = main && hour === 12 && minute === '00';
               return {
@@ -71,6 +71,9 @@ try {
       const params = new URLSearchParams({ locale, full: full ? '1' : '0' });
       await page.goto(`http://127.0.0.1:${server.address().port}/?${params}`);
       const northName = locale === 'ar' ? 'مركز الصيانة الشمالي' : 'North Service Center';
+      assert.equal(await page.locator('[data-hour="8"]').count(), 0, `${locale}: timeline hides hours before the configured 09:00 opening`);
+      assert.equal(await page.locator('[data-hour="9"]').count(), 1, `${locale}: timeline starts at the configured opening hour`);
+      assert.equal(await page.locator('[data-hour="17"]').count(), 0, `${locale}: timeline stops at the configured 17:00 closing`);
       assert.equal(await page.locator('[data-booking-lane-id]').evaluateAll((items) => new Set(items.map((item) => item.getAttribute('data-booking-lane-id'))).size), 3);
       if (locale === 'ar') assert.ok(await page.locator('[data-timeline-scroll]').evaluate((element) => element.scrollWidth > element.clientWidth), 'mobile lane timeline scrolls as one aligned surface');
       assert.ok(await page.locator('[data-booking-lane-id="lane_notes"]').count() > 0 && await page.locator('[data-booking-lane-id="lane_other"]').count() > 0,
@@ -145,7 +148,7 @@ try {
           remainingInSlot: 3 - booked, remainingInHour: 3 - booked,
         })));
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
-        branchId, isOpen: true, maxDailyAppointments: 20, bookedDailyCount: booked, slots,
+        branchId, isOpen: true, startTime: '09:00', endTime: '17:00', maxDailyAppointments: 20, bookedDailyCount: booked, slots,
       }) });
     });
     await page.goto(`http://127.0.0.1:${server.address().port}/?locale=${locale}&history=1`);

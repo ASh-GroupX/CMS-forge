@@ -1,16 +1,14 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Clock } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { laneColor, laneColors } from '../../../lib/booking-lane-colors';
 import { useServiceBooking } from './service-booking-context';
-import { getNowTimeParts, getTodayDateString, matchesBranch } from './service-booking-utils';
+import { getNowTimeParts, getTodayDateString, matchesBranch, timelineHoursFromAvailability } from './service-booking-utils';
 import { TimelineSlotContent } from './timeline-slot-content';
 import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api';
-const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8:00 to 17:00 (ends 18:00)
 const SLOTS_PER_HOUR = ['00', '15', '30', '45'];
-
 export function TimelineDayView() {
   const {
     appointments,
@@ -26,7 +24,6 @@ export function TimelineDayView() {
     t,
     userRules,
   } = useServiceBooking();
-
   const isAr = locale === 'ar';
   const todayAmman = getTodayDateString();
   const nowParts = getNowTimeParts();
@@ -35,18 +32,21 @@ export function TimelineDayView() {
     selectedDate === todayAmman ||
     selectedDate === new Date().toLocaleDateString('en-CA') ||
     selectedDate === new Date().toISOString().slice(0, 10);
+  const activeBranches = useMemo(() => branches.filter((branch) => selectedBranchIds.includes(branch.id)), [branches, selectedBranchIds]);
+  const columns = useMemo(() => bookingLanes.filter((lane) => lane.isActive && selectedBranchIds.includes(lane.serviceCenterId)).map((lane) => ({
+    lane,
+    branch: activeBranches.find((branch) => branch.id === lane.serviceCenterId),
+  })).filter((column) => column.branch !== undefined), [activeBranches, bookingLanes, selectedBranchIds]);
+  const hours = useMemo(() => timelineHoursFromAvailability(columns.map(({ lane }) => slotAvailability[lane.id])), [columns, slotAvailability]);
+  const pastHourCount = selectedDate < todayAmman ? hours.length
+    : selectedDate === todayAmman ? hours.filter((hour) => hour < nowParts.hour).length : 0;
 
   const timelineContainerRef = useRef<HTMLDivElement>(null);
   const markerRef = useRef<HTMLDivElement>(null);
   const scrolledDateRef = useRef<string | null>(null);
-
   const [markerTop, setMarkerTop] = useState<number | null>(null);
   const [formattedNowTime, setFormattedNowTime] = useState<string>('');
   const [showPastHours, setShowPastHours] = useState(false);
-  const pastHourCount = selectedDate < todayAmman ? HOURS.length
-    : selectedDate === todayAmman ? HOURS.filter((hour) => hour < nowParts.hour).length : 0;
-
-  useEffect(() => { setShowPastHours(false); }, [selectedDate]);
 
   const updateMarkerPosition = useCallback(() => {
     const { hour, minute } = getNowTimeParts();
@@ -63,16 +63,20 @@ export function TimelineDayView() {
     if (!container) return;
     if (!isToday) { setMarkerTop(null); return; }
 
-    if (hour < 8) {
-      const firstRow = container.querySelector('[data-hour="8"]') as HTMLElement | null;
+    const firstHour = hours[0];
+    const lastHour = hours.at(-1);
+    if (firstHour === undefined || lastHour === undefined) { setMarkerTop(null); return; }
+
+    if (hour < firstHour) {
+      const firstRow = container.querySelector(`[data-hour="${firstHour}"]`) as HTMLElement | null;
       if (firstRow) {
         setMarkerTop(firstRow.offsetTop);
       }
       return;
     }
 
-    if (hour >= 18) {
-      const lastRow = container.querySelector('[data-hour="17"]') as HTMLElement | null;
+    if (hour > lastHour) {
+      const lastRow = container.querySelector(`[data-hour="${lastHour}"]`) as HTMLElement | null;
       if (lastRow) {
         setMarkerTop(lastRow.offsetTop + lastRow.offsetHeight);
       } else setMarkerTop(null);
@@ -84,7 +88,7 @@ export function TimelineDayView() {
       const top = rowEl.offsetTop + (minute / 60) * rowEl.offsetHeight;
       setMarkerTop(Math.round(top));
     }
-  }, [isAr, isToday]);
+  }, [hours, isAr, isToday]);
 
   useEffect(() => {
     updateMarkerPosition();
@@ -124,11 +128,7 @@ export function TimelineDayView() {
     }
   }, [isToday, markerTop, selectedDate]);
 
-  const activeBranches = branches.filter((branch) => selectedBranchIds.includes(branch.id));
-  const columns = bookingLanes.filter((lane) => lane.isActive && selectedBranchIds.includes(lane.serviceCenterId)).map((lane) => ({
-    lane,
-    branch: activeBranches.find((branch) => branch.id === lane.serviceCenterId),
-  })).filter((column) => column.branch !== undefined);
+  useEffect(() => { setShowPastHours(false); }, [selectedDate]);
   const matchesColumn = (appointment: ServiceAppointment, laneId: string, branchId: string) => {
     if (appointment.bookingLaneId) return appointment.bookingLaneId === laneId;
     const firstLane = bookingLanes.find((lane) => lane.isActive && lane.serviceCenterId === branchId);
@@ -195,7 +195,7 @@ export function TimelineDayView() {
           </div>
         )}
 
-        {HOURS.filter((hour) => showPastHours || selectedDate > todayAmman || (selectedDate === todayAmman && hour >= nowParts.hour)).map((hour) => {
+        {hours.filter((hour) => showPastHours || selectedDate > todayAmman || (selectedDate === todayAmman && hour >= nowParts.hour)).map((hour) => {
           const hourKey = `${String(hour).padStart(2, '0')}:00`;
           return (
             <div className="grid grid-cols-[4.5rem_1fr] min-h-[7rem]" key={hour} data-hour={hour}>

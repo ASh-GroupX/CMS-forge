@@ -1,4 +1,28 @@
-import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api';
+import type { DayAvailability, ServiceAppointment } from '../../../lib/staff-service-bookings-api';
+
+const DEFAULT_TIMELINE_HOURS = Array.from({ length: 10 }, (_, index) => index + 8);
+
+function timeToMinutes(value: string) {
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return null;
+  return (hours * 60) + minutes;
+}
+
+export function timelineHoursFromAvailability(availabilities: Array<DayAvailability | null | undefined>) {
+  const ranges = availabilities.flatMap((availability) => {
+    if (!availability) return [];
+    const start = timeToMinutes(availability.startTime);
+    const end = timeToMinutes(availability.endTime);
+    return start !== null && end !== null && end > start ? [{ start, end }] : [];
+  });
+  if (ranges.length === 0) return DEFAULT_TIMELINE_HOURS;
+  const firstHour = Math.floor(Math.min(...ranges.map(({ start }) => start)) / 60);
+  const endHour = Math.ceil(Math.max(...ranges.map(({ end }) => end)) / 60);
+  return Array.from({ length: endHour - firstHour }, (_, index) => firstHour + index);
+}
 
 export function maintenanceLabel(appointment: ServiceAppointment, locale: 'en' | 'ar', periodicName: string) {
   if (appointment.periodicMileageKm == null) return appointment.maintenanceTypeName;
