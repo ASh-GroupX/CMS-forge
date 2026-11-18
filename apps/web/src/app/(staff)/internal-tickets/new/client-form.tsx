@@ -168,7 +168,7 @@ export default function CreateInternalTicketForm({
               setError(
                 val.code === 'ATTACHMENT_SIZE_EXCEEDED'
                   ? `File "${file.name}" exceeds the 5MB size limit.`
-                  : `File "${file.name}" is not allowed. Only JPG, PNG, or WebP images are allowed.`
+                  : `File "${file.name}" is not allowed. Only JPG, PNG, WebP, or PDF files are allowed.`
               );
               setLoading(false);
               return;
@@ -396,10 +396,10 @@ export default function CreateInternalTicketForm({
             name="attachments" 
             type="file" 
             multiple
-            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+            accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
             className="rounded-xl border border-line-subtle bg-surface-canvas p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand hover:file:bg-brand/20" 
           />
-          <p className="text-xs text-content-muted">JPG, PNG, and WebP images are allowed (max 5MB each).</p>
+          <p className="text-xs text-content-muted">JPG, PNG, WebP, and PDF files are allowed (max 5MB each).</p>
         </div>
       )}
 

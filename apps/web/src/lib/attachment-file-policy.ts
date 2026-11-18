@@ -8,6 +8,7 @@ const staffAllowed: Record<string, Record<string, number>> = {
   ...allowed,
   'image/png': { png: fiveMb },
   'image/webp': { webp: fiveMb },
+  'application/pdf': { pdf: fiveMb },
 };
 
 export type AttachmentFileValidation = { ok: true } | { ok: false; code: 'ATTACHMENT_REQUIRED' | 'ATTACHMENT_TYPE_BLOCKED' | 'ATTACHMENT_SIZE_EXCEEDED' };

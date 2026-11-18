@@ -27,6 +27,17 @@ export type ComplaintCaseKpiReadRows = {
   slaEvents: ComplaintCaseSlaEvent[];
 };
 
+export function departmentTicketFlowWhere(
+  direction: 'received' | 'sent',
+  branchId: string | null,
+  departmentId: string | null,
+): Prisma.InternalTicketWhereInput {
+  const scope = direction === 'received'
+    ? departmentId ? { targetDepartmentId: departmentId } : branchId ? { targetDepartment: { branchId } } : {}
+    : departmentId ? { requestedBy: { departmentId } } : branchId ? { requestedBy: { branchId } } : {};
+  return { status: { not: 'PENDING_APPROVAL' }, ...scope };
+}
+
 @Injectable()
 export class ReportsRepository {
   constructor(@Inject(PrismaService) private readonly prisma?: PrismaService) {}
@@ -292,19 +303,16 @@ export class ReportsRepository {
       };
     });
 
-    const [receivedInternal, receivedComplaints, sentInternal] = await Promise.all([
+    const [receivedInternal, sentInternal] = await Promise.all([
       this.prisma.internalTicket.count({
-        where: branchId ? { targetDepartment: { branchId } } : {}
-      }),
-      this.prisma.complaint.count({
-        where: branchId ? { branchId } : {}
+        where: departmentTicketFlowWhere('received', branchId, departmentId),
       }),
       this.prisma.internalTicket.count({
-        where: branchId ? { requestedBy: { branchId } } : {}
+        where: departmentTicketFlowWhere('sent', branchId, departmentId),
       })
     ]);
 
-    const receivedTickets = receivedInternal + receivedComplaints;
+    const receivedTickets = receivedInternal;
     const sentTickets = sentInternal;
 
     // ── Officer Data ──

@@ -11,7 +11,7 @@ import { PermissionGuard, RbacGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { ReportsController } from '../../src/modules/reports/reports.controller.ts';
-import { ReportsRepository } from '../../src/modules/reports/reports.repository.js';
+import { departmentTicketFlowWhere, ReportsRepository } from '../../src/modules/reports/reports.repository.js';
 import { ReportsService } from '../../src/modules/reports/reports.service.js';
 import type { DashboardReadRows } from '../../src/modules/reports/reports.repository.js';
 import type { ReportsKpiSummary } from '../../src/modules/reports/reports.service.js';
@@ -44,6 +44,17 @@ test('dashboard summary hides complaints outside the scoped branch', async () =>
 
   assert.equal((await service.dashboardSummary({ role: RoleCode.BRANCH_MANAGER, branchId: 'branch-a', now })).overdueComplaints, 1);
   assert.equal((await service.dashboardSummary({ role: RoleCode.ADMIN, now })).overdueComplaints, 2);
+});
+
+test('premium dashboard ticket cards use the server-session department scope', () => {
+  assert.deepEqual(departmentTicketFlowWhere('received', 'branch-a', 'dept-service'), {
+    status: { not: 'PENDING_APPROVAL' },
+    targetDepartmentId: 'dept-service',
+  });
+  assert.deepEqual(departmentTicketFlowWhere('sent', 'branch-a', 'dept-service'), {
+    status: { not: 'PENDING_APPROVAL' },
+    requestedBy: { departmentId: 'dept-service' },
+  });
 });
 
 test('filtered report applies date, branch, category, severity, and owner filters', async () => {

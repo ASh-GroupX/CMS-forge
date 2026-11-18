@@ -21,7 +21,7 @@ export function TicketNoteForm({ ticketId }: { ticketId: string }) {
         if (val.code === 'ATTACHMENT_SIZE_EXCEEDED') {
           toast.error(`File "${f.name}" exceeds the 5MB size limit.`);
         } else {
-          toast.error(`File "${f.name}" is not allowed. Only JPG, PNG, or WebP images are allowed.`);
+          toast.error(`File "${f.name}" is not allowed. Only JPG, PNG, WebP, or PDF files are allowed.`);
         }
         return;
       }
@@ -40,7 +40,7 @@ export function TicketNoteForm({ ticketId }: { ticketId: string }) {
         if (val.code === 'ATTACHMENT_SIZE_EXCEEDED') {
           toast.error(`File "${f.name}" exceeds the 5MB size limit.`);
         } else {
-          toast.error(`File "${f.name}" is not allowed. Only JPG, PNG, or WebP images are allowed.`);
+          toast.error(`File "${f.name}" is not allowed. Only JPG, PNG, WebP, or PDF files are allowed.`);
         }
         return;
       }
@@ -101,7 +101,7 @@ export function TicketNoteForm({ ticketId }: { ticketId: string }) {
         <input 
           type="file"
           multiple
-          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+          accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
           className="hidden"
           ref={fileInputRef}
           onChange={(e) => handleFilesChange(Array.from(e.target.files || []))}

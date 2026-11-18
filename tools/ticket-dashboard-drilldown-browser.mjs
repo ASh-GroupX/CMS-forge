@@ -4,6 +4,7 @@ import { createServer } from 'node:http';
 import { mkdirSync, readFileSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium } from 'playwright-core';
+import { AxeBuilder } from '@axe-core/playwright';
 import { compileTailwind } from './web-browser-check.mjs';
 import { TicketDashboardDrilldownFixture } from '../apps/web/test/browser/ticket-dashboard-drilldown.fixture.tsx';
 
@@ -35,20 +36,27 @@ const server = createServer((req, res) => {
   }
   const locale = req.url?.includes('locale=ar') ? 'ar' : 'en';
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.end(`<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><link rel="stylesheet" href="/proof.css"></head><body><div id="root">${renderToString(React.createElement(TicketDashboardDrilldownFixture, { locale }))}</div><script src="/fixture.js"></script></body></html>`);
+  res.end(`<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><title>Ticket dashboard proof</title><link rel="stylesheet" href="/proof.css"></head><body><div id="root">${renderToString(React.createElement(TicketDashboardDrilldownFixture, { locale }))}</div><script src="/fixture.js"></script></body></html>`);
 });
 await new Promise((done) => server.listen(0, '127.0.0.1', done));
 const browser = await chromium.launch({ headless: true });
 try {
   for (const locale of ['en', 'ar']) {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+    const page = await context.newPage();
     await page.goto(`http://127.0.0.1:${server.address().port}/?locale=${locale}`);
     await page.getByRole('link', { name: locale === 'en' ? 'View justified complaints' : 'عرض الشكاوى المبررة' }).waitFor();
     assert.equal(await page.getByRole('link', { name: locale === 'en' ? 'View justified complaints' : 'عرض الشكاوى المبررة' }).getAttribute('href'), `/complaints?isJustified=true&locale=${locale}`);
+    const received = page.getByRole('link', { name: locale === 'en' ? 'Received by my department: 12' : 'واردة إلى قسمي: 12' });
+    const sent = page.getByRole('link', { name: locale === 'en' ? 'Sent by my department: 9' : 'مرسلة من قسمي: 9' });
+    assert.equal(await received.getAttribute('href'), `/internal-tickets/my-work?filter=department-received&locale=${locale}`);
+    assert.equal(await sent.getAttribute('href'), `/internal-tickets/my-work?filter=department-sent&locale=${locale}`);
     assert.equal(await page.locator('section').first().locator('h3').count(), 3);
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2));
+    const severe = (await new AxeBuilder({ page }).include('section[aria-labelledby="department-ticket-flows"]').analyze()).violations.filter((item) => ['serious', 'critical'].includes(item.impact));
+    assert.deepEqual(severe.map((item) => item.id), []);
     await page.screenshot({ path: `${output}/${locale}.png`, fullPage: true });
-    await page.close();
+    await context.close();
   }
   console.log(`Ticket/dashboard browser proof passed; EN/AR screenshots in ${output}`);
 } finally {

@@ -1,22 +1,23 @@
-# Booking timeline working-hour range
+# Department ticket dashboard drill-down
 
 Status: Complete
 Date: 2026-11-18
-Risk: Medium
-SRS: REQ-BOOK-LANE-001, UI-DESIGN-001
+Risk: High
+SRS: REQ-RBAC-001, UI-DESIGN-001
 
-Make the day timeline's visible start and end follow the working hours configured
-for the selected service center instead of always rendering 08:00–18:00.
+Simplify the internal-operations manager dashboard to the department ticket
+flows the user needs and make every summary card open its exact ticket list.
 
 Scope:
 
-1. Derive the visible hour rows from live slot-availability start/end values.
-2. When several centers are selected, render the union from the earliest opening
-   through the latest closing so no valid appointment time is hidden.
-3. Keep the existing 08:00–18:00 fallback only while no valid availability is
-   present, and keep past-hour/current-time behavior within the derived range.
-4. Prove 09:00–17:00 renders 09:00 through 16:45 with no 08:00 or 17:00 row in
-   English desktop and Arabic mobile.
+1. Show only department-sent and department-received ticket cards for managers;
+   remove completion, KPI, filter, export, and employee-rating dashboard noise.
+2. Scope counts to the signed-in manager's server-session department rather than
+   the whole branch.
+3. Make each card open the internal-ticket board with the matching department
+   flow selected in English and Arabic.
+4. Keep department scope enforced by the existing authenticated backend route
+   and prove the links, filtering, RTL/LTR render, accessibility, and checks.
 
 The separate Amman periodic import remains paused at its confirmed live preflight:
 69 ready, 59 already imported, 0 review. Do not create those appointments without

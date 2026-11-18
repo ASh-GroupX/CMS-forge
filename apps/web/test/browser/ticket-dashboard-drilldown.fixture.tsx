@@ -6,6 +6,7 @@ import { TicketStatusExplanation } from '../../src/app/(staff)/internal-tickets/
 export function TicketDashboardDrilldownFixture({ locale = 'en' }: { locale?: 'en' | 'ar' }) {
   const isAr = locale === 'ar';
   const principal = { sessionId: 'proof', userId: 'admin', email: 'proof@example.invalid', nameEn: 'Admin', nameAr: 'مدير', roleCode: 'ADMIN', permissions: ['COMPLAINT_VIEW_ALL', 'REPORT_VIEW'], branchId: null };
+  const manager = { ...principal, userId: 'manager', roleCode: 'INTERNAL_MANAGER', departmentId: 'dept-it', viewMode: 'INTERNAL_TICKETS', permissions: ['TICKET_VIEW_DEPARTMENT'] };
   const crm = { total: 5, inProgress: 2, resolved: 0, closed: 0, escalated: 0, alternativeCarCount: 0, justifiedCount: 1, unjustifiedCount: 1, satisfaction: { satisfied: 1, neutral: 1, unsatisfied: 1 }, rootCauses: [] };
   return <main dir={isAr ? 'rtl' : 'ltr'} className="space-y-8 bg-surface-canvas p-6">
     <section aria-label={isAr ? 'أسباب حالات التذاكر' : 'Ticket status reasons'} className="grid gap-4 md:grid-cols-3">
@@ -14,6 +15,7 @@ export function TicketDashboardDrilldownFixture({ locale = 'en' }: { locale?: 'e
       <TicketStatusExplanation locale={locale} ticket={{ status: 'REJECTED', rejectReason: { reasonEn: 'More information required', reasonAr: 'مطلوب معلومات إضافية' }, rejectDetails: isAr ? 'يرجى إرفاق المستند الناقص.' : 'Please attach the missing document.' }} />
     </section>
     <PremiumDashboard locale={locale} principal={principal as any} data={{ crm }} />
+    <PremiumDashboard locale={locale} principal={manager as any} data={{ manager: { receivedTickets: 12, sentTickets: 9 } }} />
   </main>;
 }
 

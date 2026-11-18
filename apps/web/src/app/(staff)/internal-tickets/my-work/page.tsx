@@ -5,6 +5,16 @@ import { getStaffSessionPrincipal } from '../../../../lib/staff-session-api';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { MyWorkBoard } from '../my-work-board';
 
+export function filterDepartmentTicketFlow(tickets: any[], filter: string | undefined, departmentId: string | null | undefined): any[] {
+  if (filter === 'department-sent') {
+    return tickets.filter((ticket) => ticket.requestedBy?.departmentId === departmentId && ticket.status !== 'PENDING_APPROVAL');
+  }
+  if (filter === 'department-received') {
+    return tickets.filter((ticket) => ticket.targetDepartmentId === departmentId && ticket.status !== 'PENDING_APPROVAL');
+  }
+  return tickets;
+}
+
 export default async function InternalTicketsPage({ searchParams }: { searchParams?: Promise<{ filter?: string; status?: string; locale?: string }> }) {
   const params = await searchParams;
   const requestHeaders = await headers();
@@ -30,7 +40,9 @@ export default async function InternalTicketsPage({ searchParams }: { searchPara
 
   let myTasks = allTickets;
 
-  if (filter === 'manager-inbox') {
+  if (filter === 'department-sent' || filter === 'department-received') {
+    myTasks = filterDepartmentTicketFlow(myTasks, filter, principal?.departmentId);
+  } else if (filter === 'manager-inbox') {
     myTasks = myTasks.filter((t: any) => t.status === 'NEW' || t.status === 'TRANSFERRED');
   } else if (filter === 'manager-active') {
     myTasks = myTasks.filter((t: any) => !['CLOSED', 'RESOLVED', 'REJECTED', 'PENDING_APPROVAL', 'NEW'].includes(t.status));

@@ -7,6 +7,21 @@ test('internal-tickets service can be constructed', () => {
   assert.ok(new InternalTicketsService(new InternalTicketsRepository(null as any), null as any, null as any));
 });
 
+test('department ticket read includes sent and received flows but excludes pending approval', async () => {
+  let query: any;
+  const repository = { findMany: async (input: any) => { query = input; return []; } };
+  const service = new InternalTicketsService(repository as any, null as any, null as any);
+
+  await service.getDepartmentTickets('department-1');
+
+  assert.deepEqual(query.where, {
+    OR: [
+      { targetDepartmentId: 'department-1', status: { notIn: ['PENDING_APPROVAL'] } },
+      { requestedBy: { departmentId: 'department-1' }, status: { notIn: ['PENDING_APPROVAL'] } },
+    ],
+  });
+});
+
 test('waiting transition stores a readable reason snapshot in activity history', async () => {
   let activity: any;
   const tx = {

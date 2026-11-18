@@ -13,22 +13,34 @@ import { NotificationsService } from '../notifications/notifications.service.js'
 
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
 
-export function validateTicketImageAttachment(attachment: UploadTicketAttachmentDto): 'image/jpeg' | 'image/png' | 'image/webp' {
+type TicketAttachmentContentType = 'image/jpeg' | 'image/png' | 'image/webp' | 'application/pdf';
+
+export function validateTicketAttachment(attachment: UploadTicketAttachmentDto): TicketAttachmentContentType {
   const ext = path.extname(attachment.fileName || '').toLowerCase().replace('.', '');
   const rawMime = (attachment.contentType || '').toLowerCase().trim();
   const mime = ['image/jpg', 'image/pjpeg'].includes(rawMime) ? 'image/jpeg' : rawMime;
-  const extensionMime: Record<string, 'image/jpeg' | 'image/png' | 'image/webp'> = {
-    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp',
+  const extensionMime: Record<string, TicketAttachmentContentType> = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', pdf: 'application/pdf',
   };
   const inferredMime = extensionMime[ext];
   const contentType = !mime || mime === 'application/octet-stream' ? inferredMime : mime;
   if (!inferredMime || !contentType || inferredMime !== contentType) {
-    throw new AppException('ATTACHMENT_TYPE_BLOCKED', 'Only JPG, PNG, or WebP images are allowed', HttpStatus.BAD_REQUEST);
+    throw new AppException('ATTACHMENT_TYPE_BLOCKED', 'Only JPG, PNG, WebP, or PDF files are allowed', HttpStatus.BAD_REQUEST);
   }
-  if (attachment.sizeBytes > MAX_ATTACHMENT_SIZE) {
+  const encoded = attachment.contentBase64.replace(/\s/g, '');
+  const paddingBytes = encoded.endsWith('==') ? 2 : encoded.endsWith('=') ? 1 : 0;
+  const estimatedBytes = Math.max(0, Math.floor(encoded.length * 3 / 4) - paddingBytes);
+  if (attachment.sizeBytes > MAX_ATTACHMENT_SIZE || estimatedBytes > MAX_ATTACHMENT_SIZE) {
     throw new AppException('ATTACHMENT_SIZE_EXCEEDED', 'File exceeds 5MB limit', HttpStatus.BAD_REQUEST);
   }
-  return contentType;
+  const decodedBytes = Buffer.from(encoded, 'base64');
+  if (contentType === 'application/pdf' && decodedBytes.subarray(0, 5).toString('ascii') !== '%PDF-') {
+    throw new AppException('ATTACHMENT_TYPE_BLOCKED', 'PDF content does not match its file type', HttpStatus.BAD_REQUEST);
+  }
+  if (decodedBytes.byteLength > MAX_ATTACHMENT_SIZE) {
+    throw new AppException('ATTACHMENT_SIZE_EXCEEDED', 'File exceeds 5MB limit', HttpStatus.BAD_REQUEST);
+  }
+  return contentType as TicketAttachmentContentType;
 }
 
 @Injectable()
@@ -64,9 +76,9 @@ export class InternalTicketsService {
 
   private async storeTicketAttachments(tx: any, ticketId: string, actorId: string, attachments: UploadTicketAttachmentDto[]) {
     for (const attachment of attachments) {
-      const contentType = validateTicketImageAttachment(attachment);
+      const contentType = validateTicketAttachment(attachment);
       const ext = (path.extname(attachment.fileName || '') || '.jpg').toLowerCase();
-      const finalExt = ext === '.jpeg' ? '.jpeg' : ext === '.png' ? '.png' : ext === '.webp' ? '.webp' : '.jpg';
+      const finalExt = ext === '.jpeg' ? '.jpeg' : ext === '.png' ? '.png' : ext === '.webp' ? '.webp' : ext === '.pdf' ? '.pdf' : '.jpg';
       const stored = await this.attachmentsService.storeObject({
         storageKey: `attachments/${randomUUID()}${finalExt}`,
         bytes: Buffer.from(attachment.contentBase64, 'base64'),
@@ -88,9 +100,9 @@ export class InternalTicketsService {
 
   private async storeNoteAttachments(tx: any, noteId: string, actorId: string, attachments: UploadTicketAttachmentDto[]) {
     for (const attachment of attachments) {
-      const contentType = validateTicketImageAttachment(attachment);
+      const contentType = validateTicketAttachment(attachment);
       const ext = (path.extname(attachment.fileName || '') || '.jpg').toLowerCase();
-      const finalExt = ext === '.jpeg' ? '.jpeg' : ext === '.png' ? '.png' : ext === '.webp' ? '.webp' : '.jpg';
+      const finalExt = ext === '.jpeg' ? '.jpeg' : ext === '.png' ? '.png' : ext === '.webp' ? '.webp' : ext === '.pdf' ? '.pdf' : '.jpg';
       const stored = await this.attachmentsService.storeObject({
         storageKey: `attachments/${randomUUID()}${finalExt}`,
         bytes: Buffer.from(attachment.contentBase64, 'base64'),
@@ -445,9 +457,11 @@ export class InternalTicketsService {
 
   async getDepartmentTickets(departmentId: string) {
     return this.repository.findMany({
-      where: departmentId === 'ALL' ? {} : { 
-        targetDepartmentId: departmentId,
-        status: { notIn: [InternalTicketStatus.PENDING_APPROVAL] }
+      where: departmentId === 'ALL' ? {} : {
+        OR: [
+          { targetDepartmentId: departmentId, status: { notIn: [InternalTicketStatus.PENDING_APPROVAL] } },
+          { requestedBy: { departmentId }, status: { notIn: [InternalTicketStatus.PENDING_APPROVAL] } },
+        ],
       },
       include: {
         assignedEmployee: true,
