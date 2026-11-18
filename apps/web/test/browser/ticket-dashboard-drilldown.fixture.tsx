@@ -2,6 +2,8 @@ import React from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { PremiumDashboard } from '../../src/components/dashboard-premium';
 import { TicketStatusExplanation } from '../../src/app/(staff)/internal-tickets/[id]/ticket-status-explanation';
+import { AppRouterContext } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+import { SearchParamsContext } from 'next/dist/shared/lib/hooks-client-context.shared-runtime';
 
 export function TicketDashboardDrilldownFixture({ locale = 'en' }: { locale?: 'en' | 'ar' }) {
   const isAr = locale === 'ar';
@@ -15,7 +17,7 @@ export function TicketDashboardDrilldownFixture({ locale = 'en' }: { locale?: 'e
       <TicketStatusExplanation locale={locale} ticket={{ status: 'REJECTED', rejectReason: { reasonEn: 'More information required', reasonAr: 'مطلوب معلومات إضافية' }, rejectDetails: isAr ? 'يرجى إرفاق المستند الناقص.' : 'Please attach the missing document.' }} />
     </section>
     <PremiumDashboard locale={locale} principal={principal as any} data={{ crm }} />
-    <PremiumDashboard locale={locale} principal={manager as any} data={{ manager: { receivedTickets: 12, sentTickets: 9 } }} />
+    <AppRouterContext.Provider value={{ push() {} } as any}><SearchParamsContext.Provider value={new URLSearchParams()}><PremiumDashboard locale={locale} principal={manager as any} data={{ manager: { receivedTickets: 12, sentTickets: 9 } }} /></SearchParamsContext.Provider></AppRouterContext.Provider>
   </main>;
 }
 

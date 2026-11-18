@@ -47,13 +47,13 @@ try {
     await page.goto(`http://127.0.0.1:${server.address().port}/?locale=${locale}`);
     await page.getByRole('link', { name: locale === 'en' ? 'View justified complaints' : 'عرض الشكاوى المبررة' }).waitFor();
     assert.equal(await page.getByRole('link', { name: locale === 'en' ? 'View justified complaints' : 'عرض الشكاوى المبررة' }).getAttribute('href'), `/complaints?isJustified=true&locale=${locale}`);
-    const received = page.getByRole('link', { name: locale === 'en' ? 'Received by my department: 12' : 'واردة إلى قسمي: 12' });
-    const sent = page.getByRole('link', { name: locale === 'en' ? 'Sent by my department: 9' : 'مرسلة من قسمي: 9' });
+    const received = page.getByRole('link', { name: locale === 'en' ? 'View tickets received by my department' : 'عرض التذاكر الواردة إلى قسمي' });
+    const sent = page.getByRole('link', { name: locale === 'en' ? 'View tickets sent by my department' : 'عرض التذاكر المرسلة من قسمي' });
     assert.equal(await received.getAttribute('href'), `/internal-tickets/my-work?filter=department-received&locale=${locale}`);
     assert.equal(await sent.getAttribute('href'), `/internal-tickets/my-work?filter=department-sent&locale=${locale}`);
     assert.equal(await page.locator('section').first().locator('h3').count(), 3);
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2));
-    const severe = (await new AxeBuilder({ page }).include('section[aria-labelledby="department-ticket-flows"]').analyze()).violations.filter((item) => ['serious', 'critical'].includes(item.impact));
+    const severe = (await new AxeBuilder({ page }).include('a[href*="filter=department-"]').analyze()).violations.filter((item) => ['serious', 'critical'].includes(item.impact));
     assert.deepEqual(severe.map((item) => item.id), []);
     await page.screenshot({ path: `${output}/${locale}.png`, fullPage: true });
     await context.close();

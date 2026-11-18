@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import {
   Activity,
   AlertTriangle,
@@ -22,17 +23,19 @@ import {
   Sparkles,
   Star,
   Users,
+  Zap,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Locale } from '../../i18n/staff-shell';
 import { resolveUserDashboardCapabilities, type StaffSessionPrincipal } from '../../lib/staff-session-api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // ── Premium Dashboard Component ───────────────────────────────────────────
 
-export function PremiumDashboard({ locale, principal, data }: { locale: Locale; principal: StaffSessionPrincipal | null; data?: any }) {
+export function PremiumDashboard({ locale, principal, data, workloadData, options }: { locale: Locale; principal: StaffSessionPrincipal | null; data?: any; workloadData?: any[]; options?: any }) {
   const isRtl = locale === 'ar';
   const role = principal?.roleCode || 'STAFF';
   const isAdmin = role === 'ADMIN';
@@ -50,7 +53,7 @@ export function PremiumDashboard({ locale, principal, data }: { locale: Locale; 
     : (isRtl ? 'لوحة القيادة الذكية' : 'Smart Dashboard');
 
   const subtitle = isInternalOnly
-    ? (isRtl ? 'تابع التذاكر الواردة إلى قسمك والمرسلة منه' : 'Track tickets received by and sent from your department')
+    ? (isRtl ? 'متابعة أداء التذاكر والمهام وسير العمل الداخلي' : 'Real-time internal tickets, tasks, and operational performance metrics')
     : isCrmOnly
     ? (isRtl ? 'متابعة شكاوى العملاء ومؤشرات الرضا وسرعة الحل' : 'Real-time complaints, customer satisfaction, and SLA tracking')
     : (isRtl ? 'رؤى فورية ومقاييس أداء' : 'Real-time insights and performance metrics');
@@ -69,7 +72,8 @@ export function PremiumDashboard({ locale, principal, data }: { locale: Locale; 
           <p className="mt-2 text-content-muted">{subtitle}</p>
         </div>
 
-        {currentTab === 'crm' ? <div className="flex items-center gap-3">
+        {/* Global Filter/Search Simulation */}
+        <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-content-muted" />
             <Input className="w-64 ps-9 bg-surface/50 border-line-subtle shadow-sm rounded-xl focus-visible:ring-brand" placeholder={isRtl ? 'بحث...' : 'Search insights...'} />
@@ -78,7 +82,7 @@ export function PremiumDashboard({ locale, principal, data }: { locale: Locale; 
             <Filter className="size-4 text-brand" />
             {isRtl ? 'تصفية' : 'Filters'}
           </Button>
-        </div> : null}
+        </div>
       </header>
 
       {/* ── Mode Switcher (CRM vs Internal) ── */}
@@ -127,7 +131,7 @@ export function PremiumDashboard({ locale, principal, data }: { locale: Locale; 
         ) : canSeeInternal ? (
           <>
             {isAdmin && <AdminView isRtl={isRtl} data={data?.admin} />}
-            {isManager && <ManagerView isRtl={isRtl} data={data?.manager} />}
+            {isManager && <ManagerView isRtl={isRtl} data={data?.manager} workloadData={workloadData || []} options={options} principal={principal} />}
             {isOfficer && <OfficerView isRtl={isRtl} data={data?.officer} />}
           </>
         ) : null}
@@ -216,58 +220,235 @@ function AdminView({ isRtl, data }: { isRtl: boolean, data?: any }) {
   );
 }
 
-function ManagerView({ isRtl, data }: { isRtl: boolean; data?: any }) {
-  const managerData = data || { receivedTickets: 0, sentTickets: 0 };
-  const locale = isRtl ? 'ar' : 'en';
-  const flows = [
-    {
-      href: `/internal-tickets/my-work?filter=department-received&locale=${locale}`,
-      title: isRtl ? 'واردة إلى قسمي' : 'Received by my department',
-      description: isRtl ? 'التذاكر المرسلة إلى قسمك' : 'Tickets sent to your department',
-      value: managerData.receivedTickets,
-      icon: <ArrowDownRight className="size-6" />,
-    },
-    {
-      href: `/internal-tickets/my-work?filter=department-sent&locale=${locale}`,
-      title: isRtl ? 'مرسلة من قسمي' : 'Sent by my department',
-      description: isRtl ? 'التذاكر التي أنشأها موظفو قسمك' : 'Tickets created by your department',
-      value: managerData.sentTickets,
-      icon: <ArrowUpRight className="size-6" />,
-    },
-  ];
+function ManagerView({ isRtl, data, workloadData, options, principal }: { isRtl: boolean, data?: any, workloadData?: any[], options?: any, principal?: any }) {
+  const managerData = data || {
+    receivedTickets: 0,
+    sentTickets: 0,
+    avgCompletion: "0d",
+    performanceKpi: "100%"
+  };
+
+  const managerDepartmentId = principal?.departmentId;
+
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [sortKey, setSortKey] = useState<'done' | 'active' | 'rating' | 'onTimeRate'>('done');
+  const filterType = searchParams.get('filterType') || 'all';
+  const dateFrom = searchParams.get('dateFrom') || '';
+  const dateTo = searchParams.get('dateTo') || '';
+  const categoryId = searchParams.get('categoryId') || '';
+  const severity = searchParams.get('severity') || '';
+
+  const updateFilter = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value && value !== 'all') {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const applyDatePreset = (preset: 'today' | 'this_week' | 'this_month' | 'last_30_days' | 'this_year' | 'clear') => {
+    const params = new URLSearchParams(searchParams.toString());
+    const today = new Date();
+
+    if (preset === 'clear') {
+      params.delete('dateFrom');
+      params.delete('dateTo');
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+      return;
+    }
+
+    let from = new Date();
+    let to = new Date();
+
+    if (preset === 'today') {
+      // already today
+    } else if (preset === 'this_week') {
+      from.setDate(today.getDate() - today.getDay());
+    } else if (preset === 'this_month') {
+      from = new Date(today.getFullYear(), today.getMonth(), 1);
+    } else if (preset === 'last_30_days') {
+      from.setDate(today.getDate() - 30);
+    } else if (preset === 'this_year') {
+      from = new Date(today.getFullYear(), 0, 1);
+    }
+
+    params.set('dateFrom', from.toISOString().split('T')[0] as string);
+    params.set('dateTo', to.toISOString().split('T')[0] as string);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  // If there's real data from the API (from /team-workload), use it.
+  const sourceData = Array.isArray(workloadData) && workloadData.length ? workloadData : (managerData.teamPerformance || []);
+
+  const teamList = [...sourceData].sort((a, b) => b[sortKey] - a[sortKey]);
 
   return (
-    <section className="animate-in space-y-4 fade-in slide-in-from-bottom-4 duration-500" aria-labelledby="department-ticket-flows">
-      <div>
-        <h2 id="department-ticket-flows" className="text-xl font-semibold tracking-tight text-content-strong">
-          {isRtl ? 'حركة تذاكر القسم' : 'Department ticket flow'}
-        </h2>
-        <p className="mt-1 text-sm text-content-muted">
-          {isRtl ? 'اختر بطاقة لعرض التذاكر المطابقة.' : 'Choose a card to open the matching tickets.'}
-        </p>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+      {/* Filters Bar */}
+      <div className="flex flex-col gap-4 bg-surface p-4 rounded-2xl border border-line-subtle shadow-sm">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <span className="text-sm font-semibold text-content-strong px-2">{isRtl ? 'تحليل التذاكر:' : 'Ticket Analysis:'}</span>
+            <Select value={filterType} onValueChange={(val) => updateFilter('filterType', val)}>
+              <SelectTrigger className="w-40 rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{isRtl ? 'جميع التذاكر' : 'All Tickets'}</SelectItem>
+                <SelectItem value="internal">{isRtl ? 'داخلية فقط' : 'Internal Only'}</SelectItem>
+                <SelectItem value="external">{isRtl ? 'مستمدة من شكاوى' : 'From Complaints'}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button type="button" onClick={() => {
+            const headers = ['Department', 'Employee ID', 'Employee Name', 'Role', 'Active Tasks', 'Completed Tasks', 'On-Time Rate %', 'Rating'];
+
+            const byDepartment = teamList.reduce((acc, emp) => {
+              const dept = emp.department || 'Unassigned';
+              if (!acc[dept]) acc[dept] = [];
+              acc[dept].push(emp);
+              return acc;
+            }, {} as Record<string, any[]>);
+
+            const csvLines = [headers.join(',')];
+
+            Object.keys(byDepartment).sort().forEach(dept => {
+              byDepartment[dept].forEach((emp: any) => {
+                csvLines.push(`"${dept}","${emp.id}","${emp.name}","${emp.role}",${emp.active},${emp.done},${emp.onTimeRate},${emp.rating}`);
+              });
+            });
+
+            const blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `team_performance_report_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }} variant="outline" className="gap-2 rounded-xl">
+            <ArrowDownRight className="size-4 text-brand" />
+            {isRtl ? 'تحميل CSV' : 'Download CSV'}
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-2">
+          <div className="grid gap-2">
+            <label className="text-xs font-semibold text-content-muted">{isRtl ? 'من تاريخ' : 'Date From'}</label>
+            <input type="date" value={dateFrom} onChange={e => updateFilter('dateFrom', e.target.value)} className="flex h-10 w-full rounded-xl border border-line-subtle bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand" />
+          </div>
+          <div className="grid gap-2">
+            <label className="text-xs font-semibold text-content-muted">{isRtl ? 'إلى تاريخ' : 'Date To'}</label>
+            <input type="date" value={dateTo} onChange={e => updateFilter('dateTo', e.target.value)} className="flex h-10 w-full rounded-xl border border-line-subtle bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand" />
+          </div>
+          <div className="grid gap-2">
+            <label className="text-xs font-semibold text-content-muted">{isRtl ? 'الفئة' : 'Category'}</label>
+            <Select value={categoryId || 'all'} onValueChange={val => updateFilter('categoryId', val)}>
+              <SelectTrigger className="w-full rounded-xl h-10"><SelectValue placeholder={isRtl ? 'جميع الفئات' : 'All Categories'} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{isRtl ? 'جميع الفئات' : 'All Categories'}</SelectItem>
+                {options?.categories?.filter((cat: any) => !managerDepartmentId || cat.departmentId === managerDepartmentId).map((cat: any) => (
+                  <SelectItem key={cat.id} value={cat.id}>{isRtl ? cat.nameAr : cat.nameEn}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-2">
+            <label className="text-xs font-semibold text-content-muted">{isRtl ? 'الأهمية' : 'Severity'}</label>
+            <Select value={severity || 'all'} onValueChange={val => updateFilter('severity', val)}>
+              <SelectTrigger className="w-full rounded-xl h-10"><SelectValue placeholder={isRtl ? 'جميع مستويات الأهمية' : 'All Severities'} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{isRtl ? 'الكل' : 'All Severities'}</SelectItem>
+                {options?.severities?.map((sev: string) => (
+                  <SelectItem key={sev} value={sev}>{sev}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Date Preset Buttons */}
+        <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-line-subtle">
+          <span className="text-xs font-semibold text-content-muted me-2">{isRtl ? 'فلاتر سريعة:' : 'Quick Filters:'}</span>
+          <Button type="button" size="sm" variant="outline" className="h-7 text-xs rounded-full bg-surface-canvas" onClick={() => applyDatePreset('today')}>{isRtl ? 'اليوم' : 'Today'}</Button>
+          <Button type="button" size="sm" variant="outline" className="h-7 text-xs rounded-full bg-surface-canvas" onClick={() => applyDatePreset('this_week')}>{isRtl ? 'هذا الأسبوع' : 'This Week'}</Button>
+          <Button type="button" size="sm" variant="outline" className="h-7 text-xs rounded-full bg-surface-canvas" onClick={() => applyDatePreset('this_month')}>{isRtl ? 'هذا الشهر' : 'This Month'}</Button>
+          <Button type="button" size="sm" variant="outline" className="h-7 text-xs rounded-full bg-surface-canvas" onClick={() => applyDatePreset('last_30_days')}>{isRtl ? 'آخر 30 يوم' : 'Last 30 Days'}</Button>
+          <Button type="button" size="sm" variant="outline" className="h-7 text-xs rounded-full bg-surface-canvas" onClick={() => applyDatePreset('this_year')}>{isRtl ? 'هذه السنة' : 'This Year'}</Button>
+          <Button type="button" size="sm" variant="ghost" className="h-7 text-xs rounded-full text-brand hover:bg-brand/10" onClick={() => applyDatePreset('clear')}>{isRtl ? 'إلغاء الفلتر' : 'Clear Dates'}</Button>
+        </div>
       </div>
-      <div className="grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
-        {flows.map((flow) => (
-          <Link
-            key={flow.href}
-            href={flow.href}
-            aria-label={`${flow.title}: ${flow.value}`}
-            className="group rounded-2xl border border-line-subtle bg-surface p-6 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:translate-y-0"
-          >
-            <div className="flex items-start justify-between gap-6">
-              <div>
-                <p className="text-sm font-semibold text-content-strong">{flow.title}</p>
-                <p className="mt-1 text-sm text-content-muted">{flow.description}</p>
-                <p className="mt-7 text-4xl font-black tabular-nums tracking-tight text-content-strong">{flow.value}</p>
-              </div>
-              <span className="rounded-xl bg-brand/10 p-3 text-brand transition-transform duration-200 group-hover:scale-105" aria-hidden="true">
-                {flow.icon}
-              </span>
-            </div>
-          </Link>
-        ))}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link href={`/internal-tickets/my-work?filter=department-received&locale=${isRtl ? 'ar' : 'en'}`} className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" aria-label={isRtl ? 'عرض التذاكر الواردة إلى قسمي' : 'View tickets received by my department'}>
+          <StatCard title={isRtl ? 'تذاكر واردة إلى قسمي' : 'Received by my department'} value={managerData.receivedTickets} icon={<ArrowDownRight className="text-brand" />} />
+        </Link>
+        <Link href={`/internal-tickets/my-work?filter=department-sent&locale=${isRtl ? 'ar' : 'en'}`} className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" aria-label={isRtl ? 'عرض التذاكر المرسلة من قسمي' : 'View tickets sent by my department'}>
+          <StatCard title={isRtl ? 'تذاكر مرسلة من قسمي' : 'Sent by my department'} value={managerData.sentTickets} icon={<ArrowUpRight className="text-purple-500" />} />
+        </Link>
+        <StatCard title={isRtl ? 'متوسط الإنجاز' : 'Avg Completion'} value={managerData.avgCompletion} icon={<Clock />} />
+        <StatCard title={isRtl ? 'مؤشر الأداء' : 'Performance KPI'} value={managerData.performanceKpi} icon={<Zap className="text-yellow-500" />} />
       </div>
-    </section>
+
+      <Card className="rounded-2xl border-line-subtle shadow-lg bg-surface/40 backdrop-blur-xl overflow-hidden">
+        <CardHeader className="border-b border-line-subtle bg-surface/30 flex flex-row items-center justify-between">
+          <CardTitle className="text-lg font-bold">{isRtl ? 'أداء الموظفين وتقييمهم' : 'Employee Performance & Ratings'}</CardTitle>
+          <div className="flex gap-2">
+            <Button type="button" size="sm" variant={sortKey === 'done' ? 'default' : 'outline'} onClick={() => setSortKey('done')}>
+              {isRtl ? 'مكتمل' : 'Completed'}
+            </Button>
+            <Button type="button" size="sm" variant={sortKey === 'active' ? 'default' : 'outline'} onClick={() => setSortKey('active')}>
+              {isRtl ? 'نشط' : 'Active'}
+            </Button>
+            <Button type="button" size="sm" variant={sortKey === 'rating' ? 'default' : 'outline'} onClick={() => setSortKey('rating')}>
+              {isRtl ? 'تقييم' : 'Rating'}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="divide-y divide-line-subtle">
+            {teamList.map((emp: any) => (
+              <Link key={emp.id} href={`/internal-tickets/employee/${emp.id}`} className="flex items-center justify-between p-4 hover:bg-surface-raised transition-colors group cursor-pointer">
+                <div className="flex items-center gap-4">
+                  <div className="size-10 rounded-full bg-gradient-to-br from-brand/20 to-purple-500/20 text-brand flex items-center justify-center font-bold shadow-inner shrink-0">
+                    {String(isRtl ? (emp.nameAr || emp.name) : emp.name).charAt(0)}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm group-hover:text-brand transition-colors">{isRtl ? (emp.nameAr || emp.name) : emp.name}</p>
+                    <p className="text-xs text-content-muted">{emp.role} • {emp.department}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-8">
+                  <div className="text-center">
+                    <p className="text-xs text-content-muted mb-1">{isRtl ? 'نشط' : 'Active'}</p>
+                    <p className="font-bold tabular-nums text-sm">{emp.active}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-content-muted mb-1">{isRtl ? 'مكتمل' : 'Completed'}</p>
+                    <p className="font-bold tabular-nums text-sm text-status-success">{emp.done}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-content-muted mb-1">{isRtl ? 'معدل الوقت' : 'On-Time'}</p>
+                    <p className="font-bold tabular-nums text-sm">{emp.onTimeRate}%</p>
+                  </div>
+                  <div className="flex items-center gap-1 bg-yellow-500/10 text-yellow-600 px-3 py-1 rounded-full shrink-0">
+                    <Star className="size-3.5 fill-current" />
+                    <span className="font-bold text-sm">{emp.rating}</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 function OfficerView({ isRtl, data }: { isRtl: boolean, data?: any }) {
@@ -283,7 +464,7 @@ function OfficerView({ isRtl, data }: { isRtl: boolean, data?: any }) {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        
+
         {/* Workload Stats */}
         <Link href="/internal-tickets/my-work?status=active" className="block transition-transform hover:-translate-y-1">
           <Card className="rounded-2xl border-line-subtle shadow-xl bg-gradient-to-br from-brand/5 to-purple-500/5 overflow-hidden group h-full">
@@ -402,7 +583,7 @@ function CrmDashboardView({ isRtl, crmData, locale }: { isRtl: boolean; crmData?
 
   const totalResolved = (crm.resolved || 0) + (crm.closed || 0);
   const resolutionRate = crm.total > 0 ? Math.round((totalResolved / crm.total) * 100) : 0;
-  
+
   const totalDecidedJustification = (crm.justifiedCount || 0) + (crm.unjustifiedCount || 0);
   const justifiedRate = totalDecidedJustification > 0
     ? Math.round((crm.justifiedCount / totalDecidedJustification) * 100)
@@ -471,7 +652,7 @@ function CrmDashboardView({ isRtl, crmData, locale }: { isRtl: boolean; crmData?
 
       {/* ── Justification & Satisfaction Row ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
+
         {/* Justification Card */}
         <Card className="rounded-2xl border-line-subtle shadow-md bg-surface overflow-hidden">
           <CardHeader className="border-b border-line-subtle bg-surface-canvas/50 pb-3">

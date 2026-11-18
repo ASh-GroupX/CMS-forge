@@ -4,6 +4,8 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { PremiumDashboard } from '../../src/components/dashboard-premium';
 import { filterDepartmentTicketFlow } from '../../src/app/(staff)/internal-tickets/my-work/page';
+import { AppRouterContext } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+import { SearchParamsContext } from 'next/dist/shared/lib/hooks-client-context.shared-runtime';
 
 const principal = {
   sessionId: 'session', userId: 'admin', email: 'admin@example.invalid', nameEn: 'Admin', nameAr: 'مدير',
@@ -29,14 +31,14 @@ test('dashboard justification and satisfaction cards link to filtered complaint 
   }
 });
 
-test('manager dashboard shows only department sent and received cards with exact drill-down links', () => {
+test('manager dashboard retains analysis and performance while department cards link to exact lists', () => {
   for (const locale of ['en', 'ar'] as const) {
-    const html = renderToStaticMarkup(<PremiumDashboard locale={locale} principal={managerPrincipal as any} data={{ manager: { receivedTickets: 12, sentTickets: 9 } }} />);
+    const html = renderToStaticMarkup(<AppRouterContext.Provider value={{ push() {} } as any}><SearchParamsContext.Provider value={new URLSearchParams()}><PremiumDashboard locale={locale} principal={managerPrincipal as any} data={{ manager: { receivedTickets: 12, sentTickets: 9 } }} /></SearchParamsContext.Provider></AppRouterContext.Provider>);
     assert.ok(html.includes(`/internal-tickets/my-work?filter=department-received&amp;locale=${locale}`));
     assert.ok(html.includes(`/internal-tickets/my-work?filter=department-sent&amp;locale=${locale}`));
-    assert.equal(html.includes('Avg Completion'), false);
-    assert.equal(html.includes('Performance KPI'), false);
-    assert.equal(html.includes('Employee Performance &amp; Ratings'), false);
+    assert.ok(html.includes(locale === 'en' ? 'Avg Completion' : 'متوسط الإنجاز'));
+    assert.ok(html.includes(locale === 'en' ? 'Performance KPI' : 'مؤشر الأداء'));
+    assert.ok(html.includes(locale === 'en' ? 'Employee Performance &amp; Ratings' : 'أداء الموظفين وتقييمهم'));
   }
 });
 
