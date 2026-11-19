@@ -16,6 +16,8 @@ import { ServiceBookingSmsSettingsService } from './service-booking-sms-settings
 import { ServiceBookingNextAvailableService } from './service-booking-next-available.service.js';
 import { parseUpsertServiceBookingLaneBody } from './dto/service-booking-lane.dto.js';
 import { ServiceBookingLanesService } from './service-booking-lanes.service.js';
+import { ServiceBookingClosuresService } from './service-booking-closures.service.js';
+import { parseCreateServiceBookingClosureBody } from './dto/service-booking-closure.dto.js';
 
 @Controller('service-bookings')
 export class ServiceBookingsController {
@@ -25,7 +27,32 @@ export class ServiceBookingsController {
     private readonly smsSettingsService?: ServiceBookingSmsSettingsService,
     private readonly nextAvailableService?: ServiceBookingNextAvailableService,
     private readonly lanesService?: ServiceBookingLanesService,
+    private readonly closuresService?: ServiceBookingClosuresService,
   ) {}
+
+  @Get('centers/:centerId/closures')
+  @UseGuards(SessionAuthGuard, RbacGuard)
+  @Roles('ADMIN')
+  listClosures(@Req() req: AuthenticatedRequest, @Param('centerId') centerId: string) {
+    if (!this.closuresService || !req.principal) throw new Error('Booking closures service is unavailable');
+    return this.closuresService.list(centerId, req.principal);
+  }
+
+  @Post('centers/:centerId/closures')
+  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
+  @Roles('ADMIN')
+  createClosure(@Req() req: AuthenticatedRequest, @Param('centerId') centerId: string, @Body() body: unknown) {
+    if (!this.closuresService || !req.principal) throw new Error('Booking closures service is unavailable');
+    return this.closuresService.create(parseCreateServiceBookingClosureBody(body, centerId), req.principal);
+  }
+
+  @Delete('centers/:centerId/closures/:id')
+  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
+  @Roles('ADMIN')
+  deleteClosure(@Req() req: AuthenticatedRequest, @Param('centerId') centerId: string, @Param('id') id: string) {
+    if (!this.closuresService || !req.principal) throw new Error('Booking closures service is unavailable');
+    return this.closuresService.delete(centerId, id, req.principal);
+  }
 
   @Get('centers/:centerId/lanes')
   @UseGuards(SessionAuthGuard)

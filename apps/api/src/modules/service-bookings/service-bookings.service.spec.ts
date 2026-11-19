@@ -90,6 +90,36 @@ test('service-bookings service can be constructed', () => {
   assert.ok(new ServiceBookingsService(createMockRepository()));
 });
 
+test('closed date blocks creation and reports no available slots', async () => {
+  let wrote = false;
+  const repository = createMockRepository({ createAppointment: async () => { wrote = true; } });
+  const closures = { findActive: async (_centerId: string, date: Date) =>
+    date.toISOString().slice(0, 10) === '2026-12-23' ? { id: 'closure-1' } : null };
+  const service = new ServiceBookingsService(repository, undefined, undefined, closures as any);
+  await assert.rejects(service.createAppointment({ customerName: 'Test', customerPhone: '0790000000',
+    carModelId: 'c1', maintenanceTypeId: 'm1', branchId: 'b_main', date: '2026-12-23',
+    startTime: '09:00', notes: '' }), /booking is closed/i);
+  assert.equal(wrote, false);
+  const availability = await service.getSlotAvailability('b_main', '2026-12-23');
+  assert.equal(availability.isOpen, false);
+  assert.equal(availability.slots.length, 0);
+});
+
+test('closed date blocks rescheduling without changing the appointment', async () => {
+  let changed = false;
+  const existing = { id: 'apt-2', status: 'BOOKED', serviceCenterId: 'b_main', branchId: null,
+    bookingLaneId: 'lane-1', date: new Date('2026-12-20T00:00:00Z'), startTime: '09:00', durationMinutes: 30,
+    customerName: 'Maya', customerPhone: '0791234567', createdAt: new Date() };
+  const repository = createMockRepository({
+    findAppointmentById: async () => existing,
+    updateAppointmentWithAudits: async () => { changed = true; },
+  });
+  const closures = { findActive: async () => ({ id: 'closure-1' }) };
+  const service = new ServiceBookingsService(repository, undefined, undefined, closures as any);
+  await assert.rejects(service.updateAppointment('apt-2', { date: '2026-12-23' }), /booking is closed/i);
+  assert.equal(changed, false);
+});
+
 test('booking rejects missing or deactivated catalog models without creating an appointment', async () => {
   for (const model of [null, { id: 'c1', nameEn: 'Patrol', brand: 'Nissan', isActive: false }]) {
     let created = false;

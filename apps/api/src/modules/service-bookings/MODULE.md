@@ -19,6 +19,7 @@ Agent context manifest for the service center booking module.
 
 - `service_appointments`
 - `service_booking_rules`
+- `service_booking_closures`
 - `service_booking_lanes`
 - `service_car_models`
 - `service_centers`
@@ -40,5 +41,6 @@ Agent context manifest for the service center booking module.
 - SR-BOOK-003 (Multi-branch view and branch name management)
 - SR-BOOK-004 (Master data for car models and maintenance types)
 - REQ-BOOK-LANE-001 (Admin-configured capacity lanes inside a service center)
+- REQ-BOOK-CALENDAR-001 (Admin-configured booking date closures)
 - REQ-BOOK-SMS-001 (Admin-configured service appointment SMS reminders)
 - REQ-INT-DATA-001 (Scoped external appointment reads)

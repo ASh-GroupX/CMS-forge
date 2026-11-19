@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import { ServiceBookingSmsReminderService } from './service-booking-sms-reminder.service.js';
 
 test('reminder snapshots current message and schedules before local appointment time', async () => {
+  mock.timers.enable({ apis: ['Date'], now: new Date('2026-11-18T00:00:00.000Z') });
+  try {
   const queued: any[] = [];
   const cancelled: string[] = [];
   const service = new ServiceBookingSmsReminderService({
@@ -25,6 +27,7 @@ test('reminder snapshots current message and schedules before local appointment 
   assert.equal(queued[0].idempotencyKey, 'service-booking-reminder:apt-1:revision-1:2026-11-01T00:00:00.000Z');
   assert.equal(queued[0].scheduledAt.toISOString(), '2026-11-19T06:00:00.000Z');
   assert.deepEqual(queued[0].payload, { to: '+962791234567', from: '+962790000000', textBody: 'Hi Lina: APT-1 at 09:00' });
+  } finally { mock.timers.reset(); }
 });
 
 test('disabled reminders cancel stale queued messages and do not enqueue a new one', async () => {

@@ -1,0 +1,28 @@
+export const bookingClosuresText = {
+  en: {
+    tab: 'Booking calendar', title: 'Close booking dates',
+    description: 'Choose a service center and an inclusive date range. Existing appointments stay on the schedule.',
+    center: 'Service center', start: 'From date', end: 'Through date', reason: 'Reason',
+    reasonPlaceholder: 'e.g. Christmas week', close: 'Close bookings', saving: 'Saving…',
+    loading: 'Loading closed dates…', empty: 'No booking closures for this center.',
+    loadError: 'Could not load closed dates.', retry: 'Retry', saveError: 'Could not close these dates.',
+    conflict: 'These dates overlap an existing closure. Refresh and choose another range.',
+    deleteError: 'Could not reopen these dates.', saved: 'Booking dates closed.',
+    deleted: 'Booking dates reopened.', reopen: 'Reopen', confirm: 'Reopen bookings for this date range?',
+    invalid: 'Choose a valid date range and enter a reason.', closedRanges: 'Closed date ranges',
+    calendar: 'Booking closure calendar', previousMonth: 'Previous month', nextMonth: 'Next month', closedDay: 'closed',
+  },
+  ar: {
+    tab: 'تقويم الحجوزات', title: 'إغلاق مواعيد الحجز',
+    description: 'اختر مركز الصيانة والفترة شاملة تاريخ النهاية. تبقى المواعيد الحالية ظاهرة في الجدول.',
+    center: 'مركز الصيانة', start: 'من تاريخ', end: 'حتى تاريخ', reason: 'السبب',
+    reasonPlaceholder: 'مثلاً أسبوع عيد الميلاد', close: 'إغلاق الحجوزات', saving: 'جارٍ الحفظ…',
+    loading: 'جارٍ تحميل فترات الإغلاق…', empty: 'لا توجد فترات إغلاق لهذا المركز.',
+    loadError: 'تعذر تحميل فترات الإغلاق.', retry: 'إعادة المحاولة', saveError: 'تعذر إغلاق هذه التواريخ.',
+    conflict: 'تتداخل هذه التواريخ مع فترة إغلاق موجودة. حدّث الصفحة واختر فترة أخرى.',
+    deleteError: 'تعذرت إعادة فتح هذه التواريخ.', saved: 'تم إغلاق مواعيد الحجز.',
+    deleted: 'أعيد فتح مواعيد الحجز.', reopen: 'إعادة الفتح', confirm: 'إعادة فتح الحجز لهذه الفترة؟',
+    invalid: 'اختر فترة صالحة وأدخل السبب.', closedRanges: 'فترات الإغلاق',
+    calendar: 'تقويم إغلاق الحجوزات', previousMonth: 'الشهر السابق', nextMonth: 'الشهر التالي', closedDay: 'مغلق',
+  },
+} as const;

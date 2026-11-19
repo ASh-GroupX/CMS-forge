@@ -19,6 +19,8 @@ import { ServiceBookingsExportService } from './service-bookings.export.service.
 import { ServiceBookingNextAvailableService } from './service-booking-next-available.service.js';
 import { ServiceBookingLanesRepository } from './service-booking-lanes.repository.js';
 import { ServiceBookingLanesService } from './service-booking-lanes.service.js';
+import { ServiceBookingClosuresRepository } from './service-booking-closures.repository.js';
+import { ServiceBookingClosuresService } from './service-booking-closures.service.js';
 
 @Module({
   imports: [AuthModule, NotificationsModule],
@@ -38,6 +40,8 @@ import { ServiceBookingLanesService } from './service-booking-lanes.service.js';
     ServiceBookingNextAvailableService,
     ServiceBookingLanesRepository,
     ServiceBookingLanesService,
+    ServiceBookingClosuresRepository,
+    ServiceBookingClosuresService,
     {
       provide: SESSION_AUTH_SERVICE,
       inject: [AuthService],

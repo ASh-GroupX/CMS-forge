@@ -1229,6 +1229,34 @@ commands:
 - npm run test:booking-timeline:browser
 - npm run openapi:check
 
+### REQ-BOOK-CALENDAR-001: Service-center booking date closures
+type: functional
+lane: T2_STANDARD
+risk: high
+priority: must
+status: active
+source: approved user change request, 2026-11-19
+
+Admin can close booking for a specific date or inclusive date range in one service
+center, such as a holiday week. A closure overrides recurring weekly opening hours.
+Existing appointments remain visible and are not cancelled automatically.
+
+#### Acceptance Criteria
+- AC1 [must] Admin can see closures on a calendar, add an inclusive date range with a reason, and reopen it.
+- AC2 [must] Backend rejects new bookings and reschedules on closed dates, and slot availability and next available suggestions exclude them.
+- AC3 [must] Writes require the Admin server session and CSRF, and append a CONFIG audit entry in the same transaction.
+- AC4 [must] Admin UI works in English LTR and Arabic RTL with keyboard access and loading, empty, error, success, and conflict states.
+
+#### Proof Requirements
+minimum: L3
+commands:
+- npm run test:api -- service-bookings
+- npm run openapi:check
+- npm run typecheck
+- npm run lint
+- npm run test:booking-timeline:browser
+- npm run test:booking-closures:browser
+
 ### REQ-BOOK-SMS-001: Service appointment SMS reminders
 type: integration-contract
 lane: T2_STANDARD

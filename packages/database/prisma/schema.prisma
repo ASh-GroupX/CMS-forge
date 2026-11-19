@@ -1870,6 +1870,7 @@ model ServiceCenter {
   createdAt    DateTime             @default(now()) @map("created_at")
   updatedAt    DateTime             @updatedAt @map("updated_at")
   rules        ServiceBookingRule[]
+  closures     ServiceBookingClosure[]
   bookingLanes ServiceBookingLane[]
   appointments ServiceAppointment[]
 
@@ -1920,6 +1921,21 @@ model ServiceBookingRule {
   @@unique([serviceCenterId, dayOfWeek])
   @@index([serviceCenterId])
   @@map("service_booking_rules")
+}
+
+model ServiceBookingClosure {
+  id              String        @id @default(cuid())
+  serviceCenterId String        @map("service_center_id")
+  startDate       DateTime      @db.Date @map("start_date")
+  endDate         DateTime      @db.Date @map("end_date")
+  reason          String
+  createdById     String?       @map("created_by_id")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  serviceCenter   ServiceCenter @relation(fields: [serviceCenterId], references: [id], onDelete: Restrict)
+
+  @@index([serviceCenterId, startDate, endDate])
+  @@map("service_booking_closures")
 }
 
 model ServiceAppointment {

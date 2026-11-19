@@ -1,17 +1,12 @@
 # Current State
 
-Date: 2026-11-18
-Status: Department manager dashboard restored; release pending
-Risk: High
+Date: 2026-11-19
+Status: Booking closure release preflight passed; deployment pending
+Risk: Critical
 
-- The manager dashboard again shows its analysis filters, export, four metric
-  cards, and employee performance panel.
-- Counts and destination lists use the department from the authenticated server
-  session and exclude tickets still awaiting sender approval.
-- Both cards open the matching filtered internal-ticket board in English/Arabic.
-- Passed web 249/249, typecheck, lint, and EN/AR browser proof. The changed
-  card links passed focused Axe checks and screenshots were inspected.
-- Production deployment and signed-in live card drill-down are Not Run.
-- The Amman periodic live preflight remains untouched: 69 ready, 59 already
-  imported, 0 review. No production booking was created in this task.
+- Production is healthy at revision ce0669948d8a5a554040d3a0d9b37a0f6f08fd42.
+- Live baseline: 885 service appointments, 2 centers, 5 complaints, 13 customers. Only the additive booking closure migration is pending.
+- Fresh database and attachment backups exist on the VPS. A temporary database restore reproduced the baseline counts exactly. SHA-256 verified encrypted recovery copies are in untracked `outputs/booking-closure-backup/` on this computer.
+- Root tests 78/78, focused API 51/51, EN/AR browser proof, security, backup, OpenAPI, typecheck, and lint passed.
+- No production migration or booking change has run. The Amman periodic import remains paused.
 - Preserve untracked `outputs/`, `tmp/`, and `uploads/`.

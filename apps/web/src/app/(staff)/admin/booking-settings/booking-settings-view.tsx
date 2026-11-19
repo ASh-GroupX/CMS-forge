@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Building2, Car, Clock, FileUp, Layers3, MessageSquareText, ShieldCheck, Wrench } from 'lucide-react';
+import { Building2, CalendarDays, Car, Clock, FileUp, Layers3, MessageSquareText, ShieldCheck, Wrench } from 'lucide-react';
 import { BranchHoursTab } from './branch-hours-tab';
 import { CarModelsTab } from './car-models-tab';
 import { MaintenanceTypesTab } from './maintenance-types-tab';
@@ -10,6 +10,8 @@ import { UserRulesTab } from './user-rules-tab';
 import { SmsReminderTab } from './sms-reminder-tab';
 import { BookingLanesTab } from './booking-lanes-tab';
 import { AmmanNotesImportTab } from './amman-notes-import-tab';
+import { BookingClosuresTab } from './booking-closures-tab';
+import { bookingClosuresText } from '../../../../i18n/staff-booking-closures';
 import { ammanNotesImportText } from '../../../../i18n/amman-notes-import';
 import type { CarModel, DayRule, MaintenanceType, ServiceCenter } from '../../../../lib/staff-service-bookings-api';
 import type { Locale } from '../../../../i18n/staff-shell';
@@ -31,7 +33,7 @@ export function BookingSettingsView({
   t: ServiceBookingCopy;
 }) {
   const isAr = locale === 'ar';
-  const [activeTab, setActiveTab] = useState<'hours' | 'lanes' | 'cars' | 'maintenance' | 'centers' | 'user-rules' | 'sms-reminder' | 'import-notes' | 'import-periodic' | 'import-irbid-periodic'>('hours');
+  const [activeTab, setActiveTab] = useState<'hours' | 'closures' | 'lanes' | 'cars' | 'maintenance' | 'centers' | 'user-rules' | 'sms-reminder' | 'import-notes' | 'import-periodic' | 'import-irbid-periodic'>('hours');
   const [centersList, setCentersList] = useState(centers);
   const [carList, setCarList] = useState(carModels);
   const [typesList, setTypesList] = useState(maintenanceTypes);
@@ -84,6 +86,8 @@ export function BookingSettingsView({
 
         {/* Tab Pills */}
         <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-line-subtle/80 pt-4">
+          <button className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'closures' ? 'bg-brand text-primary-foreground shadow-sm' : 'border border-line-subtle bg-surface text-content-muted hover:text-content-strong'}`}
+            onClick={() => setActiveTab('closures')} type="button"><CalendarDays className="size-4" /><span>{bookingClosuresText[locale].tab}</span></button>
           <button
             className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'lanes' ? 'bg-brand text-primary-foreground shadow-sm' : 'border border-line-subtle bg-surface text-content-muted hover:text-content-strong'}`}
             onClick={() => setActiveTab('lanes')}
@@ -183,6 +187,7 @@ export function BookingSettingsView({
 
       {/* Tab Panels */}
       <div>
+        {activeTab === 'closures' ? <BookingClosuresTab centers={centersList} locale={locale} /> : null}
         <div style={{ display: activeTab === 'hours' ? undefined : 'none' }}>
           <BranchHoursTab
             centers={centersList}

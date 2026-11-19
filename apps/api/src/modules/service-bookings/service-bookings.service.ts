@@ -12,18 +12,18 @@ import {
 import { UserBookingRulesService } from './user-booking-rules.service.js';
 import { ServiceBookingSmsReminderService } from './service-booking-sms-reminder.service.js';
 import { ServiceBookingsCatalogService } from './service-bookings-catalog.service.js';
+import { ServiceBookingClosuresService } from './service-booking-closures.service.js';
 
 export { DEFAULT_DAY_RULES };
-
 @Injectable()
 export class ServiceBookingsService extends ServiceBookingsCatalogService {
   constructor(
     repository: ServiceBookingsRepository,
     private readonly userRulesService?: UserBookingRulesService,
     private readonly smsReminderService?: ServiceBookingSmsReminderService,
+    private readonly closuresService?: ServiceBookingClosuresService,
   ) { super(repository); }
 
-  // ── Appointments ──────────────────────────────────────────────────────────
   async listAppointments(params: { branchId?: string | undefined; fromDate?: string | undefined; toDate?: string | undefined; status?: string | undefined }, actorId?: string | null, roleCode?: string): Promise<ServiceAppointmentDto[]> {
     if (actorId && this.userRulesService) {
       await this.userRulesService.checkPermission(actorId, roleCode, 'canViewBookings');
@@ -63,6 +63,7 @@ export class ServiceBookingsService extends ServiceBookingsCatalogService {
 
     const dateObj = new Date(`${dto.date}T00:00:00Z`);
     const rule = await this.resolveRule(centerId, dateObj.getUTCDay());
+    await this.assertNotClosed(centerId, dateObj);
     const lane = await this.resolveLane(centerId, dto.bookingLaneId);
     if (!rule.isOpen) throw new BadRequestException('The selected branch is closed on this day');
     if (!isBookableTime(rule, dto.startTime)) throw new BadRequestException('Select a time within the branch booking slots');
@@ -174,6 +175,7 @@ export class ServiceBookingsService extends ServiceBookingsCatalogService {
       }
 
       const rule = await this.resolveRule(targetBranch, targetDate.getUTCDay());
+      await this.assertNotClosed(targetBranch, targetDate);
       const lane = await this.resolveLane(targetBranch, targetLaneId);
       resolvedTargetLaneId = lane.id;
       if (!rule.isOpen) throw new BadRequestException('Branch is closed on target day');
@@ -222,13 +224,13 @@ export class ServiceBookingsService extends ServiceBookingsCatalogService {
     return mapAppointment(updated, history);
   }
 
-  // ── Availability Engine ───────────────────────────────────────────────────
   async getSlotAvailability(branchId: string, dateStr: string, bookingLaneId?: string): Promise<DayAvailabilityDto> {
     const dateObj = new Date(`${dateStr}T00:00:00Z`);
     const dayOfWeek = dateObj.getUTCDay();
     const rule = await this.resolveRule(branchId, dayOfWeek);
+    const closure = await this.closuresService?.findActive(branchId, dateObj);
     const lane = await this.resolveLane(branchId, bookingLaneId);
-    const appointments = rule.isOpen
+    const appointments = rule.isOpen && !closure
       ? await this.repository.findAppointmentsForDate(branchId, dateObj, lane.id)
       : [];
 
@@ -236,13 +238,12 @@ export class ServiceBookingsService extends ServiceBookingsCatalogService {
       branchId,
       dateStr,
       dayOfWeek,
-      rule: { ...rule, maxDailyAppointments: lane.maxDailyAppointments, maxPerHour: lane.maxPerHour, maxPerSlot: lane.maxPerSlot },
+      rule: { ...rule, isOpen: rule.isOpen && !closure, maxDailyAppointments: lane.maxDailyAppointments, maxPerHour: lane.maxPerHour, maxPerSlot: lane.maxPerSlot },
       appointments,
       lane,
     });
   }
 
-  // ── Rules Management ──────────────────────────────────────────────────────
   async getBranchRules(branchId: string) {
     const existing = await this.repository.findRulesForBranch(branchId);
     if (existing.length === 7) return existing;
@@ -275,7 +276,11 @@ export class ServiceBookingsService extends ServiceBookingsCatalogService {
     })));
   }
 
-  // ── Private Helpers ───────────────────────────────────────────────────────
+  private async assertNotClosed(centerId: string, date: Date) {
+    if (await this.closuresService?.findActive(centerId, date)) {
+      throw new BadRequestException('Booking is closed for this service center on the selected date');
+    }
+  }
   private async resolveRule(branchId: string, dayOfWeek: number) {
     const rule = await this.repository.findRuleForDay(branchId, dayOfWeek);
     if (rule) return rule;
