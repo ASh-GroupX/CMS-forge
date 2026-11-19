@@ -12,46 +12,38 @@ import { TransferTicketDto, AssignTicketDto, ResolveTicketDto, WaitTicketDto, Re
 @Controller('internal-tickets')
 export class InternalTicketsController {
   constructor(private readonly service: InternalTicketsService) {}
-
   @Post()
   async create(@Req() req: AuthenticatedRequest, @Body() dto: CreateInternalTicketDto) {
     return this.service.create(req.principal, dto);
   }
-
   @Get()
   async getMyTickets(@Req() req: AuthenticatedRequest) {
     const departmentId = req.principal?.departmentId;
     const userId = req.principal?.userId;
     if (!departmentId || !userId) return [];
-    const tickets = await this.service.getMyTickets(departmentId, userId);
+    const tickets = await this.service.getMyTickets(departmentId, userId, req.principal?.roleCode);
     return tickets;
   }
-
   @Get('settings/reasons/:type')
   async getSettingsReasons(@Param('type') type: string, @Query('departmentId') departmentId: string, @Req() req: AuthenticatedRequest) {
     return this.service.getSettingsReasons(type, departmentId, req.principal);
   }
-
   @Post('settings/reasons/:type')
   async createSettingsReason(@Param('type') type: string, @Req() req: AuthenticatedRequest, @Body() dto: any) {
     return this.service.createSettingsReason(type, dto, req.principal);
   }
-
   @Put('settings/reasons/:type/:id')
   async updateSettingsReason(@Param('type') type: string, @Param('id') id: string, @Req() req: AuthenticatedRequest, @Body() dto: any) {
     return this.service.updateSettingsReason(type, id, dto, req.principal);
   }
-
   @Delete('settings/reasons/:type/:id')
   async deleteSettingsReason(@Param('type') type: string, @Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.service.deleteSettingsReason(type, id, req.principal);
   }
-
   @Get('settings/routing/:departmentId')
   async getSettingsRouting(@Param('departmentId') departmentId: string, @Req() req: AuthenticatedRequest) {
     return this.service.getSettingsRouting(departmentId, req.principal);
   }
-
   @Put('settings/routing/:departmentId')
   async updateSettingsRouting(@Param('departmentId') departmentId: string, @Req() req: AuthenticatedRequest, @Body() dto: any) {
     return this.service.updateSettingsRouting(departmentId, dto, req.principal);
@@ -137,11 +129,17 @@ export class InternalTicketsController {
 
   @Get('employee/:employeeId')
   async getEmployeeTickets(@Param('employeeId') employeeId: string, @Req() req: AuthenticatedRequest) {
+    if (req.principal?.roleCode === 'INTERNAL_OFFICER' && employeeId !== req.principal.userId) {
+      throw new AppException('RBAC_FORBIDDEN', 'Forbidden', 403);
+    }
     return this.service.getEmployeeTickets(employeeId, req.principal);
   }
 
   @Get('department/:departmentId')
   async getDepartmentTickets(@Param('departmentId') departmentId: string, @Req() req: AuthenticatedRequest) {
+    if (req.principal?.roleCode === 'INTERNAL_OFFICER') {
+      throw new AppException('RBAC_FORBIDDEN', 'Forbidden', 403);
+    }
     if (req.principal?.roleCode !== 'ADMIN') {
       if (departmentId !== req.principal?.departmentId) {
         throw new AppException('RBAC_FORBIDDEN', 'Access to another department tickets is forbidden', 403);
@@ -235,7 +233,9 @@ export class InternalTicketsController {
     @Param('attachmentId') attachmentId: string,
     @Query('redirect') redirect: string | undefined,
     @Res() res: any,
+    @Req() req: AuthenticatedRequest,
   ) {
+    await this.service.getTicket(id, req.principal);
     const fileData = await this.service.getAttachmentFile(id, attachmentId);
     let filename = fileData.attachment.fileName || 'attachment';
     if (!path.extname(filename)) {
@@ -269,7 +269,9 @@ export class InternalTicketsController {
     @Param('attachmentId') attachmentId: string,
     @Query('redirect') redirect: string | undefined,
     @Res() res: any,
+    @Req() req: AuthenticatedRequest,
   ) {
+    await this.service.getTicket(id, req.principal);
     const fileData = await this.service.getNoteAttachmentFile(id, noteId, attachmentId);
     let filename = fileData.attachment.fileName || 'attachment';
     if (!path.extname(filename)) {

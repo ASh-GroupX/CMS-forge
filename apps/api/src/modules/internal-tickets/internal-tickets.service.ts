@@ -472,10 +472,13 @@ export class InternalTicketsService {
     });
   }
 
-  async getMyTickets(departmentId: string, userId: string) {
+  async getMyTickets(departmentId: string, userId: string, roleCode?: string) {
     return this.repository.findMany({
       where: {
-        OR: [
+        OR: roleCode === 'INTERNAL_OFFICER' ? [
+          { requestedById: userId },
+          { assignedEmployeeId: userId },
+        ] : [
           { targetDepartmentId: departmentId, status: { not: 'PENDING_APPROVAL' } },
           { requestedById: userId },
           { assignedEmployeeId: userId },
@@ -836,6 +839,7 @@ export class InternalTicketsService {
   }
 
   async getTeamWorkload(principal: any, filters?: { filterType?: string, dateFrom?: string, dateTo?: string, categoryId?: string, severity?: string }) {
+    if (principal.roleCode === 'INTERNAL_OFFICER') throw new AppException('RBAC_FORBIDDEN', 'Forbidden', 403);
     return this.repository.transaction(async (tx) => {
       let userQuery: any = { isActive: true };
       
@@ -965,6 +969,9 @@ export class InternalTicketsService {
     if (!ticket) throw new NotFoundException('Ticket not found');
 
     if (principal && principal.roleCode !== 'ADMIN') {
+      if (principal.roleCode === 'INTERNAL_OFFICER' && principal.userId !== ticket.requestedById && principal.userId !== ticket.assignedEmployeeId) {
+        throw new AppException('RBAC_FORBIDDEN', 'Forbidden', 403);
+      }
       const isTargetDept = Boolean(principal.departmentId && principal.departmentId === ticket.targetDepartmentId);
       const isRequester = Boolean(principal.userId === ticket.requestedById || (principal.departmentId && principal.departmentId === (ticket as any).requestedBy?.departmentId));
       const isAssigned = Boolean(principal.userId === ticket.assignedEmployeeId);

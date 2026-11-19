@@ -108,6 +108,7 @@ export function mergeWorkItems(
   complaints: any[],
   now: Date = new Date(),
   currentUserId?: string,
+  ownOnly = false,
 ): EmployeeTodayTasks {
   const isDoneComplaint = (status?: string | null) => {
     const s = String(status || '').trim().toUpperCase();
@@ -158,7 +159,7 @@ export function mergeWorkItems(
           initialCompleted.push({ ...t, status: 'DONE' });
         }
       } else {
-        active.push(t);
+        if (!ownOnly || isTaskMine(t)) active.push(t);
       }
     }
     return active;
@@ -200,6 +201,7 @@ export function mergeWorkItems(
   }
 
   for (const task of extraTasks) {
+    if (ownOnly && !isTaskMine(task)) continue;
     const isDone = task.status === 'DONE';
     const dueTime = new Date(task.dueAt).getTime();
     const isOverdue = !isDone && dueTime < startOfToday.getTime();

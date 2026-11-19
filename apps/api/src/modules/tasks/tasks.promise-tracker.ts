@@ -10,9 +10,9 @@ export function promiseTrackerQuery(scope: PromiseTrackerScope) {
   return {
     userId: scope.userId,
     branchId: scope.branchId,
-    departmentId: scope.departmentId ?? null,
-    isAdmin: scope.permissions?.includes('TASK_MANAGE_ALL') ?? false,
-    isManager: scope.permissions?.some((code) => ['TASK_VIEW_BRANCH', 'TASK_MANAGE_BRANCH', 'TASK_MANAGE_ALL'].includes(code)) ?? false,
+    departmentId: scope.roleCode === 'INTERNAL_OFFICER' ? null : scope.departmentId ?? null,
+    isAdmin: scope.roleCode !== 'INTERNAL_OFFICER' && (scope.permissions?.includes('TASK_MANAGE_ALL') ?? false),
+    isManager: scope.roleCode !== 'INTERNAL_OFFICER' && (scope.permissions?.some((code) => ['TASK_VIEW_BRANCH', 'TASK_MANAGE_BRANCH', 'TASK_MANAGE_ALL'].includes(code)) ?? false),
   };
 }
 

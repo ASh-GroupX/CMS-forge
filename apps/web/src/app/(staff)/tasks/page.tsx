@@ -118,7 +118,7 @@ export default async function TasksPage({
     allTickets = Array.from(map.values());
   }
 
-  const aggregatedData = mergeWorkItems(baseTasks, allTickets, assignedComplaints, new Date(), principal?.userId);
+  const aggregatedData = mergeWorkItems(baseTasks, allTickets, assignedComplaints, new Date(), principal?.userId, principal?.roleCode === 'INTERNAL_OFFICER');
   const isAdmin = principal?.roleCode === 'ADMIN' || Boolean(principal?.permissions?.includes('ADMIN_SYSTEM_CONFIG'));
 
   return (

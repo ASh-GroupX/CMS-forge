@@ -18,6 +18,7 @@ export function managerBranchId(scope: ManagerRollupScope): string | null {
 }
 
 export function assertCanView(task: TaskRecord, actor: TaskActor): void {
+  if (actor.roleCode === 'INTERNAL_OFFICER' && !isParticipant(task, actor.userId)) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
   if (has(actor, 'TASK_MANAGE_ALL')) return;
   if (isParticipant(task, actor.userId)) return;
   if (isDepartmentMember(task, actor)) return;
@@ -32,6 +33,7 @@ export function assertCanComment(task: TaskRecord, actor: TaskActor): void {
 }
 
 export function assertCanManage(task: TaskRecord, actor: TaskActor): void {
+  if (actor.roleCode === 'INTERNAL_OFFICER' && !isParticipant(task, actor.userId)) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
   if (has(actor, 'TASK_MANAGE_ALL')) return;
   const membership = task.participants.find((participant) => participant.userId === actor.userId);
   if (task.ownerId === actor.userId || task.assigneeId === actor.userId || task.nextActionWhoId === actor.userId || membership?.role === TaskParticipantRole.PARTICIPANT) return;
@@ -53,6 +55,7 @@ function isParticipant(task: TaskRecord, userId: string): boolean {
 // tasks. Confidential tasks stay limited to named participants and admins.
 // The actor departmentId comes from the server session, never client input.
 function isDepartmentMember(task: TaskRecord, actor: TaskActor): boolean {
+  if (actor.roleCode === 'INTERNAL_OFFICER') return false;
   if (task.confidentialityLevel !== TaskConfidentialityLevel.NORMAL) return false;
   return Boolean(actor.departmentId && task.departmentRecipients.some((recipient) => recipient.departmentId === actor.departmentId));
 }

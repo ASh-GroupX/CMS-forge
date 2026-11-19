@@ -12,6 +12,8 @@ import { AppException } from '../../core/http-kernel.js';
 import { promiseKeptOnTime } from './tasks.promise.js';
 import { TasksRelatedRecordsService } from './tasks.related-records.service.js';
 import { TasksService } from './tasks.service.js';
+import { assertCanManage, assertCanView } from './tasks.access.js';
+import { promiseTrackerQuery } from './tasks.promise-tracker.js';
 import { TasksRepository, type CreateTaskCommentData, type CreateTaskData, type CreateTaskStatusHistoryData, type PromiseTaskRecord, type TaskCommentRecord, type TaskRecord, type UpdateTaskStatusData } from './tasks.repository.js';
 import { TaskRecipientsRepository } from './tasks.recipients.js';
 
@@ -396,6 +398,29 @@ test('employee today buckets only tasks visible to the actor', async () => {
   assert.deepEqual(result.waitingOnMe.map((task) => task.id), ['waiting']);
 });
 
+test('internal officer today hides same-department tasks owned by other staff', async () => {
+  const repository = { listEmployeeToday: async () => [
+    taskRecord({ id: 'assigned', ownerId: 'manager', assigneeId: 'officer', nextActionWhoId: 'manager', dueAt: new Date('2026-06-20T15:00:00.000Z') }),
+    taskRecord({ id: 'department_only', ownerId: 'manager', assigneeId: 'coworker', nextActionWhoId: 'coworker', dueAt: new Date('2026-06-20T15:00:00.000Z'), departmentRecipients: [{ departmentId: 'department-1', department: { nameEn: 'Internal', nameAr: 'داخلي', branchId: 'branch_1' } }] }),
+  ] } as unknown as TasksRepository;
+  const service = new TasksService(repository, {} as never);
+  const officer = await service.employeeToday({ userId: 'officer', roleCode: 'INTERNAL_OFFICER', departmentId: 'department-1', branchId: 'branch_1' }, new Date('2026-06-20T12:00:00.000Z'));
+  const manager = await service.employeeToday({ userId: 'manager', roleCode: 'INTERNAL_MANAGER', departmentId: 'department-1', branchId: 'branch_1' }, new Date('2026-06-20T12:00:00.000Z'));
+  assert.deepEqual(officer.dueToday.map((task) => task.id), ['assigned']);
+  assert.deepEqual(manager.dueToday.map((task) => task.id), ['assigned', 'department_only']);
+});
+
+test('internal officer cannot read or manage a department-only task', () => {
+  const task = taskRecord({ ownerId: 'manager', assigneeId: 'coworker', nextActionWhoId: 'coworker', departmentRecipients: [{ departmentId: 'department-1', department: { nameEn: 'Internal', nameAr: 'داخلي', branchId: 'branch_1' } }] });
+  const officer = { userId: 'officer', roleCode: 'INTERNAL_OFFICER', branchId: 'branch_1', departmentId: 'department-1' };
+  assert.throws(() => assertCanView(task, officer), (error: any) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN');
+  assert.throws(() => assertCanManage(task, officer), (error: any) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN');
+  assert.doesNotThrow(() => assertCanView(task, { ...officer, roleCode: 'INTERNAL_MANAGER' }));
+  assert.doesNotThrow(() => assertCanView(taskRecord({ ...task, assigneeId: 'officer' }), officer));
+  assert.equal(promiseTrackerQuery({ ...officer, permissions: ['TASK_MANAGE_ALL'] }).departmentId, null);
+  assert.equal(promiseTrackerQuery({ ...officer, permissions: ['TASK_MANAGE_ALL'] }).isAdmin, false);
+});
+
 test('sent by me lists tasks owned by the actor', async () => {
   let ownerId = '';
   let completedSince: Date | undefined;
@@ -539,7 +564,7 @@ test('manager control room derives scoped rollup counts from active tasks', asyn
   } as unknown as TasksRepository;
   const service = new TasksService(repository, {} as never);
 
-  const result = await service.managerControlRoom({ roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' }, new Date('2026-06-20T12:00:00.000Z'));
+  const result = await service.managerControlRoom({ roleCode: 'BRANCH_MANAGER', branchId: 'branch_1', permissions: ['TASK_VIEW_BRANCH'] }, new Date('2026-06-20T12:00:00.000Z'));
 
   assert.equal(scopedBranch, 'branch_1');
   assert.equal(includeConfidential, false);
@@ -562,7 +587,7 @@ test('admin manager control room can include confidential task rows', async () =
   } as unknown as TasksRepository;
   const service = new TasksService(repository, {} as never);
 
-  await service.managerControlRoom({ roleCode: RoleCode.ADMIN, branchId: null }, new Date('2026-06-20T12:00:00.000Z'));
+  await service.managerControlRoom({ roleCode: RoleCode.ADMIN, branchId: null, permissions: ['TASK_MANAGE_ALL'] }, new Date('2026-06-20T12:00:00.000Z'));
 
   assert.equal(includeConfidential, true);
 });
@@ -581,7 +606,7 @@ test('promise tracker returns server-scoped promises with labels and kept KPI', 
   } as unknown as TasksRepository;
   const service = new TasksService(repository, {} as never);
 
-  const result = await service.promiseTracker({ userId: 'user_owner', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_1' }, new Date('2026-06-20T12:00:00.000Z'));
+  const result = await service.promiseTracker({ userId: 'user_owner', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_1', permissions: ['TASK_VIEW_BRANCH'] }, new Date('2026-06-20T12:00:00.000Z'));
 
   assert.deepEqual(query, { userId: 'user_owner', branchId: 'branch_1', departmentId: null, isAdmin: false, isManager: true });
   assert.equal(result.openPromiseCount, 2);

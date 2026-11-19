@@ -1,10 +1,10 @@
-# Release booking closure calendar without data loss
+# Restrict Internal Officer work to named assignments
 
 Status: In Progress
 Date: 2026-11-19
-Risk: Critical
-SRS: REQ-BOOK-CALENDAR-001, NFR-DATA-001, NFR-AVAIL-001
+Risk: High
+SRS: REQ-RBAC-001, REQ-COLLAB-001
 
-Scope: Verify production state and pending migrations. Create a fresh database dump, validate the archive and restore it into an isolated temporary database, and preserve an independent recovery copy before deploying. Run production checks, verify record counts and booking closure behavior, and record proof. Do not run imports or alter existing appointments.
+Scope: Repair three small access boundaries independently: internal ticket list/detail/attachment reads (controller and service plus tests), task today/board/detail reads (controller, service, access, scope helper plus tests), and My Work aggregation (page and merge helper plus test). Keep manager department access. The server session supplies role, user, and department. No schema, migration, import, deletion, or data rewrite is in scope.
 
-Release gate: Stop before any migration if the backup/restore proof fails, if unexpected pending migrations appear, or if an independent recovery copy cannot be secured. Production deployment must retain the existing data and attachment storage.
+Proof: `npm run test:api -- tasks`, `npm run test:api -- internal-tickets`, `npm run test:web -- shell`, focused module regressions, `npm run typecheck`, `npm run lint`, `npm run openapi:check`, `npm run security:check`, `git diff --check`. Before and after any production release, verify backup and record counts.

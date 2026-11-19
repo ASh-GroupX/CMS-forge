@@ -181,13 +181,14 @@ export class TasksService {
     await nudgeForActor(this.tasksRepository, this.auditService, this.notificationsService, taskId, input, actor, audit);
   }
 
-  async employeeToday(actorId: string, now: Date = new Date()): Promise<EmployeeTodayResponseDto> {
-    const userId = requiredText(actorId, 'actorId');
+  async employeeToday(actor: TaskActor | string, now: Date = new Date()): Promise<EmployeeTodayResponseDto> {
+    const userId = requiredText(typeof actor === 'string' ? actor : actor.userId, 'actorId');
     const completedSince = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
     const tasks = await this.tasksRepository.listEmployeeToday(userId, completedSince);
     const [start, end] = utcDay(now);
-    const openTasks = tasks.filter((task) => task.status !== TaskStatus.DONE);
     const isMine = (t: TaskRecord) => t.assigneeId === userId || t.ownerId === userId || t.nextActionWhoId === userId || Boolean(t.participants?.some((p) => p.userId === userId));
+    const ownOnly = typeof actor === 'string' || actor.roleCode === 'INTERNAL_OFFICER';
+    const openTasks = tasks.filter((task) => task.status !== TaskStatus.DONE && (!ownOnly || isMine(task)));
     return {
       completed: tasks.filter((task) => task.status === TaskStatus.DONE && isMine(task)).map(taskToResponse),
       dueToday: openTasks.filter((task) => task.dueAt >= start && task.dueAt < end).map(taskToResponse),

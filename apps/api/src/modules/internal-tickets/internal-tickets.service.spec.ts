@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { InternalTicketsRepository } from './internal-tickets.repository.js';
 import { InternalTicketsService } from './internal-tickets.service.js';
+import { AppException } from '../../core/http-kernel.js';
 
 test('internal-tickets service can be constructed', () => {
   assert.ok(new InternalTicketsService(new InternalTicketsRepository(null as any), null as any, null as any));
@@ -20,6 +21,22 @@ test('department ticket read includes sent and received flows but excludes pendi
       { requestedBy: { departmentId: 'department-1' }, status: { notIn: ['PENDING_APPROVAL'] } },
     ],
   });
+});
+
+test('internal officer ticket list includes only requested or assigned tickets', async () => {
+  let where: any;
+  const service = new InternalTicketsService({ findMany: async (query: any) => { where = query.where; return []; } } as any, null as any, null as any);
+  await service.getMyTickets('department-1', 'officer-1', 'INTERNAL_OFFICER');
+  assert.deepEqual(where, { OR: [{ requestedById: 'officer-1' }, { assignedEmployeeId: 'officer-1' }] });
+  await service.getMyTickets('department-1', 'manager-1', 'INTERNAL_MANAGER');
+  assert.ok(where.OR.some((entry: any) => entry.targetDepartmentId === 'department-1'));
+});
+
+test('internal officer cannot open another department member ticket', async () => {
+  const ticket = { id: 'ticket-1', targetDepartmentId: 'department-1', requestedById: 'manager-1', assignedEmployeeId: 'officer-2', requestedBy: { departmentId: 'department-1' } };
+  const service = new InternalTicketsService({ findById: async () => ticket } as any, null as any, null as any);
+  await assert.rejects(service.getTicket('ticket-1', { roleCode: 'INTERNAL_OFFICER', userId: 'officer-1', departmentId: 'department-1' }), (error: any) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN');
+  assert.equal((await service.getTicket('ticket-1', { roleCode: 'INTERNAL_OFFICER', userId: 'officer-2', departmentId: 'department-1' })).id, 'ticket-1');
 });
 
 test('waiting transition stores a readable reason snapshot in activity history', async () => {

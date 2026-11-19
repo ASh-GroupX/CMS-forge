@@ -113,17 +113,17 @@ test('quick-add rejects client-owned task authority fields', async () => {
 });
 
 test('today derives employee identity from the staff session', async () => {
-  let capturedActor = '';
+  let capturedActor: unknown;
   const controller = new TasksController({
-    employeeToday: async (actorId: string) => {
-      capturedActor = actorId;
+    employeeToday: async (actor: unknown) => {
+      capturedActor = actor;
       return { dueToday: [], overdue: [], overduePromises: [], assignedToMe: [], waitingOnMe: [] };
     },
   } as unknown as TasksService);
 
   const result = await controller.today(request());
 
-  assert.equal(capturedActor, 'user_owner');
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'CR_OFFICER', branchId: 'branch_1', departmentId: null, permissions: [] });
   assert.deepEqual(result, { dueToday: [], overdue: [], overduePromises: [], assignedToMe: [], waitingOnMe: [] });
 });
 
@@ -162,7 +162,7 @@ test('manager rollup derives role and branch from the staff session', async () =
 
   const result = await controller.managerRollup(request('BRANCH_MANAGER'));
 
-  assert.deepEqual(capturedScope, { roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' });
+  assert.deepEqual(capturedScope, { roleCode: 'BRANCH_MANAGER', branchId: 'branch_1', permissions: [] });
   assert.deepEqual(result, { overdueByEmployee: [], dueToday: [], overduePromises: [], stuck: [], workloadByAssignee: [], escalated: [], promiseKpi: { openPromiseCount: 0, overduePromiseCount: 0 } });
 });
 
@@ -177,7 +177,7 @@ test('promises route derives actor from the staff session', async () => {
 
   const result = await controller.promises(request('BRANCH_MANAGER'));
 
-  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' });
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1', permissions: [] });
   assert.deepEqual(result, { openPromiseCount: 0, overduePromiseCount: 0, keptOnTimePercent: 0, promises: [] });
 });
 

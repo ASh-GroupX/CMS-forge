@@ -39,7 +39,7 @@ export class TasksController {
   @UseGuards(SessionAuthGuard, PermissionGuard)
   @Permissions('COMPLAINT_COMMENT_INTERNAL')
   async today(@Req() request: AuthenticatedRequest): Promise<EmployeeTodayResponseDto> {
-    return this.tasksService.employeeToday(principalUserId(request));
+    return this.tasksService.employeeToday(taskActor(requirePrincipal(request)));
   }
 
   @Get('sent-by-me')
