@@ -5,9 +5,9 @@ import { InternalTicketsService } from './internal-tickets.service.js';
 
 const principal = { userId: 'staff-1', departmentId: 'dept-1', roleCode: 'CR_OFFICER' };
 const field = { id: 'phone-field', nameEn: 'Customer phone', isRequired: true, phoneDuplicateCheck: true };
-test('international phone normalization matches formatting, 00 prefix and Arabic digits', () => {
-  for (const input of ['+962 79-000-0000', '00962(79)0000000', '+٩٦٢ ٧٩-٠٠٠-٠٠٠٠', '+۹۶۲ ۷۹-۰۰۰-۰۰۰۰']) assert.equal(normalizeTicketPhone(input), '+962790000000');
-  for (const input of ['0790000000', '', '+0', '+962790000000ext4', 962790000000, undefined]) assert.throws(() => normalizeTicketPhone(input));
+test('Jordanian local and international phones normalize to one duplicate key', () => {
+  for (const input of ['0791401860', '٠٧٩١٤٠١٨٦٠', '+962 79-140-1860', '00962(79)1401860']) assert.equal(normalizeTicketPhone(input), '+962791401860');
+  for (const input of ['', '0711401860', '079140186', '+0', '+962791401860ext4', 962791401860, undefined]) assert.throws(() => normalizeTicketPhone(input));
 });
 test('phone lookup uses exactly the existing ticket detail visibility boundary', async () => {
   assert.throws(() => readableTicketScope({ userId: '', roleCode: 'ADMIN' }));
@@ -24,18 +24,20 @@ test('create rechecks under lock, rejects duplicates until that field is explici
   const tx = { $queryRaw: async () => events.push('locked'), ticketCustomerPhone: { findMany: async () => { events.push('checked'); return [{ ticket: { id: 'existing' } }]; } } } as any;
   await assert.rejects(() => enforcePhoneRule(tx, principal, [field], { 'phone-field': '+962790000000' }, []), (error: any) => error.code === 'DUPLICATE_CUSTOMER_PHONE' && error.getStatus() === 409);
   assert.deepEqual(events, ['locked', 'checked']);
-  await assert.rejects(() => enforcePhoneRule(tx, principal, [field], { 'phone-field': '  ' }, ['phone-field']));
+  assert.deepEqual(await enforcePhoneRule(tx, principal, [field], { 'phone-field': '  ' }, []), []);
+  assert.deepEqual(await enforcePhoneRule(tx, principal, [field], {}, []), []);
+  await assert.rejects(() => enforcePhoneRule(tx, principal, [field], { 'phone-field': '0791401860' }, []), (error: any) => error.code === 'DUPLICATE_CUSTOMER_PHONE');
   const result = await enforcePhoneRule(tx, principal, [field], { 'phone-field': '+962 790000000' }, ['phone-field']);
   assert.deepEqual(result, [{ fieldId: 'phone-field', phone: '+962790000000' }]);
   await assert.rejects(() => enforcePhoneRule(tx, principal, [field], { 'phone-field': '+962790000000' }, ['other-field']));
 });
-test('admin phone rule forces text+required; unauthorized field configuration is denied', async () => {
+test('admin phone rule keeps text optional; unauthorized field configuration is denied', async () => {
   let data: any;
   const tx = { departmentTicketCustomField: { count: async () => 0, create: async (query: any) => { data = query.data; return data; } } };
   const service = new InternalTicketsService({ transaction: async (work: any) => work(tx) } as any, null as any);
   await assert.rejects(() => service.createDepartmentCustomField('dept-1', { nameEn: 'Phone', nameAr: 'هاتف', fieldType: 'NUMBER', phoneDuplicateCheck: true }, principal));
   await service.createDepartmentCustomField('dept-1', { nameEn: 'Phone', nameAr: 'هاتف', fieldType: 'NUMBER', phoneDuplicateCheck: true, isRequired: false }, { ...principal, roleCode: 'ADMIN' });
-  assert.equal(data.phoneDuplicateCheck, true); assert.equal(data.fieldType, 'TEXT'); assert.equal(data.isRequired, true);
+  assert.equal(data.phoneDuplicateCheck, true); assert.equal(data.fieldType, 'TEXT'); assert.equal(data.isRequired, false);
 });
 test('phone ticket creates normalized index, activity and audit in the same transaction', async () => {
   const writes: any[] = [];

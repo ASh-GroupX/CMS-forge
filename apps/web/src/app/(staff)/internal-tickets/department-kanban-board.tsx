@@ -131,8 +131,8 @@ export function DepartmentKanbanBoard({
   };
 
   return (
-    <div className="w-full min-w-0 max-w-full rounded-3xl border border-line-subtle bg-surface-canvas/60 p-4 shadow-sm flex flex-col overflow-hidden">
-      <div className="flex gap-5 pb-4 items-start overflow-x-auto min-w-0 max-w-full">
+    <div role="region" aria-label={isAr ? 'لوحة التذاكر الداخلية' : 'Internal Tickets board'} tabIndex={0} className="w-full min-w-0 max-w-full max-h-[70vh] overflow-auto overscroll-contain rounded-3xl border border-line-subtle bg-surface-canvas/60 p-4 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+      <div className="flex w-max min-w-full items-start gap-5 pb-4">
         {/* 1. Pending Inbox Column */}
       {(isManager || isAdmin) && pendingInbox.length > 0 && (
         <DepartmentKanbanColumn

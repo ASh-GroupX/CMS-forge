@@ -1,6 +1,6 @@
 export const ticketPhoneRuleText = {
   en: {
-    hint: 'Include the country code, for example +962790000000.',
+    hint: 'Optional. Enter a Jordanian mobile number such as 0791401860, or use +962791401860.',
     checking: 'Checking existing tickets…', failed: 'Could not check existing tickets. Try again.', retry: 'Check again',
     duplicate: 'This phone number is already used on an existing ticket.',
     followUp: 'Open an existing ticket to add a follow-up in its notes, or create another ticket for a different problem.',
@@ -8,7 +8,7 @@ export const ticketPhoneRuleText = {
     noMatches: 'No matching tickets in your accessible departments.',
   },
   ar: {
-    hint: 'أدخل رمز الدولة، مثل ‎+962790000000.',
+    hint: 'اختياري. أدخل رقمًا أردنيًا مثل 0791401860 أو استخدم ‎+962791401860.',
     checking: 'جارٍ البحث في التذاكر السابقة…', failed: 'تعذر البحث في التذاكر السابقة. حاول مرة أخرى.', retry: 'إعادة البحث',
     duplicate: 'رقم الهاتف مستخدم بالفعل في تذكرة سابقة.',
     followUp: 'افتح التذكرة السابقة لإضافة متابعة في الملاحظات، أو أنشئ تذكرة أخرى لمشكلة مختلفة.',
@@ -20,5 +20,5 @@ export const ticketPhoneRuleAdmin = {
   nameEn: 'Customer phone number', nameAr: 'رقم هاتف العميل',
   badge: 'Phone duplicate rule / قاعدة تكرار الهاتف',
   label: 'Customer phone duplicate rule / قاعدة التحقق من تكرار هاتف العميل',
-  hint: 'Required international phone; checks all accessible departments, links existing tickets and allows a separate problem. / هاتف دولي إلزامي؛ يبحث في الأقسام المتاحة ويربط التذاكر السابقة مع السماح بمشكلة منفصلة.',
+  hint: 'Optional phone; accepts Jordanian 07 numbers or international format and checks accessible tickets when entered. / رقم هاتف اختياري؛ يقبل الأرقام الأردنية 07 أو الصيغة الدولية ويفحص التذاكر المتاحة عند إدخاله.',
 };

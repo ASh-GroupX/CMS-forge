@@ -110,7 +110,7 @@ export function AddCustomFieldForm({ departmentId, onSuccess, onCancel }: AddCus
         <label className="flex items-center gap-2 text-xs font-semibold text-content-strong cursor-pointer">
           <input
             type="checkbox"
-            checked={phoneDuplicateCheck || isRequired}
+            checked={!phoneDuplicateCheck && isRequired}
             disabled={phoneDuplicateCheck}
             onChange={(e) => setIsRequired(e.target.checked)}
             className="rounded text-brand"
@@ -122,7 +122,7 @@ export function AddCustomFieldForm({ departmentId, onSuccess, onCancel }: AddCus
       <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-border p-3 text-sm">
         <Checkbox aria-label={ticketPhoneRuleAdmin.label} checked={phoneDuplicateCheck} onCheckedChange={checked => {
           setPhoneDuplicateCheck(checked === true);
-          if (checked === true) { setFieldType('TEXT'); setIsRequired(true); if (!nameEn) setNameEn(ticketPhoneRuleAdmin.nameEn); if (!nameAr) setNameAr(ticketPhoneRuleAdmin.nameAr); }
+          if (checked === true) { setFieldType('TEXT'); setIsRequired(false); if (!nameEn) setNameEn(ticketPhoneRuleAdmin.nameEn); if (!nameAr) setNameAr(ticketPhoneRuleAdmin.nameAr); }
         }} />
         <span><span className="block font-semibold">{ticketPhoneRuleAdmin.label}</span><span className="mt-1 block text-xs text-muted-foreground">{ticketPhoneRuleAdmin.hint}</span></span>
       </label>

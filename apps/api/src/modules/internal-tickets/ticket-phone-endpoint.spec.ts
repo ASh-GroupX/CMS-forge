@@ -40,7 +40,8 @@ test('phone duplicate HTTP endpoint enforces session auth, validates request and
     const allowed = await request(input);
     assert.equal(allowed.status, 200);
     assert.deepEqual(await allowed.json(), { items: [ticket] });
-    assert.equal((await request({ ...input, phone: '0790000000' })).status, 400);
+    assert.equal((await request({ ...input, phone: '0790000000' })).status, 200);
+    assert.equal((await request({ ...input, phone: '0710000000' })).status, 400);
     assert.equal((await request({ ...input, fieldId: 'other-field' })).status, 404);
   } finally { await app.close(); }
 });

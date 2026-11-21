@@ -178,7 +178,7 @@
             }
           },
           "400": {
-            "description": "Required field or international phone invalid",
+            "description": "Required field or phone invalid",
             "content": {
               "application/json": {
                 "schema": {
@@ -342,7 +342,7 @@
           "InternalTickets"
         ],
         "operationId": "internalTicketPhoneDuplicates",
-        "summary": "Check international phone against tickets readable by current session across accessible departments",
+        "summary": "Check Jordanian local or international phone against tickets readable by current session across accessible departments",
         "security": [
           {
             "staffSession": []
@@ -370,7 +370,7 @@
             }
           },
           "400": {
-            "description": "Invalid international phone or rule request",
+            "description": "Invalid phone or rule request",
             "content": {
               "application/json": {
                 "schema": {
@@ -8084,7 +8084,7 @@
           "phoneDuplicateCheck": {
             "type": "boolean",
             "default": false,
-            "description": "Opt-in immutable rule; forces TEXT and required international phone; allows explicitly acknowledged different-problem reuse."
+            "description": "Opt-in immutable rule; forces TEXT and optional phone; accepts Jordanian local or international numbers and allows explicitly acknowledged different-problem reuse."
           },
           "isRequired": {
             "type": "boolean"
@@ -8142,7 +8142,7 @@
           "phoneDuplicateCheck": {
             "type": "boolean",
             "default": false,
-            "description": "Opt-in immutable rule; forces TEXT and required international phone; allows explicitly acknowledged different-problem reuse."
+            "description": "Opt-in immutable rule; forces TEXT and optional phone; accepts Jordanian local or international numbers and allows explicitly acknowledged different-problem reuse."
           },
           "isRequired": {
             "type": "boolean"
@@ -8258,7 +8258,7 @@
       },
       "InternalTicketPhoneRule": {
         "type": "object",
-        "description": "Opt-in immutable rule on a new department custom field: phoneDuplicateCheck=true forces TEXT and isRequired=true.",
+        "description": "Opt-in immutable rule on a new department custom field: phoneDuplicateCheck=true forces TEXT and makes the phone optional.",
         "properties": {
           "phoneDuplicateCheck": {
             "type": "boolean",

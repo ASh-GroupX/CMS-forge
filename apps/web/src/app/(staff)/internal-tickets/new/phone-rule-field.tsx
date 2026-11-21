@@ -31,8 +31,8 @@ export function PhoneRuleField({ field, value, onChange, onAcknowledge, isAr = f
     return () => { active = false; window.clearTimeout(timer); };
   }, [value, field.id, field.departmentId, retry, lookupVersion]);
   return <div className="space-y-2 sm:col-span-2">
-    <label htmlFor={`phone-${field.id}`} className="text-sm font-semibold">{isAr ? field.nameAr : field.nameEn} *</label>
-    <Input id={`phone-${field.id}`} type="tel" dir="ltr" required value={value} placeholder="+962790000000"
+    <label htmlFor={`phone-${field.id}`} className="text-sm font-semibold">{isAr ? field.nameAr : field.nameEn}</label>
+    <Input id={`phone-${field.id}`} type="tel" dir="ltr" value={value} placeholder="0791401860"
       aria-describedby={`phone-help-${field.id}`} onChange={event => { setConfirmed(false); onAcknowledge(false); onChange(event.target.value); }} />
     <p id={`phone-help-${field.id}`} className="text-xs text-muted-foreground">{t.hint}</p>
     {state === 'loading' && <p role="status" className="text-sm text-muted-foreground">{t.checking}</p>}

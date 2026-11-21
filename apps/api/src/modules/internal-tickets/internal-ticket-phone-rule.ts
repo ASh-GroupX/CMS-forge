@@ -4,11 +4,12 @@ import { AuditService } from '../../core/audit.service.js';
 
 type Principal = { userId: string; roleCode: string; departmentId?: string | null };
 export function normalizeTicketPhone(value: unknown): string {
-  if (typeof value !== 'string') throw new AppException('VALIDATION_FAILED', 'An international customer phone number is required', 400);
+  if (typeof value !== 'string') throw new AppException('VALIDATION_FAILED', 'Enter a valid phone number', 400);
   const phone = value.trim().replace(/[٠-٩۰-۹]/g, digit => String(digit.charCodeAt(0) - (digit >= '۰' ? 1776 : 1632)))
     .replace(/[\s().-]/g, '').replace(/^00/, '+');
-  if (!/^\+[1-9]\d{7,14}$/.test(phone)) throw new AppException('VALIDATION_FAILED', 'Include an international country code, for example +962790000000', 400);
-  return phone;
+  const normalized = /^07[789]\d{7}$/.test(phone) ? `+962${phone.slice(1)}` : phone;
+  if (!/^\+[1-9]\d{7,14}$/.test(normalized)) throw new AppException('VALIDATION_FAILED', 'Enter a valid phone number, for example 0791401860', 400);
+  return normalized;
 }
 
 export function readableTicketScope(principal: Principal): Prisma.InternalTicketWhereInput {
@@ -35,10 +36,10 @@ export async function enforcePhoneRule(tx: Prisma.TransactionClient, principal: 
   const phones: { fieldId: string; phone: string }[] = [];
   for (const field of fields) {
     const value = values[field.id];
-    if (field.isRequired && (value === undefined || value === null || typeof value === 'string' && !value.trim())) {
+    if (!field.phoneDuplicateCheck && field.isRequired && (value === undefined || value === null || typeof value === 'string' && !value.trim())) {
       throw new AppException('VALIDATION_FAILED', `Field "${field.nameEn}" is required`, 400);
     }
-    if (field.phoneDuplicateCheck) phones.push({ fieldId: field.id, phone: normalizeTicketPhone(value) });
+    if (field.phoneDuplicateCheck && value !== undefined && value !== null && (typeof value !== 'string' || value.trim())) phones.push({ fieldId: field.id, phone: normalizeTicketPhone(value) });
   }
   // Stable lock order prevents concurrent creates bypassing the duplicate warning.
   for (const phone of [...new Set(phones.map(item => item.phone))].sort()) {

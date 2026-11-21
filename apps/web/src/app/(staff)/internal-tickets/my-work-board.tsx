@@ -324,8 +324,8 @@ export function MyWorkBoard({ tickets, propLocale }: { tickets: any[]; propLocal
           <p className="text-sm text-content-muted mt-1">{t.board.emptySubtitle}</p>
         </div>
       ) : (
-        <div className="w-full min-w-0 max-w-full rounded-3xl border border-line-subtle bg-surface-canvas/60 p-4 shadow-sm flex flex-col overflow-hidden">
-          <div className="flex overflow-x-auto gap-4 pb-4 items-start min-w-0 max-w-full">
+        <div role="region" aria-label={locale === 'ar' ? 'لوحة التذاكر الداخلية' : 'Internal Tickets board'} tabIndex={0} className="w-full min-w-0 max-w-full max-h-[70vh] overflow-auto overscroll-contain rounded-3xl border border-line-subtle bg-surface-canvas/60 p-4 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+          <div className="flex w-max min-w-full items-start gap-4 pb-4">
             {sections.map((status) => (
               <StatusSection key={status} status={status} tickets={grouped[status] || []} locale={locale} t={t} />
             ))}

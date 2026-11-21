@@ -188,7 +188,7 @@ export function DepartmentFieldsTab({
                   <div>
                     <div className="text-sm font-semibold text-content-strong flex items-center gap-2">
                       {field.nameEn} <span className="text-xs text-content-muted">({field.nameAr})</span>
-                      {field.isRequired && <span className="rounded bg-status-error/10 px-1.5 py-0.5 text-[10px] font-bold text-status-error">Required</span>}
+                      {field.isRequired && !field.phoneDuplicateCheck && <span className="rounded bg-status-error/10 px-1.5 py-0.5 text-[10px] font-bold text-status-error">Required</span>}
                       {field.phoneDuplicateCheck && <Badge variant="outline">{ticketPhoneRuleAdmin.badge}</Badge>}
                       {!field.isActive && <span className="rounded bg-surface-raised px-1.5 py-0.5 text-[10px] font-semibold text-content-muted">Disabled</span>}
                     </div>

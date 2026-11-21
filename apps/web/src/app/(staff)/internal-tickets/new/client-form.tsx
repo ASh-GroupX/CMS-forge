@@ -124,7 +124,7 @@ export default function CreateInternalTicketForm({
 
     // Validate required custom fields
     for (const f of deptCustomFields) {
-      if (f.isRequired) {
+      if (f.isRequired && !f.phoneDuplicateCheck) {
         const val = customFieldValues[f.id];
         if (val === undefined || val === null || val === '') {
           setError(`Field "${f.nameEn}" is required.`);

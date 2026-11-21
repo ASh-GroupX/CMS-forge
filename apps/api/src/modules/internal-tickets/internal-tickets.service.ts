@@ -749,7 +749,7 @@ export class InternalTicketsService {
           options,
           placeholderEn: dto.placeholderEn?.trim() || null,
           placeholderAr: dto.placeholderAr?.trim() || null,
-          isRequired: dto.phoneDuplicateCheck === true || Boolean(dto.isRequired),
+          isRequired: dto.phoneDuplicateCheck === true ? false : Boolean(dto.isRequired),
           isActive: dto.isActive !== false,
           order: typeof dto.order === 'number' ? dto.order : count,
         },
@@ -780,7 +780,7 @@ export class InternalTicketsService {
       if (dto.isRequired !== undefined) data.isRequired = Boolean(dto.isRequired);
       if (dto.isActive !== undefined) data.isActive = Boolean(dto.isActive);
       if (dto.order !== undefined) data.order = Number(dto.order);
-      if (field.phoneDuplicateCheck) { data.isRequired = true; data.fieldType = 'TEXT'; }
+      if (field.phoneDuplicateCheck) { data.isRequired = false; data.fieldType = 'TEXT'; }
 
       return tx.departmentTicketCustomField.update({
         where: { id: fieldId },

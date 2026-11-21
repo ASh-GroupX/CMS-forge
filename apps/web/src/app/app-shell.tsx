@@ -57,7 +57,7 @@ export function AppShell({ activePath = '', activeSearch = '', children, locale,
   const subheading = dashboard && identity ? `${identity.role} • ${identity.branch}` : t.subtitle;
 
   return (
-    <main lang={t.lang} dir={t.dir} className="min-h-screen w-full max-w-full overflow-x-hidden bg-surface-canvas text-content-strong">
+    <main lang={t.lang} dir={t.dir} className="min-h-screen w-full max-w-full overflow-x-clip bg-surface-canvas text-content-strong">
       <Toaster position="bottom-center" richColors />
       <a className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:ring-2 focus:ring-brand" href="#staff-main">{t.skipToMain}</a>
       <div className="flex min-h-screen w-full max-w-full">

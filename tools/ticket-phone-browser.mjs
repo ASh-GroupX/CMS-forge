@@ -25,7 +25,7 @@ await build({ entryPoints: ['apps/web/test/browser/ticket-phone-rule.fixture.tsx
       export async function findTicketPhoneDuplicates(input) {
         const mode=window.phoneMode || 'matches';
         if (input.phone.endsWith('001')) await new Promise(resolve=>setTimeout(resolve,800));
-        if (!input.phone.startsWith('+')) return {items:[],error:'VALIDATION_FAILED'};
+        if (!/^07[789][0-9]{7}$/.test(input.phone) && !input.phone.startsWith('+')) return {items:[],error:'VALIDATION_FAILED'};
         if (mode==='error') return {items:[],error:'UNAVAILABLE'};
         return {items:mode==='empty'?[]:[{id:'ticket-1',referenceNumber:'TKT-100',title:'Previous problem',status:'IN_PROGRESS'}]};
       }` }));
@@ -52,9 +52,10 @@ try {
     const copy = ticketPhoneRuleText[locale];
     await page.goto(`http://127.0.0.1:${server.address().port}/?${locale}`);
     const phone = page.locator('input[type=tel]');
-    await phone.fill('0790000000');
+    assert.equal(await phone.getAttribute('required'), null);
+    await phone.fill('0710000000');
     await page.getByRole('alert').getByText(copy.hint, { exact: true }).waitFor();
-    await phone.fill('+962790000000');
+    await phone.fill('0790000000');
     await page.getByText(copy.duplicate, { exact: true }).waitFor();
     const link = page.getByRole('link');
     assert.equal(await link.getAttribute('href'), `/internal-tickets/ticket-1?returnTo=new-ticket&locale=${locale}`);
@@ -81,17 +82,18 @@ try {
     await page.evaluate(() => { window.phoneMode = 'matches'; });
     await page.getByRole('button', { name: copy.retry, exact: true }).click();
     await page.getByText(copy.duplicate, { exact: true }).waitFor();
-    await page.getByRole('checkbox', { name: ticketPhoneRuleAdmin.label, exact: true }).check();
-    assert.ok(await page.locator('input[type=checkbox]:not([aria-hidden])').isChecked());
+    const ruleCheckbox = page.getByRole('checkbox', { name: ticketPhoneRuleAdmin.label, exact: true });
+    await ruleCheckbox.check();
+    assert.ok(await ruleCheckbox.isChecked());
     assert.ok(await page.locator('input[type=checkbox]:not([aria-hidden])').isDisabled());
     assert.ok(await page.locator('select').isDisabled());
     await page.getByRole('button', { name: 'Save Field / حفظ', exact: true }).click();
     await page.waitForFunction(() => window.savedPhoneRule?.phoneDuplicateCheck === true);
-    assert.equal(await page.evaluate(() => window.savedPhoneRule.isRequired), true);
+    assert.equal(await page.evaluate(() => window.savedPhoneRule.isRequired), false);
     assert.equal(await page.evaluate(() => window.savedPhoneRule.fieldType), 'TEXT');
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2));
     assert.deepEqual(errors, []);
     await page.close();
   }
-  console.log('Ticket phone browser proof passed: EN/AR duplicate links, separate-problem choice/reset, validation, stale lookup, retry and mandatory admin rule.');
+  console.log('Ticket phone browser proof passed: EN/AR optional local phone, duplicate links, separate-problem choice/reset, validation, stale lookup, retry and admin rule.');
 } finally { await browser.close(); await new Promise(done => server.close(done)); }
