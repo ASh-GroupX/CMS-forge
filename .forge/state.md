@@ -1,7 +1,7 @@
 # Current State
 
 Date: 2026-11-21
-Status: Production deployment blocked by exhausted PostgreSQL connections; bounded pool repair verified locally
+Status: Concurrent ticket and booking save repair deployed successfully
 Risk: High
 
 - Direct same-origin create requests replace deployment-sensitive Server Actions. Client-generated request IDs let retries recover committed records; random ticket and booking references avoid simultaneous-create collisions.
@@ -10,7 +10,9 @@ Risk: High
 - Passed: service bookings API 55/55, internal tickets API 18/18, web API client 116/116, web shell 250/250, root tests 78/78 with coverage gates, typecheck, lint, OpenAPI, security, production build, EN/AR navigation, booking suggestions, booking search browser proof, diff check.
 - Read-only production baseline before release: appointments 922, complaints 4, customers 13, tasks 72, internal tickets 66. Signed-in production UAT remains Needs Human Review.
 - First production deployment run 44877246025 passed validation but failed before changing containers because PostgreSQL had reached its 100-connection limit (API approximately 81, worker approximately 19). The pre-deployment dump could not connect. API and web remained healthy on revision 4a9c62d. Production compose now caps the API, worker, and migration Prisma pools at two connections each; focused deployment artifact test 8/8 passed.
-- Stopped the old worker temporarily to free connections. A fresh custom-format dump `cms-auto-manual-20261121T065415Z.dump` is 1,093,177 bytes, passed `pg_restore -l`, SHA-256 `6d38617b57a3d704e9722c959b90d87821441936b9ec029ce6bf160112e68294`. Live counts after that backup: 922 appointments, 4 complaints, 13 customers, 72 tasks, 67 tickets. Worker will resume with the corrected deployment.
+- Stopped the old worker temporarily to free connections. A fresh custom-format dump `cms-auto-manual-20261121T065415Z.dump` is 1,093,177 bytes, passed `pg_restore -l`, SHA-256 `6d38617b57a3d704e9722c959b90d87821441936b9ec029ce6bf160112e68294`. Live counts after that backup: 922 appointments, 4 complaints, 13 customers, 72 tasks, 67 tickets. The worker resumed healthy with the corrected deployment.
+- Corrected production run 44877805909 completed successfully at revision 879153d9f11ce88d9daa8064cba90b89fac400e1. A separate workflow dump `cms-auto-20261121T065807Z.dump` is 1,093,602 bytes, passed `pg_restore -l`, and has SHA-256 `f88afb0391b8cfbbf142bf4b1c5b5b38b79e858fcb40661e751d6db803094b24`.
+- Public API health returned 200 and the matching revision; API, web, worker, Caddy, PostgreSQL, and Redis were healthy. Read-only after counts: 925 appointments, 4 complaints, 13 customers, 72 tasks, 67 tickets. PostgreSQL app connections fell from 100 to 46 (28 API, 18 worker) after the pool cap. Signed-in staff UAT remains Needs Human Review because no staff credentials were used.
 
 ---
 
