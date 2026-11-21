@@ -39,6 +39,10 @@ test('production deploy artifacts define the required pilot stack', () => {
   assert.match(caddy, /handle_path \/api\/\*/);
 });
 
+test('production Prisma pools leave PostgreSQL connections for saves and backups', () => {
+  assert.equal((compose.match(/DATABASE_URL: postgresql:\/\/\$\{POSTGRES_USER\}:[^\n]+\?connection_limit=2/g) ?? []).length, 3);
+});
+
 test('production deploy artifacts gate startup on migrations and healthchecks', () => {
   assert.match(compose, /migrate:[\s\S]*prisma\/build\/index\.js[\s\S]*migrate[\s\S]*deploy/);
   assert.match(compose, /api:[\s\S]*migrate:[\s\S]*condition:\s*service_completed_successfully/);
