@@ -124,3 +124,55 @@ test('creating a ticket notifies its active recipients after commit', async () =
   assert.equal(calls[0].recipientUserId, 'recipient');
   assert.equal(calls[0].templateCode, 'internal_ticket.created');
 });
+
+test('simultaneous ticket creates use distinct references and retry returns the original', async () => {
+  const stored = new Map<string, any>();
+  let writes = 0;
+  const tx = {
+    userTicketRule: { findUnique: async () => null },
+    departmentTicketCustomField: { findMany: async () => [] },
+    internalTicket: { create: async ({ data }: any) => { writes++; const row = { ...data, id: data.id }; stored.set(row.id, row); return row; } },
+    ticketActivity: { create: async () => ({}) },
+  };
+  const repository = { findById: async (id: string) => stored.get(id) ?? null, transaction: async (work: any) => work(tx) };
+  const service = new InternalTicketsService(repository as any, null as any, null as any);
+  const principal = { userId: 'staff-1', roleCode: 'ADMIN', permissions: [] };
+  const base = { title: 'Request', description: 'Details', targetDepartmentId: 'department-1', categoryId: 'category-1' };
+  const requests = Array.from({ length: 20 }, (_, index) => ({ ...base, requestId: `11111111-1111-4111-8111-${String(index).padStart(12, '0')}` }));
+  const rows = await Promise.all(requests.map((input) => service.create(principal, input as any)));
+  assert.equal(new Set(rows.map((row) => row.referenceNumber)).size, rows.length);
+  assert.equal((await service.create(principal, requests[0] as any)).id, rows[0]?.id);
+  assert.equal(writes, 20);
+  await assert.rejects(service.create({ ...principal, userId: 'staff-2' }, requests[0] as any), (error: any) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN');
+});
+
+test('ticket attachment storage finishes before opening the database transaction', async () => {
+  let stored = false;
+  let metadata: any;
+  const attachments = { storeObject: async () => { await new Promise((resolve) => setTimeout(resolve, 10)); stored = true; return { storageKey: 'attachments/staged.jpg' }; } };
+  const tx = {
+    userTicketRule: { findUnique: async () => null },
+    departmentTicketCustomField: { findMany: async () => [] },
+    internalTicket: { create: async ({ data }: any) => ({ ...data, id: 'ticket-1' }) },
+    ticketActivity: { create: async () => ({}) },
+    ticketAttachment: { create: async ({ data }: any) => { metadata = data; } },
+  };
+  const repository = { transaction: async (work: any) => { assert.equal(stored, true); return work(tx); } };
+  const service = new InternalTicketsService(repository as any, attachments as any, null as any);
+  const result = await service.create({ userId: 'staff-1', roleCode: 'ADMIN' }, { title: 'Request', description: 'Details', targetDepartmentId: 'department-1', categoryId: 'category-1', attachments: [{ fileName: 'photo.jpg', contentType: 'image/jpeg', sizeBytes: 5, contentBase64: 'aGVsbG8=' }] } as any);
+  assert.equal(result.id, 'ticket-1');
+  assert.equal(metadata.storageKey, 'attachments/staged.jpg');
+  assert.equal(metadata.ticketId, 'ticket-1');
+});
+
+test('simultaneous ticket replay resolves the saved row after a unique ID conflict', async () => {
+  const requestId = '33333333-3333-4333-8333-333333333333';
+  let lookups = 0;
+  const repository = {
+    findById: async () => ++lookups === 1 ? null : { id: requestId, requestedById: 'staff-1' },
+    transaction: async () => { throw { code: 'P2002' }; },
+  };
+  const service = new InternalTicketsService(repository as any, null as any, null as any);
+  const result = await service.create({ userId: 'staff-1', roleCode: 'ADMIN' }, { requestId, title: 'Request', description: 'Details', targetDepartmentId: 'department-1', categoryId: 'category-1' } as any);
+  assert.equal(result.id, requestId);
+});

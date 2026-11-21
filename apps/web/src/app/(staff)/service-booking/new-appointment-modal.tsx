@@ -6,7 +6,7 @@ import { AlertCircle } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
 import { useServiceBooking } from './service-booking-context';
-import { createAppointmentAction } from './actions';
+import { createBookingRequest } from '../../../lib/staff-create-requests';
 import { BookingCustomerFields } from './booking-customer-fields';
 import { MaintenanceTypeSelector, isPeriodicMaintenanceType } from './maintenance-type-selector';
 import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api';
@@ -113,7 +113,7 @@ export function NewAppointmentModal() {
     const effectiveCarModelId = carModelId;
     const selectedMaint = maintenanceTypes.find((m) => m.id === maintenanceTypeId && m.isActive);
     if (!selectedMaint) { setErrorMsg(t.modal.selectMaintenanceType); return; }
-    const res = await createAppointmentAction({
+    const res = await createBookingRequest({
       branchId: branchId || branches[0]?.id || 'center_main',
       bookingLaneId,
       carModelId: effectiveCarModelId,

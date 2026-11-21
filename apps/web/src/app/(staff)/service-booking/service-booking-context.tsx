@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useTransition, type ReactNode } from 'react';
+import React, { createContext, useContext, useRef, useState, useTransition, type ReactNode } from 'react';
 import type { Locale } from '../../../i18n/staff-shell';
 import { serviceBookingText, type ServiceBookingCopy } from '../../../i18n/staff-service-booking';
 import type {
@@ -11,7 +11,8 @@ import type {
   ServiceAppointment,
   UserBookingRule,
 } from '../../../lib/staff-service-bookings-api';
-import { fetchSlotAvailability } from '../../../lib/staff-service-bookings-api';
+import { fetchServiceAppointments, fetchSlotAvailability } from '../../../lib/staff-service-bookings-api';
+import { serviceBookingWindow } from '../../../lib/service-booking-window';
 
 export type BranchOption = {
   id: string;
@@ -93,6 +94,7 @@ export function ServiceBookingProvider({
     initialBranches.map((branch) => branch.id),
   );
   const [appointments, setAppointments] = useState<ServiceAppointment[]>(initialAppointments);
+  const loadedWindows = useRef([serviceBookingWindow(initialDate)]);
   const [slotAvailability, setSlotAvailability] = useState<Record<string, DayAvailability | null>>({});
   const [branches, setBranches] = useState<BranchOption[]>(initialBranches);
   const [bookingLanes, setBookingLanes] = useState<ServiceBookingLane[]>(() => initialBookingLanes ?? initialBranches.map((branch) => ({
@@ -110,6 +112,17 @@ export function ServiceBookingProvider({
   React.useEffect(() => {
     setAppointments(initialAppointments);
   }, [initialAppointments]);
+
+  React.useEffect(() => {
+    const window = serviceBookingWindow(selectedDate);
+    if (loadedWindows.current.some((loaded) => loaded.fromDate <= window.fromDate && loaded.toDate >= window.toDate)) return;
+    loadedWindows.current.push(window);
+    void fetchServiceAppointments(window).then((rows) => {
+      setAppointments((current) => [...new Map([...current, ...rows].map((row) => [row.id, row])).values()]);
+    }).catch(() => {
+      loadedWindows.current = loadedWindows.current.filter((loaded) => loaded !== window);
+    });
+  }, [selectedDate]);
 
   React.useEffect(() => {
     let active = true;

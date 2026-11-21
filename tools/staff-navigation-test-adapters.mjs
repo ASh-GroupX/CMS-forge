@@ -21,6 +21,11 @@ export const navigationTestAdapters = {
       export async function createInternalTicket(data){window.createdTicket=data;return {success:true,data:{id:'created-ticket'}};}
       export async function addTicketNote(id,content){window.followUpNote={id,content};return {success:true};}
     ` }));
+    builder.onResolve({ filter: /staff-create-requests$/ }, args => ({ path: args.path, namespace: 'create-requests-test' }));
+    builder.onLoad({ filter: /.*/, namespace: 'create-requests-test' }, () => ({ loader: 'js', contents: `
+      export async function createTicketRequest(data){window.createdTicket=data;return {success:true,data:{id:'created-ticket'}};}
+      export async function createBookingRequest(data){window.createdAppointment=data;return {success:false,error:'Proof only'};}
+    ` }));
     builder.onResolve({ filter: /staff-ticket-phone-actions$/ }, args => ({ path: args.path, namespace: 'phone-actions-test' }));
     builder.onLoad({ filter: /.*/, namespace: 'phone-actions-test' }, () => ({ loader: 'js', contents: `export async function findTicketPhoneDuplicates(){return {items:[{id:'existing',referenceNumber:'TKT-100',title:'Existing problem',status:'IN_PROGRESS'}]};}` }));
   },

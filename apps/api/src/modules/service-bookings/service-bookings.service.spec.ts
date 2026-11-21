@@ -332,6 +332,49 @@ test('createAppointment succeeds and generates reference when within limits', as
   assert.ok(scheduled?.revision);
 });
 
+test('booking retry returns the saved record without another write or reminder', async () => {
+  const requestId = '11111111-1111-4111-8111-111111111111';
+  let writes = 0;
+  let reminders = 0;
+  let saved: any;
+  const repo = createMockRepository({
+    findAppointmentById: async () => saved ?? null,
+    createAppointment: async (data: any) => { writes++; saved = { ...data, createdAt: new Date(), updatedAt: new Date(), branch: null }; return saved; },
+  });
+  const service = new ServiceBookingsService(repo, undefined, { sync: async () => { reminders++; } } as any);
+  const input = { requestId, customerName: 'Test', customerPhone: '0790000000', carModelId: 'c1', maintenanceTypeId: 'm1', branchId: 'b_main', date: '2026-11-02', startTime: '11:15', notes: '' };
+  const first = await service.createAppointment(input, 'staff-1');
+  const retry = await service.createAppointment(input, 'staff-1');
+  assert.equal(first.id, requestId);
+  assert.equal(retry.id, requestId);
+  assert.equal(writes, 1);
+  assert.equal(reminders, 1);
+  await assert.rejects(service.createAppointment(input, 'staff-2'), /already in use/i);
+});
+
+test('simultaneous replay resolves the saved booking after a unique ID conflict', async () => {
+  const requestId = '22222222-2222-4222-8222-222222222222';
+  let lookups = 0;
+  const saved = { id: requestId, createdById: 'staff-1', date: new Date('2026-11-02T00:00:00Z'),
+    startTime: '11:15', endTime: '11:45', createdAt: new Date(), updatedAt: new Date(),
+    customerName: 'Test', customerPhone: '0790000000', referenceNumber: 'APT-20261102-123456789abc',
+    status: 'BOOKED', branch: null };
+  const repo = createMockRepository({
+    findAppointmentById: async () => ++lookups === 1 ? null : saved,
+    createAppointment: async () => { throw { code: 'P2002' }; },
+  });
+  const service = new ServiceBookingsService(repo);
+  const result = await service.createAppointment({ requestId, customerName: 'Test', customerPhone: '0790000000', carModelId: 'c1', maintenanceTypeId: 'm1', branchId: 'b_main', date: '2026-11-02', startTime: '11:15', notes: '' }, 'staff-1');
+  assert.equal(result.id, requestId);
+});
+
+test('reminder failure after commit still returns the saved booking', async () => {
+  const repo = createMockRepository();
+  const service = new ServiceBookingsService(repo, undefined, { sync: async () => { throw new Error('queue unavailable'); } } as any);
+  const result = await service.createAppointment({ customerName: 'Test', customerPhone: '0790000000', carModelId: 'c1', maintenanceTypeId: 'm1', branchId: 'b_main', date: '2026-11-02', startTime: '11:15', notes: '' });
+  assert.equal(result.id, 'apt_1');
+});
+
 test('periodic mileage is stored and returned with the booking', async () => {
   let saved: any;
   const repo = createMockRepository({

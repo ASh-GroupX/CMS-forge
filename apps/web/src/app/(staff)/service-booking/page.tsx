@@ -14,6 +14,7 @@ import {
   type ServiceCenter,
 } from '../../../lib/staff-service-bookings-api';
 import { getTodayDateString } from './service-booking-utils';
+import { serviceBookingWindow } from '../../../lib/service-booking-window';
 import { ServiceBookingProvider } from './service-booking-context';
 import { ServiceBookingView } from './service-booking-view';
 
@@ -35,6 +36,7 @@ export default async function ServiceBookingPage({
   const shell = staffShellText[locale];
 
   const todayStr = params?.date || getTodayDateString();
+  const appointmentWindow = serviceBookingWindow(todayStr);
   const cookieHeader = requestHeaders.get('cookie') ?? '';
 
   // Parallel data fetching with forwarded cookie header
@@ -42,7 +44,7 @@ export default async function ServiceBookingPage({
     fetchServiceCenters(true, cookieHeader).catch(() => [] as ServiceCenter[]),
     fetchCarModels(true, cookieHeader).catch(() => [] as CarModel[]),
     fetchMaintenanceTypes(true, cookieHeader).catch(() => [] as MaintenanceType[]),
-    fetchServiceAppointments({}, cookieHeader).then((items) => ({ items, error: false })).catch(() => ({ items: [] as ServiceAppointment[], error: true })),
+    fetchServiceAppointments(appointmentWindow, cookieHeader).then((items) => ({ items, error: false })).catch(() => ({ items: [] as ServiceAppointment[], error: true })),
     fetchMyBookingRules(cookieHeader).catch(() => ({
       userId: '', canViewBookings: true, canCreateBookings: true, canRescheduleBookings: true,
       canChangeStatus: true, canCancelBookings: true, canManageSettings: false,

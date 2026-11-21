@@ -74,9 +74,9 @@ export class InternalTicketsService {
     return { items, nextCursor: rows.length > limit ? items.at(-1)?.id ?? null : null };
   }
 
-  private async storeTicketAttachments(tx: any, ticketId: string, actorId: string, attachments: UploadTicketAttachmentDto[]) {
-    for (const attachment of attachments) {
-      const contentType = validateTicketAttachment(attachment);
+  private async prepareTicketAttachments(attachments: UploadTicketAttachmentDto[]) {
+    const validated = attachments.map((attachment) => ({ attachment, contentType: validateTicketAttachment(attachment) }));
+    return Promise.all(validated.map(async ({ attachment, contentType }) => {
       const ext = (path.extname(attachment.fileName || '') || '.jpg').toLowerCase();
       const finalExt = ext === '.jpeg' ? '.jpeg' : ext === '.png' ? '.png' : ext === '.webp' ? '.webp' : ext === '.pdf' ? '.pdf' : '.jpg';
       const stored = await this.attachmentsService.storeObject({
@@ -84,14 +84,19 @@ export class InternalTicketsService {
         bytes: Buffer.from(attachment.contentBase64, 'base64'),
         contentType,
       });
+      return { storageKey: stored.storageKey, fileName: attachment.fileName, contentType, sizeBytes: attachment.sizeBytes };
+    }));
+  }
 
+  private async storeTicketAttachments(tx: any, ticketId: string, actorId: string, attachments: Awaited<ReturnType<InternalTicketsService['prepareTicketAttachments']>>) {
+    for (const attachment of attachments) {
       await tx.ticketAttachment.create({
         data: {
           ticketId,
           uploadedById: actorId,
-          storageKey: stored.storageKey,
+          storageKey: attachment.storageKey,
           fileName: attachment.fileName,
-          contentType,
+          contentType: attachment.contentType,
           sizeBytes: attachment.sizeBytes,
         },
       });
@@ -163,8 +168,20 @@ export class InternalTicketsService {
 
   async create(principal: any, dto: CreateInternalTicketDto) {
     const actorId = principal.userId;
-    const ticket = await this.repository.transaction(async (tx) => {
-      const refNumber = `TKT-${Date.now()}`;
+    const requestId = dto.requestId;
+    if (requestId && !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) {
+      throw new BadRequestException('Invalid ticket request ID');
+    }
+    const existing = requestId ? await this.repository.findById(requestId) : null;
+    if (existing) {
+      if (existing.requestedById !== actorId) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', 403);
+      return existing;
+    }
+    const attachments = await this.prepareTicketAttachments(dto.attachments ?? []);
+    let ticket;
+    try {
+      ticket = await this.repository.transaction(async (tx) => {
+      const refNumber = `TKT-${Date.now()}-${randomUUID().slice(0, 8)}`;
       
       if (principal.roleCode !== 'ADMIN' && principal.departmentId) {
         const senderDeptId = principal.departmentId;
@@ -222,6 +239,7 @@ export class InternalTicketsService {
 
       const ticket = await tx.internalTicket.create({
         data: {
+          ...(requestId ? { id: requestId } : {}),
           referenceNumber: refNumber,
           title: dto.title,
           description: dto.description,
@@ -247,12 +265,19 @@ export class InternalTicketsService {
         await auditPhoneTicketCreate(tx, ticket.id, actorId, phones.filter(value => acknowledgedPhoneFields.includes(value.fieldId)).map(value => value.fieldId));
       }
 
-      if (dto.attachments?.length) {
-        await this.storeTicketAttachments(tx, ticket.id, actorId, dto.attachments);
+      if (attachments.length) {
+        await this.storeTicketAttachments(tx, ticket.id, actorId, attachments);
       }
 
       return ticket;
-    });
+      });
+    } catch (error) {
+      if (requestId && (error as { code?: string }).code === 'P2002') {
+        const saved = await this.repository.findById(requestId);
+        if (saved && saved.requestedById === actorId) return saved;
+      }
+      throw error;
+    }
     await this.notifyParticipants(ticket.id, actorId, 'created', ticket.id);
     return ticket;
   }

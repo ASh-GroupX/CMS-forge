@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { chromium } from 'playwright-core';
 import { AxeBuilder } from '@axe-core/playwright';
 import { compileTailwind } from './web-browser-check.mjs';
-import { BookingSearchFixture } from '../apps/web/test/browser/booking-search.fixture.tsx';
+import { BookingSearchFixture, bookingSearchAppointments } from '../apps/web/test/browser/booking-search.fixture.tsx';
 import { bookingSearchCopy } from '../apps/web/src/app/(staff)/service-booking/booking-search-copy.ts';
 
 const output = resolve('coverage/booking-search-browser');
@@ -40,11 +40,16 @@ try {
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     await page.route('**/service-bookings/slots-availability**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
+    let searchRequests = 0;
+    await page.route('**/service-bookings/appointments*', (route) => { searchRequests++; return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(bookingSearchAppointments) }); });
     await page.goto(`http://127.0.0.1:${server.address().port}/?locale=${locale}`);
     const search = page.getByRole('searchbox', { name: bookingSearchCopy[locale].placeholder });
+    assert.equal(searchRequests, 0, `${locale}: full history is not loaded before searching`);
     await search.fill('Alice');
     const results = page.getByRole('listitem');
+    await results.first().waitFor();
     assert.equal(await results.count(), 2, `${locale}: name matches all dates`);
+    assert.equal(searchRequests, 1, `${locale}: full history loads once on demand`);
     await results.first().getByText(locale === 'ar' ? 'ملغي' : 'Cancelled').waitFor({ state: 'visible' });
     await page.screenshot({ path: `${output}/${locale}-results.png`, fullPage: true });
     const accessibility = await new AxeBuilder({ page }).analyze();

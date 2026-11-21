@@ -20,9 +20,9 @@ await build({ entryPoints: ['apps/web/test/browser/booking-suggestions.fixture.t
   platform: 'browser', outfile: `${output}/fixture.js`, jsx: 'automatic',
   define: { 'process.env.NODE_ENV': '"development"', 'process.env.NEXT_PUBLIC_API_URL': '""' },
   tsconfig: 'apps/web/tsconfig.json', plugins: [{ name: 'server-action-test-double', setup(builder) {
-    builder.onResolve({ filter: /\.\/actions$/ }, (args) => ({ path: args.path, namespace: 'test-actions' }));
+    builder.onResolve({ filter: /staff-create-requests$/ }, (args) => ({ path: args.path, namespace: 'test-actions' }));
     builder.onLoad({ filter: /.*/, namespace: 'test-actions' }, () => ({ contents:
-      'export async function createAppointmentAction(data) { window.createdAppointment = data; return { success: false, error: "Proof only" }; }', loader: 'js' }));
+      'export async function createBookingRequest(data) { window.createdAppointment = data; return { success: false, error: "Proof only" }; }', loader: 'js' }));
   } }] });
 const server = createServer((req, res) => {
   if (req.url === '/fixture.js' || req.url === '/proof.css') {
@@ -70,7 +70,7 @@ try {
     assert.equal(await dialog.locator('input[type="date"]').inputValue(), proofDate);
     assert.equal(await dialog.locator('select').last().inputValue(), '12:15');
     await dialog.getByRole('combobox', { name: copy.modal.maintenanceType }).click();
-    await page.getByRole('option', { name: copy.modal.periodicMaintenance }).click();
+    await page.getByRole('option', { name: locale === 'ar' ? 'صيانة دورية 20,000 كم' : 'Periodic Maintenance 20,000 km', exact: true }).click();
     await dialog.getByRole('combobox', { name: copy.modal.periodicMileage }).click();
     assert.equal(await page.getByRole('option').count(), 17);
     await page.getByRole('option').last().click();
@@ -86,6 +86,8 @@ try {
       await dialog.getByRole('textbox', { name: /Customer Name/ }).fill('Test Customer');
       await dialog.getByRole('textbox', { name: /Phone Number/ }).fill('0790000000');
       for (const [mileage, id, duration] of [['20,000 km', 'maint_periodic_20k', 45], ['40,000 km', 'maint_periodic_40k', 60]]) {
+        await dialog.getByRole('combobox', { name: copy.modal.maintenanceType }).click();
+        await page.getByRole('option', { name: `Periodic Maintenance ${mileage}`, exact: true }).click();
         await dialog.getByRole('combobox', { name: copy.modal.periodicMileage }).click();
         await page.getByRole('option', { name: mileage, exact: true }).click();
         await dialog.getByRole('button', { name: copy.modal.save }).click();

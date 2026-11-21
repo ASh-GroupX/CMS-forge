@@ -27,6 +27,13 @@ test('appointment creation writes a metadata-only audit in the same transaction'
   assert.equal(JSON.stringify(audit).includes('0790000000'), false);
 });
 
+test('concurrent booking references are unique without a count query', async () => {
+  const repository = new ServiceBookingsRepository({ serviceAppointment: { count: async () => { throw new Error('Count query must not be used'); } } } as never);
+  const references = await Promise.all(Array.from({ length: 100 }, () => repository.generateReferenceNumber(new Date('2026-11-19T00:00:00.000Z'))));
+  assert.equal(new Set(references).size, references.length);
+  assert.ok(references.every((reference) => /^APT-20261119-[0-9A-F]{12}$/.test(reference)));
+});
+
 test('appointment reschedule and its audit commit in one transaction', async () => {
   const events: string[] = [];
   const client = {

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import type { Prisma, ServiceAppointmentStatus } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 import {
@@ -224,15 +225,12 @@ export class ServiceBookingsRepository extends ServiceBookingsCatalogRepository 
     });
   }
 
-  async generateReferenceNumber(date: Date, client: ServiceBookingClient = this.prisma): Promise<string> {
+  async generateReferenceNumber(date: Date, _client: ServiceBookingClient = this.prisma): Promise<string> {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
     const prefix = `APT-${y}${m}${d}-`;
-    const count = await client.serviceAppointment.count({
-      where: { referenceNumber: { startsWith: prefix } },
-    });
-    return `${prefix}${String(count + 1).padStart(4, '0')}`;
+    return `${prefix}${randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()}`;
   }
 
   // ── Rules ─────────────────────────────────────────────────────────────────

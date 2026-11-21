@@ -19,9 +19,9 @@ export class LocalDiskAttachmentStorage implements AttachmentStoragePort {
     const storageKey = input.storageKey?.trim() || `attachments/${randomUUID()}`;
     const safeKey = storageKey.replace(/[^a-zA-Z0-9_-]/g, '_');
     const filePath = path.join(this.uploadDir, safeKey);
-    fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, Buffer.from(input.bytes));
-    fs.writeFileSync(`${filePath}.meta`, JSON.stringify({ contentType: input.contentType }));
+    await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.promises.writeFile(filePath, Buffer.from(input.bytes));
+    await fs.promises.writeFile(`${filePath}.meta`, JSON.stringify({ contentType: input.contentType }));
     this.memory.set(storageKey, { bytes: Uint8Array.from(input.bytes), contentType: input.contentType });
     return { storageKey, contentType: input.contentType, sizeBytes: input.bytes.byteLength };
   }

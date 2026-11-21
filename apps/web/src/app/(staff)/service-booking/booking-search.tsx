@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowUpRight, CalendarDays, Phone, Search, X } from 'lucide-react';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
+import { fetchServiceAppointments, type ServiceAppointment } from '../../../lib/staff-service-bookings-api';
 import { useServiceBooking } from './service-booking-context';
 import { bookingSearchCopy } from './booking-search-copy';
 import { findBookings } from './booking-search-utils';
@@ -20,8 +21,18 @@ export function BookingSearch({ loadError = false }: { loadError?: boolean }) {
   } = useServiceBooking();
   const copy = bookingSearchCopy[locale];
   const [query, setQuery] = useState('');
-  const matches = useMemo(() => findBookings(appointments, query), [appointments, query]);
   const hasQuery = query.trim().length >= 2;
+  const [searchAppointments, setSearchAppointments] = useState<ServiceAppointment[] | null>(null);
+  const [searchError, setSearchError] = useState(false);
+  const [searchAttempt, setSearchAttempt] = useState(0);
+  useEffect(() => {
+    if (!hasQuery || searchAppointments || loadError) return;
+    let active = true;
+    void fetchServiceAppointments({}).then((rows) => { if (active) { setSearchAppointments(rows); setSearchError(false); } })
+      .catch(() => { if (active) setSearchError(true); });
+    return () => { active = false; };
+  }, [hasQuery, searchAppointments, searchAttempt, loadError]);
+  const matches = useMemo(() => findBookings(searchAppointments ? [...new Map([...searchAppointments, ...appointments].map((row) => [row.id, row])).values()] : [], query), [appointments, searchAppointments, query]);
   const dateLocale = locale === 'ar' ? 'ar-JO' : 'en-US';
 
   return <Card className="rounded-2xl border-line-subtle bg-surface shadow-sm" aria-label={copy.title}>
@@ -38,11 +49,12 @@ export function BookingSearch({ loadError = false }: { loadError?: boolean }) {
       {loadError && <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-status-error-border bg-status-error-bg px-3 py-2 text-sm text-status-error" role="alert">
         <span>{copy.error}</span><Button onClick={() => window.location.reload()} size="sm" type="button" variant="outline">{copy.retry}</Button>
       </div>}
-      {!loadError && <p aria-live="polite" className="mt-2 text-xs text-content-muted">
-        {!hasQuery ? copy.hint : matches.length === 0 ? copy.empty : matches.length > RESULT_LIMIT
+      {!loadError && searchError && <div className="mt-3 flex items-center gap-3 text-sm text-status-error" role="alert">{copy.error}<Button onClick={() => { setSearchError(false); setSearchAttempt((value) => value + 1); }} size="sm" type="button" variant="outline">{copy.retry}</Button></div>}
+      {!loadError && !searchError && <p aria-live="polite" className="mt-2 text-xs text-content-muted">
+        {!hasQuery ? copy.hint : !searchAppointments ? copy.loading : matches.length === 0 ? copy.empty : matches.length > RESULT_LIMIT
           ? copy.limited.replace('{count}', String(RESULT_LIMIT)) : copy.count.replace('{count}', String(matches.length))}
       </p>}
-      {!loadError && hasQuery && matches.length > 0 && <div className="mt-3 max-h-[26rem] space-y-2 overflow-y-auto pe-1" role="list">
+      {!loadError && !searchError && hasQuery && searchAppointments && matches.length > 0 && <div className="mt-3 max-h-[26rem] space-y-2 overflow-y-auto pe-1" role="list">
         {matches.slice(0, RESULT_LIMIT).map((appointment) => {
           const branch = branches.find((item) => matchesBranch(appointment, item));
           const branchName = branch ? (locale === 'ar' ? branch.nameAr : branch.nameEn) : null;

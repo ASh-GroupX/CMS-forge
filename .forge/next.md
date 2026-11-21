@@ -1,10 +1,10 @@
-# Restrict Internal Officer work to named assignments
+# Reliable concurrent ticket and booking creation
 
-Status: Completed
-Date: 2026-11-19
+Status: In Progress
+Date: 2026-11-21
 Risk: High
-SRS: REQ-RBAC-001, REQ-COLLAB-001
+SRS: NFR-PERF-001, NFR-AVAIL-001, NFR-DATA-001, REQ-BOOK-LANE-001
 
-Scope: Repair three small access boundaries independently: internal ticket list/detail/attachment reads (controller and service plus tests), task today/board/detail reads (controller, service, access, scope helper plus tests), and My Work aggregation (page and merge helper plus test). Keep manager department access. The server session supplies role, user, and department. No schema, migration, import, deletion, or data rewrite is in scope.
+Scope: Fix three small paths separately. First move staff ticket and booking creation to stable same-origin API calls instead of deployment-sensitive Server Actions. Second make concurrent creation reference numbers collision-safe and make retried requests return the original saved record. Third keep booking notification scheduling after commit from making a saved appointment appear failed. Preserve all existing records and attachments; use no destructive migration or import.
 
-Proof: Passed `npm run test:api -- tasks`, `npm run test:api -- internal-tickets`, `npm run test:web -- shell`, task and ticket module regressions, root tests/coverage, `npm run typecheck`, `npm run lint`, `npm run openapi:check`, `npm run security:check`, `git diff --check`. Production deployment passed with a verified backup and preserved record counts. Signed-in Internal Officer UAT remains Needs Human Review.
+Proof: Focused ticket and booking API tests, concurrent and retry tests, web creation tests, typecheck, lint, OpenAPI, security, build, diff check. If released, verify fresh backup and before/after record counts, health, and source revision.

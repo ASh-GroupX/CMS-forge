@@ -5,6 +5,10 @@ import { UploadTicketAttachmentDto } from './upload-attachment.dto.js';
 
 export class CreateInternalTicketDto {
   @IsString()
+  @IsOptional()
+  requestId?: string;
+
+  @IsString()
   @IsNotEmpty()
   title: string;
 

@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 
 export class CreateServiceAppointmentDto {
+  requestId?: string;
   customerName!: string;
   customerPhone!: string;
   vin?: string | null;
@@ -20,6 +21,10 @@ export function parseCreateServiceAppointmentBody(input: unknown): CreateService
     throw new Error('Appointment payload must be an object');
   }
   const body = input as Record<string, unknown>;
+  const requestId = body.requestId;
+  if (requestId !== undefined && (typeof requestId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId))) {
+    throw new BadRequestException('Invalid booking request ID');
+  }
 
   const customerName = String(body.customerName ?? '').trim();
   if (!customerName) throw new Error('Customer name is required');
@@ -56,6 +61,7 @@ export function parseCreateServiceAppointmentBody(input: unknown): CreateService
   if (!validMileage) throw new BadRequestException('Select a valid periodic maintenance mileage');
 
   return {
+    ...(typeof requestId === 'string' ? { requestId } : {}),
     customerName,
     customerPhone,
     vin,

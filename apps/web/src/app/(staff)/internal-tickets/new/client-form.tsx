@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createInternalTicket, getDepartmentFormFields } from '../../../../lib/staff-internal-tickets-actions';
+import { getDepartmentFormFields } from '../../../../lib/staff-internal-tickets-actions';
+import { createTicketRequest } from '../../../../lib/staff-create-requests';
 import { attachmentFileToBase64, normalizeAttachmentMime, validateStaffAttachmentFile } from '../../../../lib/attachment-file-policy';
 import { staffAttachmentFiles } from '../../../../lib/staff-attachments-api';
 import { Paperclip } from 'lucide-react';
@@ -186,7 +187,7 @@ export default function CreateInternalTicketForm({
         }
       }
 
-      const result = await createInternalTicket(payload);
+      const result = await createTicketRequest(payload);
       if (result && !result.success) {
         if (result.code === 'DUPLICATE_CUSTOMER_PHONE') setPhoneLookupVersion(version => version + 1);
         setError(result.code === 'DUPLICATE_CUSTOMER_PHONE' ? ticketPhoneRuleText[locale].duplicate : result.error || 'Failed to create ticket');
