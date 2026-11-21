@@ -1,10 +1,10 @@
 # Current State
 
 Date: 2026-11-21
-Status: Internal Tickets board scrolling fixed locally
-Risk: Low
+Status: Internal Tickets phone and board fixes deployed successfully
+Risk: Medium
 
-- The app shell clips horizontal overflow without creating a page scroll ancestor for the sticky desktop sidebar. Department and My Work Internal Tickets boards now own both vertical and horizontal scrolling, with keyboard focus and localized region labels.
-- Passed: typecheck, lint, web shell 250/250, focused EN/AR Playwright scroll/sidebar proof with screenshots inspected, diff check.
-- The earlier optional Jordanian phone change remains local and tested. No database migration or production deployment ran. Existing records and attachments were not modified. Preserve untracked outputs/, tmp/, and uploads/, including the encrypted recovery copy.
-- Production remains on revision 879153d9f11ce88d9daa8064cba90b89fac400e1; deployment and backup details remain in evidence.md.
+- Production commit 9442880f35aeb1e056cd3aa6f465ae2e80a55fc2 is live. GitHub Actions run 44881260117 passed Validate and Test and Deploy to VPS. Public API health returned 200 and the exact matching revision. Signed-out /internal-tickets redirected to sign-in.
+- The Customer Care to CRM department phone-rule field accepts Jordanian 07 mobile format and is optional. Entered local and +962 numbers normalize to the same duplicate key. Department and My Work ticket boards scroll in both axes; the desktop sidebar remains sticky.
+- Passed locally: production build, root tests 79/79 with coverage gates, internal tickets API 18/18, web shell 250/250, EN/AR phone and scroll browser proofs, typecheck, lint, OpenAPI, security check, development backup readiness, diff check.
+- The deployment workflow's pre-deployment backup gate passed; an independent backup artifact listing and signed-in staff UAT were Not Run. No schema migration was added in this release. Preserve untracked outputs/, tmp/, and uploads/, including the encrypted recovery copy.
