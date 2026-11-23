@@ -1,10 +1,10 @@
-# Internal officer ticket board personal column
+# Department board receiving-ticket scope
 
 Status: Completed
 Date: 2026-11-23
-Risk: Medium
-SRS: REQ-RBAC-001, ARCH-UI-001, UI-DESIGN-001
+Risk: High
+SRS: REQ-RBAC-001, REQ-COLLAB-001, ARCH-UI-001, UI-DESIGN-001
 
-Scope: Show the signed-in Internal Officer's named column on the Department Ticket Board even though the team workload endpoint is manager-only. Use the server session identity and preserve the private team workload boundary.
+Scope: Show only tickets targeted at the signed-in department on its board. Keep outgoing tickets in My Work Sent and preserve the backend's scoped ticket lists.
 
-Proof: EN/AR render test with denied workload, desktop/mobile browser screenshots, web shell 252/252, typecheck, lint, production build, diff check.
+Proof: Allowed receiving and denied outgoing board cases, My Work Sent regression, web tests, typecheck, lint, production build, EN/AR screenshot review, diff check.

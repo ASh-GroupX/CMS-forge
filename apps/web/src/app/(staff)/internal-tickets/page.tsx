@@ -13,6 +13,12 @@ import { internalTicketsText } from '../../../i18n/staff-internal-tickets';
 import { resolveLocale } from '../../../i18n/staff-shell';
 import { DepartmentKanbanBoard } from './department-kanban-board';
 
+export function selectDepartmentBoardTickets(tickets: any[], departmentId: string | null | undefined, isAdmin: boolean): any[] {
+  if (isAdmin) return tickets;
+  if (!departmentId) return [];
+  return tickets.filter((ticket) => ticket.targetDepartmentId === departmentId);
+}
+
 export default async function DepartmentTicketsPage({
   searchParams,
 }: {
@@ -36,7 +42,7 @@ export default async function DepartmentTicketsPage({
   const allTicketsMap = new Map();
   for (const item of tickets) allTicketsMap.set(item.id, item);
   for (const item of myTickets) allTicketsMap.set(item.id, item);
-  const allTickets = Array.from(allTicketsMap.values());
+  const allTickets = selectDepartmentBoardTickets(Array.from(allTicketsMap.values()), principal?.departmentId, Boolean(isAdmin));
 
   const team = isAdmin || isManager ? await getTeamWorkload().catch(() => []) : [];
   const options = await getTicketOptions().catch(() => ({ departments: [] }));
