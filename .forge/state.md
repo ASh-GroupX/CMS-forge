@@ -1,9 +1,9 @@
 # Current State
 
 Date: 2026-11-23
-Status: Internal Manager officer workload filters deployed
-Risk: Medium
+Status: Internal Tickets training video completed
+Risk: Low
 
-- The Internal Manager department board now orders officer columns by their current active ticket count, highest first. All, Active, and Free filters select the officer columns; Team Tasks stays visible.
-- Active means an assigned ticket that is not RESOLVED, CLOSED, or REJECTED. A free officer has zero such tickets. Completed cards can remain in a free officer's column while its active count is zero.
-- Passed: web tests 254/254, typecheck, lint, production build, English desktop and Arabic mobile screenshot review, diff check. GitHub Actions run 45137450507 deployed 119df00 successfully; public landing and API health returned HTTP 200 with the matching revision. Signed-in manager UAT remains pending.
+- Recorded a 40-second captioned WebM walkthrough at outputs/internal-tickets-demo.webm using only the test account. The recording starts after sign-in and shows department versus specific-officer choices, form submission, My Work Sent and Received, and acceptance.
+- Created one labeled training ticket (ID ba9a5b65-b68f-4cc2-a82c-fa311b0025ac) assigned to test in IT; it was accepted and remains IN_PROGRESS. The one-account demonstration uses test as both sender and receiver.
+- Passed: video metadata duration 39.76 seconds, sampled frame review of the form, recipient choice, Received view, Accept action, and In Progress result. No application source change or deployment.

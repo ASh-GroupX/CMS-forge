@@ -1,10 +1,10 @@
-# Internal manager officer workload filters
+# Internal Tickets training video
 
 Status: Completed
 Date: 2026-11-23
-Risk: Medium
-SRS: REQ-RBAC-001, ARCH-UI-001, UI-DESIGN-001
+Risk: Low
+SRS: REQ-COLLAB-001, ARCH-UI-001
 
-Scope: Sort Internal Manager officer columns by active ticket count descending and add All, Active, and Free officer filters. Keep ticket scope and shared Team Tasks unchanged.
+Scope: Record a short Internal Tickets walkthrough using only the test account: demonstrate department and specific-officer choices, submit one labeled training ticket, show Sent and Received, and accept it.
 
-Proof: Sorting/filter behavior tests including resolved tickets, officer RBAC visibility, web tests, typecheck, lint, production build, EN/AR screenshot review, diff check.
+Proof: Watch recorded video frames, verify duration and final accepted state, confirm no login/password appears in the recording, and record the created training ticket.
