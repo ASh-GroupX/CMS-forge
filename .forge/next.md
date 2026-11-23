@@ -1,10 +1,10 @@
-# Department board receiving-ticket scope
+# Internal manager officer workload filters
 
 Status: Completed
 Date: 2026-11-23
-Risk: High
-SRS: REQ-RBAC-001, REQ-COLLAB-001, ARCH-UI-001, UI-DESIGN-001
+Risk: Medium
+SRS: REQ-RBAC-001, ARCH-UI-001, UI-DESIGN-001
 
-Scope: Show only tickets targeted at the signed-in department on its board. Keep outgoing tickets in My Work Sent and preserve the backend's scoped ticket lists.
+Scope: Sort Internal Manager officer columns by active ticket count descending and add All, Active, and Free officer filters. Keep ticket scope and shared Team Tasks unchanged.
 
-Proof: Allowed receiving and denied outgoing board cases, My Work Sent regression, web tests, typecheck, lint, production build, EN/AR screenshot review, diff check.
+Proof: Sorting/filter behavior tests including resolved tickets, officer RBAC visibility, web tests, typecheck, lint, production build, EN/AR screenshot review, diff check.

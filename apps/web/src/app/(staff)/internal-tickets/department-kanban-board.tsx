@@ -4,8 +4,11 @@ import React, { useState } from 'react';
 import { Inbox, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { DepartmentKanbanColumn } from './department-kanban-column';
+import { officerWorkload, type OfficerFilter } from './officer-workload';
 import { assignTicket, assignToTeamTicket } from '../../../lib/staff-internal-tickets-actions';
 import type { Locale } from '../../../i18n/staff-shell';
+import { officerBoardCopy } from '../../../i18n/officer-board-copy';
+import { Button } from '../../../components/ui/button';
 
 interface DepartmentKanbanBoardProps {
   initialTickets: any[];
@@ -32,7 +35,9 @@ export function DepartmentKanbanBoard({
   const [tickets, setTickets] = useState<any[]>(initialTickets);
   const [draggedTicket, setDraggedTicket] = useState<any | null>(null);
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
+  const [officerFilter, setOfficerFilter] = useState<OfficerFilter>('all');
   const isAr = locale === 'ar';
+  const filterText = officerBoardCopy[locale];
   const canDrag = isManager || isAdmin;
 
   const pendingInbox = tickets.filter(
@@ -46,9 +51,9 @@ export function DepartmentKanbanBoard({
   );
 
   const visibleTeam = isAdmin || isManager
-    ? team
+    ? officerWorkload(team, tickets, officerFilter, locale)
     : principalUserId
-      ? [team.find((member: any) => member.id === principalUserId) ?? { id: principalUserId, nameEn: principalNameEn, nameAr: principalNameAr }]
+      ? officerWorkload([team.find((member: any) => member.id === principalUserId) ?? { id: principalUserId, nameEn: principalNameEn, nameAr: principalNameAr }], tickets, 'all', locale)
       : [];
 
   const handleDragStart = (e: React.DragEvent, ticket: any) => {
@@ -137,6 +142,16 @@ export function DepartmentKanbanBoard({
   };
 
   return (
+    <div className="space-y-3">
+    {canDrag && (
+      <div role="group" aria-label={filterText.filterLabel} className="flex flex-wrap items-center gap-2">
+        {(['all', 'active', 'free'] as const).map((filter) => (
+          <Button key={filter} size="sm" variant={officerFilter === filter ? 'default' : 'outline'} aria-pressed={officerFilter === filter} onClick={() => setOfficerFilter(filter)}>
+            {filterText[filter]}
+          </Button>
+        ))}
+      </div>
+    )}
     <div role="region" aria-label={isAr ? 'لوحة التذاكر الداخلية' : 'Internal Tickets board'} tabIndex={0} className="w-full min-w-0 max-w-full max-h-[70vh] overflow-auto overscroll-contain rounded-3xl border border-line-subtle bg-surface-canvas/60 p-4 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
       <div className="flex w-max min-w-full items-start gap-5 pb-4">
         {/* 1. Pending Inbox Column */}
@@ -182,8 +197,14 @@ export function DepartmentKanbanBoard({
         onDragEnd={handleDragEnd}
       />
 
+      {canDrag && visibleTeam.length === 0 && (
+        <p role="status" className="self-center rounded-2xl border border-line-subtle bg-surface px-5 py-4 text-sm text-content-muted">
+          {officerFilter === 'free' ? filterText.noFree : officerFilter === 'active' ? filterText.noActive : filterText.noOfficers}
+        </p>
+      )}
+
       {/* 3. Employee Columns */}
-      {visibleTeam.map((member: any) => {
+      {visibleTeam.map(({ member, activeCount }) => {
         const memberTickets = tickets.filter(
           (t: any) => t.assignedEmployeeId === member.id && t.status !== 'CLOSED'
         );
@@ -202,6 +223,7 @@ export function DepartmentKanbanBoard({
               </div>
             }
             count={memberTickets.length}
+            subtitle={filterText.activeCount(activeCount)}
             tickets={memberTickets}
             isDropTarget={dragOverTarget === member.id}
             dropText={isAr ? `أفلت هنا للإسناد إلى ${memberName}` : `Drop here to assign to ${memberName}`}
@@ -219,6 +241,7 @@ export function DepartmentKanbanBoard({
         );
       })}
       </div>
+    </div>
     </div>
   );
 }

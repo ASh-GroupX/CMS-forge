@@ -5,6 +5,34 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { DepartmentKanbanBoard } from '../../src/app/(staff)/internal-tickets/department-kanban-board';
 import { selectDepartmentBoardTickets } from '../../src/app/(staff)/internal-tickets/page';
 import { filterDepartmentTicketFlow } from '../../src/app/(staff)/internal-tickets/my-work/page';
+import { officerWorkload } from '../../src/app/(staff)/internal-tickets/officer-workload';
+
+test('manager orders officers by active tickets and filters active or free', () => {
+  const team = [
+    { id: 'free', nameEn: 'Zaid', nameAr: 'زيد' },
+    { id: 'one', nameEn: 'Ali', nameAr: 'علي' },
+    { id: 'two', nameEn: 'Basma', nameAr: 'بسمة' },
+  ];
+  const tickets = [
+    { assignedEmployeeId: 'two', status: 'ASSIGNED' },
+    { assignedEmployeeId: 'two', status: 'WAITING' },
+    { assignedEmployeeId: 'one', status: 'IN_PROGRESS' },
+    { assignedEmployeeId: 'free', status: 'RESOLVED' },
+    { assignedEmployeeId: 'free', status: 'CLOSED' },
+    { assignedEmployeeId: null, status: 'ASSIGNED' },
+  ];
+  assert.deepEqual(officerWorkload(team, tickets, 'all', 'en').map(({ member, activeCount }) => [member.id, activeCount]), [['two', 2], ['one', 1], ['free', 0]]);
+  assert.deepEqual(officerWorkload(team, tickets, 'active', 'ar').map(({ member }) => member.id), ['two', 'one']);
+  assert.deepEqual(officerWorkload(team, tickets, 'free', 'en').map(({ member }) => member.id), ['free']);
+  assert.equal(team[0]?.id, 'free');
+  const html = renderToStaticMarkup(<DepartmentKanbanBoard initialTickets={tickets} team={team} isAdmin={false} isManager locale="en" />);
+  assert.match(html, /All officers/);
+  assert.match(html, /Active officers/);
+  assert.match(html, /Free officers/);
+  assert.ok(html.indexOf('Basma') < html.indexOf('Ali'));
+  const arabic = renderToStaticMarkup(<DepartmentKanbanBoard initialTickets={tickets} team={team} isAdmin={false} isManager locale="ar" />);
+  assert.match(arabic, /الموظفون المتاحون/);
+});
 
 test('outgoing team ticket stays in Sent and off the sender department board', () => {
   const tickets = [
@@ -33,4 +61,5 @@ test('officer sees their own named column even when team workload is denied', ()
   }
   const signedOut = renderToStaticMarkup(<DepartmentKanbanBoard initialTickets={[]} team={[]} isAdmin={false} isManager={false} locale="en" />);
   assert.doesNotMatch(signedOut, /Omar/);
+  assert.doesNotMatch(signedOut, /Free officers/);
 });
