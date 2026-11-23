@@ -15,6 +15,8 @@ interface DepartmentKanbanBoardProps {
   isManager: boolean;
   locale: Locale;
   principalUserId?: string | undefined;
+  principalNameEn?: string | undefined;
+  principalNameAr?: string | undefined;
 }
 
 export function DepartmentKanbanBoard({
@@ -24,6 +26,8 @@ export function DepartmentKanbanBoard({
   isManager,
   locale,
   principalUserId,
+  principalNameEn,
+  principalNameAr,
 }: DepartmentKanbanBoardProps) {
   const [tickets, setTickets] = useState<any[]>(initialTickets);
   const [draggedTicket, setDraggedTicket] = useState<any | null>(null);
@@ -43,7 +47,9 @@ export function DepartmentKanbanBoard({
 
   const visibleTeam = isAdmin || isManager
     ? team
-    : team.filter((m: any) => m.id === principalUserId);
+    : principalUserId
+      ? [team.find((member: any) => member.id === principalUserId) ?? { id: principalUserId, nameEn: principalNameEn, nameAr: principalNameAr }]
+      : [];
 
   const handleDragStart = (e: React.DragEvent, ticket: any) => {
     if (!canDrag) return;

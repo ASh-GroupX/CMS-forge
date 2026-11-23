@@ -38,7 +38,7 @@ export default async function DepartmentTicketsPage({
   for (const item of myTickets) allTicketsMap.set(item.id, item);
   const allTickets = Array.from(allTicketsMap.values());
 
-  const team = await getTeamWorkload().catch(() => []);
+  const team = isAdmin || isManager ? await getTeamWorkload().catch(() => []) : [];
   const options = await getTicketOptions().catch(() => ({ departments: [] }));
 
   const pendingInboxCount = allTickets.filter(
@@ -125,6 +125,8 @@ export default async function DepartmentTicketsPage({
         isManager={Boolean(isManager)}
         locale={locale}
         principalUserId={principal?.userId}
+        principalNameEn={principal?.nameEn}
+        principalNameAr={principal?.nameAr}
       />
     </div>
   );
