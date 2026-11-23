@@ -5,6 +5,7 @@ export const staffNavigationText = {
     draftUnavailable: 'Draft saving is unavailable. Keep this page open to avoid losing your entries.',
     discard: 'Discard draft', discardHint: 'Clear this ticket draft and start again?',
     missingFiles: 'Please reattach your files. Browsers cannot restore file selections after a full reload.',
+    removeAttachment: 'Remove', removeAttachmentLabel: (name: string) => `Remove ${name} from draft`,
     backToDraft: 'Back to new ticket draft', restored: 'Your ticket draft has been restored.',
   },
   ar: { back: 'رجوع', forward: 'تقدم', up: 'العودة إلى القسم', navigation: 'التنقل بين الصفحات',
@@ -13,6 +14,7 @@ export const staffNavigationText = {
     draftUnavailable: 'تعذر حفظ المسودة. أبقِ هذه الصفحة مفتوحة لتجنب فقدان البيانات.',
     discard: 'حذف المسودة', discardHint: 'هل تريد مسح مسودة التذكرة والبدء من جديد؟',
     missingFiles: 'أعد إرفاق الملفات. لا يستطيع المتصفح استعادة الملفات بعد إعادة تحميل الصفحة بالكامل.',
+    removeAttachment: 'إزالة', removeAttachmentLabel: (name: string) => `إزالة ${name} من المسودة`,
     backToDraft: 'العودة إلى مسودة التذكرة الجديدة', restored: 'تمت استعادة مسودة التذكرة.',
   },
 };

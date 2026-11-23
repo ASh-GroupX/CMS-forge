@@ -53,7 +53,8 @@ try {
     await page.locator('input[type=tel]').fill('+962790000000');
     await page.getByRole('button', { name: 'Specific Date', exact: true }).click();
     await page.locator('input[type=date]').fill('2026-12-01');
-    await page.locator('#attachments').setInputFiles({ name: 'proof.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z0S8AAAAASUVORK5CYII=', 'base64') });
+    const proofFile = { name: 'proof.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC0lEQVR42mP8/x8AAusB9Y9Z0S8AAAAASUVORK5CYII=', 'base64') };
+    await page.locator('#attachments').setInputFiles([proofFile, { name: 'unwanted.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n') }]);
     const duplicate = page.getByRole('link', { name: /TKT-100/ });
     await duplicate.waitFor();
     assert.equal(await duplicate.getAttribute('target'), null);
@@ -73,6 +74,13 @@ try {
     assert.equal(await page.locator('input[type=tel]').inputValue(), '+962790000000');
     assert.equal(await page.locator('input[type=date]').inputValue(), '2026-12-01');
     assert.equal(await page.locator('#attachments').evaluate(input => input.files[0]?.name), 'proof.png');
+    await page.getByRole('button', { name: t.removeAttachmentLabel('unwanted.pdf') }).click();
+    assert.deepEqual(await page.locator('#attachments').evaluate(input => Array.from(input.files, file => file.name)), ['proof.png']);
+    assert.deepEqual(await page.evaluate(() => Object.entries(sessionStorage).filter(([key]) => key.endsWith(':new-ticket')).map(([, value]) => JSON.parse(value).value.attachmentNames)), [['proof.png']]);
+    await page.getByRole('button', { name: t.removeAttachmentLabel('proof.png') }).click();
+    assert.equal(await page.locator('#attachments').evaluate(input => input.files.length), 0);
+    assert.equal(await page.locator('form[data-draft-has-files]').getAttribute('data-draft-has-files'), 'false');
+    await page.locator('#attachments').setInputFiles(proofFile);
     await page.getByRole('button', { name: phoneCopy.separate, exact: true }).click();
     await page.screenshot({ path: `${output}/${locale}-restored-draft.png`, fullPage: true });
     await page.getByRole('button', { name: 'Submit Ticket', exact: true }).click();
@@ -116,5 +124,5 @@ try {
     assert.deepEqual(errors, []);
     await page.close();
   }
-  console.log('Staff navigation browser proof passed EN/AR: same-tab duplicate review, notes, draft/file restore, separate create, clear-on-success/logout, report filter return, back/forward, active menu and unsaved guard.');
+  console.log('Staff navigation browser proof passed EN/AR: same-tab duplicate review, notes, draft/file restore and per-file removal, separate create, clear-on-success/logout, report filter return, back/forward, active menu and unsaved guard.');
 } finally { await browser.close(); await new Promise(done => server.close(done)); }

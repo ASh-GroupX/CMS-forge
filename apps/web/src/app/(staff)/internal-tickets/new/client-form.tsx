@@ -400,6 +400,12 @@ export default function CreateInternalTicketForm({
             accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
             className="rounded-xl border border-line-subtle bg-surface-canvas p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand hover:file:bg-brand/20" 
           />
+          {draft.attachmentNames.length > 0 && <ul className="space-y-2" aria-live="polite">
+            {draft.attachmentNames.map((name, index) => <li key={`${name}-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-line-subtle bg-surface px-3 py-2 text-sm">
+              <span className="min-w-0 truncate" title={name}>{name}</span>
+              <Button type="button" size="sm" variant="outline" aria-label={navigation.removeAttachmentLabel(name)} disabled={loading} onClick={() => draftState.removeAttachment(index)}>{navigation.removeAttachment}</Button>
+            </li>)}
+          </ul>}
           <p className="text-xs text-content-muted">JPG, PNG, WebP, and PDF files are allowed (max 5MB each).</p>
         </div>
       )}

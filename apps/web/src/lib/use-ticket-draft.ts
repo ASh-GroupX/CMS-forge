@@ -92,6 +92,21 @@ export function useTicketDraft(owner: string | null) {
       update('attachmentNames', selected.map(file => file.name));
     }
   }
-  return { draft, update, ready, restored, available, clear, formRef, attachmentRef, captureFiles,
+  function removeAttachment(index: number) {
+    if (index < 0 || index >= latest.current.attachmentNames.length) return;
+    const selected = files.get(key) ?? Array.from(fileInput.current?.files ?? []);
+    if (selected.length) {
+      const remaining = selected.filter((_, position) => position !== index);
+      const transfer = new DataTransfer();
+      for (const file of remaining) transfer.items.add(file);
+      if (fileInput.current) fileInput.current.files = transfer.files;
+      if (remaining.length) files.set(key, remaining); else files.delete(key);
+      update('attachmentNames', remaining.map(file => file.name));
+    } else {
+      update('attachmentNames', names => names.filter((_, position) => position !== index));
+    }
+    if (formRef.current) formRef.current.dataset.draftHasFiles = String((fileInput.current?.files?.length ?? 0) > 0);
+  }
+  return { draft, update, ready, restored, available, clear, formRef, attachmentRef, captureFiles, removeAttachment,
     missingFiles: ready && draft.attachmentNames.length > 0 && !files.get(key)?.length };
 }

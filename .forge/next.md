@@ -1,10 +1,10 @@
-# Internal Tickets phone and board production release
+# Remove attachments from an internal ticket draft
 
 Status: Completed
-Date: 2026-11-21
+Date: 2026-11-23
 Risk: Medium
-SRS: METHOD-API-001, METHOD-TEST-001, ARCH-UI-001, UI-DESIGN-001
+SRS: REQ-FILES-001, ARCH-UI-001, UI-DESIGN-001
 
-Scope: Release the optional Jordanian local phone field and bounded two-axis Internal Tickets board scrolling with a sticky desktop sidebar. Preserve existing data and attachments.
+Scope: Let staff remove individual files selected for a new internal ticket before submission. Update the browser file input and tab draft together. Keep submitted ticket attachment behavior unchanged.
 
-Proof: Local production build, root tests with coverage, internal ticket API, web shell, EN/AR browser proofs, typecheck, lint, OpenAPI, security, backup readiness, production workflow, exact live revision, public health, signed-out ticket route.
+Proof: EN/AR browser draft restoration, individual and last-file removal, persisted names, submitted payload, screenshot review; web tests, typecheck, lint.
