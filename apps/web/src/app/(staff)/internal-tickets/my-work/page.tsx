@@ -15,6 +15,10 @@ export function filterDepartmentTicketFlow(tickets: any[], filter: string | unde
   return tickets;
 }
 
+export function isReceivingTeamTicket(ticket: any, departmentId: string | null | undefined): boolean {
+  return Boolean(departmentId && ticket.targetDepartmentId === departmentId && !ticket.assignedEmployeeId && ['ASSIGNED', 'IN_PROGRESS', 'WAITING', 'RESOLVED'].includes(ticket.status));
+}
+
 export default async function InternalTicketsPage({ searchParams }: { searchParams?: Promise<{ filter?: string; status?: string; locale?: string }> }) {
   const params = await searchParams;
   const requestHeaders = await headers();
@@ -53,7 +57,8 @@ export default async function InternalTicketsPage({ searchParams }: { searchPara
   } else {
     // Standard user view: show assigned or requested by them. Managers also see pending approvals and new tickets natively.
     myTasks = myTasks.filter((t: any) => {
-      const isMine = t.assignedEmployeeId === principal?.userId || t.requestedById === principal?.userId;
+      const isTeamTicket = isReceivingTeamTicket(t, principal?.departmentId);
+      const isMine = t.assignedEmployeeId === principal?.userId || t.requestedById === principal?.userId || isTeamTicket;
       const isManagerPendingOrInbox = isManager && (t.status === 'PENDING_APPROVAL' || t.status === 'NEW' || t.status === 'TRANSFERRED');
       return isMine || isManagerPendingOrInbox;
     });
@@ -61,7 +66,7 @@ export default async function InternalTicketsPage({ searchParams }: { searchPara
     if (filter === 'sent') {
       myTasks = myTasks.filter((t: any) => t.requestedById === principal?.userId);
     } else if (filter === 'received') {
-      myTasks = myTasks.filter((t: any) => t.assignedEmployeeId === principal?.userId || (isManager && (t.status === 'PENDING_APPROVAL' || t.status === 'NEW' || t.status === 'TRANSFERRED')));
+      myTasks = myTasks.filter((t: any) => t.assignedEmployeeId === principal?.userId || isReceivingTeamTicket(t, principal?.departmentId) || (isManager && (t.status === 'PENDING_APPROVAL' || t.status === 'NEW' || t.status === 'TRANSFERRED')));
     }
   }
 

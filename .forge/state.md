@@ -1,9 +1,10 @@
 # Current State
 
 Date: 2026-11-23
-Status: Internal ticket draft attachment removal deployed successfully
-Risk: Medium
+Status: Internal officer task and team ticket visibility fixes ready for release
+Risk: High
 
-- Production revision 6fc7f3a033afcc2709fd1a1198783b3c1ea164bd is live. GitHub Actions run 45125200459 passed Validate and Test and Deploy to VPS. Public landing and API health returned 200 with the exact revision; the signed-out new-ticket route returned 307.
-- New ticket drafts show each selected file with a localized Remove action. Removal updates the browser file input, in-memory draft files, and persisted names before submission. No submitted ticket deletion path, schema migration, or data mutation was added.
-- Passed locally: EN/AR browser proof, web tests 250/250, root tests 79/79 with coverage thresholds, production build, typecheck, lint, OpenAPI, security, and diff check. English desktop and Arabic mobile screenshots were inspected. The workflow backup gate passed; independent backup listing/restore and authenticated live UAT were Not Run.
+- Task creation now sends every selected officer and department ID from the form. The backend keeps one accountable assignee and other selected users as participants.
+- A receiving department's officers can list and open unclaimed team-assigned tickets. My Work and the department board show their cards. Coworker-assigned tickets and other departments remain denied.
+- Passed locally: internal-ticket API 19/19, tasks API 46/46, web shell 251/251, web API client 117/117, root tests 79/79 with coverage, typecheck, lint, OpenAPI, security, production build, visual 96 routes, accessibility 24 routes, EN/AR permissions browser proof. English ticket board and Arabic mobile task screenshots reviewed.
+- Production is still at revision 6fc7f3a033afcc2709fd1a1198783b3c1ea164bd from the prior draft attachment release. This fix has not been deployed yet.

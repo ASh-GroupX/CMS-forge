@@ -3,7 +3,7 @@ import test from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { PremiumDashboard } from '../../src/components/dashboard-premium';
-import { filterDepartmentTicketFlow } from '../../src/app/(staff)/internal-tickets/my-work/page';
+import { filterDepartmentTicketFlow, isReceivingTeamTicket } from '../../src/app/(staff)/internal-tickets/my-work/page';
 import { AppRouterContext } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 import { SearchParamsContext } from 'next/dist/shared/lib/hooks-client-context.shared-runtime';
 
@@ -51,4 +51,13 @@ test('department card destinations keep only the matching server-scoped ticket f
   ];
   assert.deepEqual(filterDepartmentTicketFlow(tickets, 'department-received', 'dept-it').map((ticket) => ticket.id), ['received']);
   assert.deepEqual(filterDepartmentTicketFlow(tickets, 'department-sent', 'dept-it').map((ticket) => ticket.id), ['sent']);
+});
+
+test('receiving team card appears only for unassigned active tickets in the officer department', () => {
+  const ticket = { targetDepartmentId: 'dept-it', assignedEmployeeId: null, status: 'ASSIGNED' };
+  assert.equal(isReceivingTeamTicket(ticket, 'dept-it'), true);
+  assert.equal(isReceivingTeamTicket({ ...ticket, status: 'WAITING' }, 'dept-it'), true);
+  assert.equal(isReceivingTeamTicket(ticket, 'dept-sales'), false);
+  assert.equal(isReceivingTeamTicket({ ...ticket, assignedEmployeeId: 'other-officer' }, 'dept-it'), false);
+  assert.equal(isReceivingTeamTicket({ ...ticket, status: 'NEW' }, 'dept-it'), false);
 });

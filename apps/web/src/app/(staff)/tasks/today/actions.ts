@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { getAssignableStaff, type AssignableStaff } from '../../../../lib/staff-assignable-staff-api';
 import { getQuickAddRelatedRecords, type RelatedRecordType, type StaffRelatedRecord } from '../../../../lib/staff-related-records-api';
-import { quickAddTask, updateTask, type StaffTaskStatus } from '../../../../lib/staff-tasks-api';
+import { quickAddTask, selectedTaskRecipients, updateTask, type StaffTaskStatus } from '../../../../lib/staff-tasks-api';
 import { getStaffSessionPrincipal } from '../../../../lib/staff-session-api';
 import { zonedDateTimeToIso } from '../../../../lib/locale-format';
 
@@ -24,6 +24,7 @@ export async function quickAddTaskAction(formData: FormData): Promise<void> {
     whoId: await staffIdFrom(formData, 'whoId', 'assigneeLabel'),
     assignedUserId: optionalText(formData, 'assignedUserId'),
     assignedDepartmentId: optionalText(formData, 'assignedDepartmentId'),
+    ...selectedTaskRecipients(formData),
     when: zonedDateTimeToIso(text(formData, 'when'), timeZone),
     isCustomerPromise: formData.get('isCustomerPromise') === 'on',
     ...(optionalText(formData, 'dueAt') ? { dueAt: zonedDateTimeToIso(text(formData, 'dueAt'), timeZone) } : {}),

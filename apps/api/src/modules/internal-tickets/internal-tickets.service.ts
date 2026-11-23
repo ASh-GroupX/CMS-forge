@@ -503,6 +503,7 @@ export class InternalTicketsService {
         OR: roleCode === 'INTERNAL_OFFICER' ? [
           { requestedById: userId },
           { assignedEmployeeId: userId },
+          { targetDepartmentId: departmentId, assignedEmployeeId: null, status: { in: ['ASSIGNED', 'IN_PROGRESS', 'WAITING', 'RESOLVED'] } },
         ] : [
           { targetDepartmentId: departmentId, status: { not: 'PENDING_APPROVAL' } },
           { requestedById: userId },
@@ -994,7 +995,8 @@ export class InternalTicketsService {
     if (!ticket) throw new NotFoundException('Ticket not found');
 
     if (principal && principal.roleCode !== 'ADMIN') {
-      if (principal.roleCode === 'INTERNAL_OFFICER' && principal.userId !== ticket.requestedById && principal.userId !== ticket.assignedEmployeeId) {
+      const isTeamTicket = ticket.targetDepartmentId === principal.departmentId && !ticket.assignedEmployeeId && ['ASSIGNED', 'IN_PROGRESS', 'WAITING', 'RESOLVED'].includes(ticket.status);
+      if (principal.roleCode === 'INTERNAL_OFFICER' && principal.userId !== ticket.requestedById && principal.userId !== ticket.assignedEmployeeId && !isTeamTicket) {
         throw new AppException('RBAC_FORBIDDEN', 'Forbidden', 403);
       }
       const isTargetDept = Boolean(principal.departmentId && principal.departmentId === ticket.targetDepartmentId);

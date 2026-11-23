@@ -146,6 +146,11 @@ export type QuickAddTaskPayload = {
   assignedDepartmentIds?: string[];
 };
 
+export function selectedTaskRecipients(formData: FormData): Pick<QuickAddTaskPayload, 'assignedUserIds' | 'assignedDepartmentIds'> {
+  const selected = (field: string) => formData.getAll(field).filter((value): value is string => typeof value === 'string' && value.length > 0);
+  return { assignedUserIds: selected('assignedUserIds'), assignedDepartmentIds: selected('assignedDepartmentIds') };
+}
+
 export type UpdateTaskPayload = {
   status?: StaffTaskStatus;
   statusNote?: string;

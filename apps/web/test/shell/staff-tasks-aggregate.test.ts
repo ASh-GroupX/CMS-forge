@@ -9,9 +9,10 @@ test('internal officer work merge excludes other staff tickets in the same depar
   const tickets = [
     { id: 'mine', title: 'Mine', requestedById: 'manager', assignedEmployeeId: 'officer', targetDepartmentId: 'department-1', status: 'NEW', createdAt: now.toISOString() },
     { id: 'other', title: 'Other', requestedById: 'manager', assignedEmployeeId: 'coworker', targetDepartmentId: 'department-1', status: 'NEW', createdAt: now.toISOString() },
+    { id: 'team', title: 'Team', requestedById: 'manager-2', assignedEmployeeId: null, targetDepartmentId: 'department-1', status: 'ASSIGNED', createdAt: now.toISOString() },
   ];
   const officer = mergeWorkItems(empty, tickets, [], now, 'officer', true);
   const manager = mergeWorkItems(empty, tickets, [], now, 'manager', false);
-  assert.deepEqual(officer.assignedToMe.map((item) => item.id), ['ticket_mine']);
-  assert.deepEqual(manager.assignedToMe.map((item) => item.id), ['ticket_mine', 'ticket_other']);
+  assert.deepEqual(officer.assignedToMe.map((item) => item.id), ['ticket_mine', 'ticket_team']);
+  assert.deepEqual(manager.assignedToMe.map((item) => item.id), ['ticket_mine', 'ticket_other', 'ticket_team']);
 });

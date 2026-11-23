@@ -121,7 +121,8 @@ export function mergeWorkItems(
       task.assigneeId === currentUserId ||
       task.ownerId === currentUserId ||
       task.nextAction?.whoId === currentUserId ||
-      Boolean(task.participantUserIds?.includes(currentUserId))
+      Boolean(task.participantUserIds?.includes(currentUserId)) ||
+      (task.id.startsWith('ticket_') && task.assigneeId === null)
     );
   };
 

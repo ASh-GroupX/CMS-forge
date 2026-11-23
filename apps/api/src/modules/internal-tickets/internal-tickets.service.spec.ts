@@ -23,11 +23,15 @@ test('department ticket read includes sent and received flows but excludes pendi
   });
 });
 
-test('internal officer ticket list includes only requested or assigned tickets', async () => {
+test('internal officer ticket list includes own and receiving-team tickets only', async () => {
   let where: any;
   const service = new InternalTicketsService({ findMany: async (query: any) => { where = query.where; return []; } } as any, null as any, null as any);
   await service.getMyTickets('department-1', 'officer-1', 'INTERNAL_OFFICER');
-  assert.deepEqual(where, { OR: [{ requestedById: 'officer-1' }, { assignedEmployeeId: 'officer-1' }] });
+  assert.deepEqual(where, { OR: [
+    { requestedById: 'officer-1' },
+    { assignedEmployeeId: 'officer-1' },
+    { targetDepartmentId: 'department-1', assignedEmployeeId: null, status: { in: ['ASSIGNED', 'IN_PROGRESS', 'WAITING', 'RESOLVED'] } },
+  ] });
   await service.getMyTickets('department-1', 'manager-1', 'INTERNAL_MANAGER');
   assert.ok(where.OR.some((entry: any) => entry.targetDepartmentId === 'department-1'));
 });
@@ -37,6 +41,17 @@ test('internal officer cannot open another department member ticket', async () =
   const service = new InternalTicketsService({ findById: async () => ticket } as any, null as any, null as any);
   await assert.rejects(service.getTicket('ticket-1', { roleCode: 'INTERNAL_OFFICER', userId: 'officer-1', departmentId: 'department-1' }), (error: any) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN');
   assert.equal((await service.getTicket('ticket-1', { roleCode: 'INTERNAL_OFFICER', userId: 'officer-2', departmentId: 'department-1' })).id, 'ticket-1');
+});
+
+test('receiving department officer can open team ticket but not another department team ticket', async () => {
+  let ticket: any = { id: 'ticket-1', targetDepartmentId: 'department-1', requestedById: 'manager-2', assignedEmployeeId: null, status: 'ASSIGNED', requestedBy: { departmentId: 'department-2' } };
+  const service = new InternalTicketsService({ findById: async () => ticket } as any, null as any, null as any);
+  const officer = { roleCode: 'INTERNAL_OFFICER', userId: 'officer-1', departmentId: 'department-1' };
+  assert.equal((await service.getTicket('ticket-1', officer)).id, 'ticket-1');
+  ticket = { ...ticket, targetDepartmentId: 'department-2' };
+  await assert.rejects(service.getTicket('ticket-1', officer), (error: any) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN');
+  ticket = { ...ticket, targetDepartmentId: 'department-1', assignedEmployeeId: 'officer-2' };
+  await assert.rejects(service.getTicket('ticket-1', officer), (error: any) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN');
 });
 
 test('waiting transition stores a readable reason snapshot in activity history', async () => {
