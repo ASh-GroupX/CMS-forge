@@ -1,11 +1,12 @@
 # Current State
 
 Date: 2026-11-25
-Status: Search and investigation release verified locally; publication in progress
+Status: Search and investigation release deployed at c062e13fa34a64acd0104bcc1ad7a773c7464097
 Risk: High (staff search scope and complaint attribution)
 
-- Global search matches authorized customers, internal tickets, complaints, and tasks by name, number, title, description, and notes/comments. Customer/ticket results remain visible within the limit.
+- Global search finds authorized customers, internal tickets, complaints, and tasks by name, number, title, description, and notes/comments. Customer/ticket results remain visible within the limit.
 - Investigation Findings & Notes shows the writing employee's bilingual name from matching workflow history; older findings without a reliable author remain unattributed.
-- Repaired the stale work-queues proof fixture for the current queue response and page limit.
-- Passed: search API 9/9, workflow API 103/103, web shell 255/255, web API client 117/117, work-queues and complaint-workflow E2E, root tests 79/79 with coverage, typecheck, lint, OpenAPI, security, production build, visual proof 96/96, EN/AR screenshot review, diff check, development backup readiness.
-- No production deployment yet. No signed-in live UAT. Untracked outputs, tmp, and uploads are outside the release.
+- Work-queues proof fixture repaired for the current queue response and page limit.
+- Passed: local release gates (search API, workflow API, web, E2E, root tests with coverage, typecheck, lint, OpenAPI, security, build, visual screenshots), GitHub Actions production run 45568216595 attempt 2, public health/revision and unsigned access checks. First attempt failed before upload at VPS SSH reachability; retry succeeded.
+- Production workflow's backup and service health gates passed. Independent restore and signed-in live UAT were Not Run.
+- Untracked outputs, tmp, and uploads remain outside the release.
