@@ -12,6 +12,6 @@ export class SearchController {
   @Permissions('STAFF_LOGIN')
   search(@Query() query: Record<string, unknown>, @Req() request: AuthenticatedRequest): Promise<SearchResponseDto> {
     const principal = request.principal!;
-    return this.searchService.search(query, { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId, permissions: principal.permissions ?? [] });
+    return this.searchService.search(query, { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId, departmentId: principal.departmentId ?? null, permissions: principal.permissions ?? [] });
   }
 }

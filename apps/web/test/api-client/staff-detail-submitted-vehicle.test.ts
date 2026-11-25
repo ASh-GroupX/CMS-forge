@@ -7,6 +7,7 @@ const body = { complaint: {
   subject: 'Customer Name', branchId: 'branch_khalda', customer: { id: 'customer', name: 'Customer Name', phone: null, identifier: null, source: 'MANUAL' },
   vehicle: null, submittedVehicle: { make: 'BYD', model: 'BYD Yuan Plus EV CCC', vin: 'LGX00000000000001' },
   portalAnswers: [{ key: 'preferredTime', labelEn: 'Preferred time', labelAr: 'الوقت المفضل', value: 'Evening' }],
+  investigationNotes: 'Checked wiring', investigationAuthor: { name: 'Backup Officer', nameAr: 'الموظف البديل' },
   statusHistory: [], allowedActions: [], caseSummary: null,
 } };
 const response = (data: unknown) => new Response(JSON.stringify(data), { status: 200, headers: { 'content-type': 'application/json' } });
@@ -19,6 +20,7 @@ test('staff detail loader preserves submitted vehicle and added answers for the 
   assert.equal(result.data.subject, 'Customer Name');
   assert.deepEqual(result.data.submittedVehicle, body.complaint.submittedVehicle);
   assert.deepEqual(result.data.portalAnswers, body.complaint.portalAnswers);
+  assert.deepEqual(result.data.investigationAuthor, body.complaint.investigationAuthor);
 });
 
 test('staff detail loader rejects unauthenticated access and malformed submitted fields', async () => {

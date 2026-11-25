@@ -21,6 +21,7 @@ module's boundary so you can work in a fresh context without scanning the tree.
 - `cases` (read-only search projection)
 - `deals` (read-only search projection)
 - `customers` (read-only search projection)
+- `internal_tickets`, `ticket_notes`, `ticket_customer_phones` (read-only search projection)
 
 ## May depend on
 

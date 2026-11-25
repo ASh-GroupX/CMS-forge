@@ -77,6 +77,7 @@ export type StaffComplaintDetailView = {
   isJustified?: boolean | null;
   satisfactionStatus?: string | null;
   investigationNotes?: string | null;
+  investigationAuthor?: { name: string; nameAr: string } | null;
   investigatedAt?: string | null;
 };
 
@@ -208,6 +209,7 @@ function viewFromDetail(detail: ComplaintDetail, caseTimeline: DetailTimelineIte
     isJustified: detail.isJustified ?? null,
     satisfactionStatus: detail.satisfactionStatus ?? null,
     investigationNotes: detail.investigationNotes ?? null,
+    investigationAuthor: detail.investigationAuthor ?? null,
     investigatedAt: detail.investigatedAt ?? null,
   };
 }
@@ -295,6 +297,7 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     isJustified: typeof complaint.isJustified === 'boolean' ? complaint.isJustified : null,
     satisfactionStatus: typeof complaint.satisfactionStatus === 'string' ? complaint.satisfactionStatus : null,
     investigationNotes: typeof complaint.investigationNotes === 'string' ? complaint.investigationNotes : null,
+    investigationAuthor: typeof complaint.investigationAuthor?.name === 'string' && typeof complaint.investigationAuthor.nameAr === 'string' ? complaint.investigationAuthor : null,
     investigatedAt: typeof complaint.investigatedAt === 'string' ? complaint.investigatedAt : null,
   };
 }

@@ -52,6 +52,10 @@ export function detailItem(complaint: ComplaintDetailRecord, masked = false, sla
   const approvedByTransition = statusHistory.find((t) => t.action === 'ACCEPT_INTAKE' || t.action === 'APPROVE_AND_ROUTE');
   const assignmentActions = ['APPROVE_AND_ROUTE', 'ASSIGN_INVESTIGATION', 'ROUTE_AGAIN'];
   const lastAssignment = [...statusHistory].reverse().find((t) => t.action && assignmentActions.includes(t.action));
+  const investigatedAt = complaint.investigatedAt?.getTime();
+  const investigationUpdate = investigatedAt === undefined ? null : [...statusHistory]
+    .filter((item) => Math.abs(item.createdAt.getTime() - investigatedAt) <= 30_000)
+    .sort((a, b) => Math.abs(a.createdAt.getTime() - investigatedAt) - Math.abs(b.createdAt.getTime() - investigatedAt))[0];
 
   const createdBy = createdByTransition?.actor ? { name: createdByTransition.actor.nameEn, nameAr: createdByTransition.actor.nameAr, phone: (createdByTransition.actor as any).phone ?? null } : null;
   const approvedBy = approvedByTransition?.actor ? { name: approvedByTransition.actor.nameEn, nameAr: approvedByTransition.actor.nameAr, phone: (approvedByTransition.actor as any).phone ?? null } : null;
@@ -96,6 +100,9 @@ export function detailItem(complaint: ComplaintDetailRecord, masked = false, sla
     isJustified: (complaint as any).isJustified ?? null,
     satisfactionStatus: (complaint as any).satisfactionStatus ?? null,
     investigationNotes: (complaint as any).investigationNotes ?? null,
+    investigationAuthor: complaint.investigationNotes && investigationUpdate?.actor
+      ? { name: investigationUpdate.actor.nameEn, nameAr: investigationUpdate.actor.nameAr }
+      : null,
     investigatedAt: (complaint as any).investigatedAt?.toISOString?.() ?? null,
     statusHistory: statusHistory.map((item) => ({ ...item, createdAt: item.createdAt?.toISOString?.() ?? String(item.createdAt) })),
     allowedActions: [],

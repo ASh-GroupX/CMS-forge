@@ -165,6 +165,7 @@ export function ComplaintWorkspace({
                   <div className="flex items-center gap-2 text-sm font-bold text-brand">
                     <ClipboardCheck className="size-4" />
                     {locale === 'ar' ? 'نتائج وملاحظات التحقيق' : 'Investigation Findings & Notes'}
+                    {detail.investigationAuthor && <bdi className="font-medium text-content-strong">· {locale === 'ar' ? detail.investigationAuthor.nameAr : detail.investigationAuthor.name}</bdi>}
                   </div>
                   {detail.investigatedAt && (
                     <span className="text-xs text-content-muted">

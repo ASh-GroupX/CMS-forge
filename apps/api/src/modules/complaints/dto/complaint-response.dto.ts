@@ -130,6 +130,7 @@ export type ComplaintDetailDto = ComplaintQueueItemDto & {
   isJustified?: boolean | null;
   satisfactionStatus?: string | null;
   investigationNotes?: string | null;
+  investigationAuthor?: { name: string; nameAr: string } | null;
   investigatedAt?: string | null;
   statusHistory: ComplaintStatusTimelineItemDto[];
   caseSummary: ComplaintCaseSummaryDto | null;

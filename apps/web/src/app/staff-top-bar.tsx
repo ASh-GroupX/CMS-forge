@@ -11,7 +11,7 @@ import { localeHref } from '../lib/locale-href';
 import { NotificationIndicator } from '../components/notification-center/notification-indicator';
 
 type Theme = 'light' | 'dark';
-type SearchType = 'COMPLAINT' | 'TASK' | 'CASE' | 'DEAL' | 'CUSTOMER';
+type SearchType = 'COMPLAINT' | 'TASK' | 'CASE' | 'DEAL' | 'CUSTOMER' | 'INTERNAL_TICKET';
 type SearchResult = { type: SearchType; id: string; label: string; labelAr: string; context: string; contextAr: string; href: string };
 type SearchCopy = { label: string; placeholder: string; hint: string; loading: string; empty: string; error: string; types: Record<SearchType, string> };
 

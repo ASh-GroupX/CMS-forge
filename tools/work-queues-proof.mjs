@@ -13,12 +13,13 @@ const fetchImpl = async (input, init) => {
       subject: 'Filtered queue complaint',
       branchId: 'branch_main',
       branchName: 'Main Branch',
+      displayTimeZone: 'Asia/Amman',
       ownerId: null,
       ownerName: null,
       createdAt: '2026-06-20T00:00:00.000Z',
       updatedAt: '2026-06-20T10:00:00.000Z',
     }],
-    limit: 10,
+    limit: 11,
     offset: 10,
   });
 };
@@ -39,7 +40,7 @@ const result = await getStaffQueueResult({
 
 assert.equal(result?.page, 2);
 assert.equal(result?.rows[0]?.referenceNumber, 'CMP-FILTER-001');
-assert.equal(String(calls[0]?.input), 'http://localhost:3000/complaints/search?limit=10&offset=10&branchId=branch_main&status=IN_PROGRESS&severity=HIGH&referenceNumber=CMP-FILTER');
+assert.equal(String(calls[0]?.input), 'http://localhost:3000/complaints/search?limit=11&offset=10&branchId=branch_main&status=IN_PROGRESS&severity=HIGH&referenceNumber=CMP-FILTER');
 assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
 assert.doesNotMatch(String(calls[0]?.input), /role|actor|workflow|owner/i);
 console.log('work queues proof passed');

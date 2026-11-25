@@ -13,7 +13,14 @@ export class SearchService {
     const types = searchTypes(query.types);
     if (q.length < 2 || q.length > 100 || !Number.isInteger(limit) || limit < 1 || limit > 20) throw invalidSearch();
     const grouped = await Promise.all(types.map((type) => this.searchRepository.search(type, q, limit, actor)));
-    return { items: grouped.flat().slice(0, limit), query: q, limit };
+    const items = [] as SearchResponseDto['items'];
+    for (let index = 0; items.length < limit && grouped.some((group) => index < group.length); index++) {
+      for (const group of grouped) {
+        const item = group[index];
+        if (item && items.length < limit) items.push(item);
+      }
+    }
+    return { items, query: q, limit };
   }
 }
 

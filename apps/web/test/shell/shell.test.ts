@@ -35,6 +35,7 @@ import { PortalSurveyScreen } from '../../src/components/portal-survey';
 import { PortalTrackingPreview } from '../../src/components/portal-tracking';
 import { ComplaintAttachmentControls } from '../../src/components/complaint-attachment-controls';
 import { ComplaintDetailWorkspace } from '../../src/components/complaint-detail-workspace';
+import { ComplaintWorkspace } from '../../src/components/complaint-workspace';
 import { ContextRail } from '../../src/components/complaint-workspace/context-rail';
 import { ComplaintIntakeWorkspace } from '../../src/components/complaint-intake-workspace';
 import { ComplaintWorkflowModal } from '../../src/components/complaint-workflow-modal';
@@ -1905,6 +1906,14 @@ test('complaint detail workspace keeps responsive detail layout classes', async 
   assert.match(html, /hidden w-80 shrink-0/);
   assert.match(html, /2xl:grid-cols-2/);
   assert.match(html, /grid-cols-\[minmax\(4\.5rem,0\.7fr\)_minmax\(7rem,1\.3fr\)\]/);
+});
+
+test('investigation findings show the writing officer in English and Arabic', () => {
+  const detail = complaintDetailViewFixture({ investigationNotes: 'Checked wiring', investigationAuthor: { name: 'Backup Officer', nameAr: 'الموظف البديل' } }) as never;
+  const english = renderToStaticMarkup(React.createElement(ComplaintWorkspace, { detail, locale: 'en', state: 'ready' }));
+  const arabic = renderToStaticMarkup(React.createElement(ComplaintWorkspace, { detail, locale: 'ar', state: 'ready' }));
+  assert.match(english, /Investigation Findings &amp; Notes.*Backup Officer/);
+  assert.match(arabic, /نتائج وملاحظات التحقيق.*الموظف البديل/);
 });
 
 test('complaint detail workspace source is privacy-safe and render-only', () => {

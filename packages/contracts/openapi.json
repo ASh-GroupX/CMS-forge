@@ -6455,7 +6455,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Comma-separated COMPLAINT, TASK, CASE, DEAL, or CUSTOMER values"
+              "description": "Comma-separated CUSTOMER, INTERNAL_TICKET, COMPLAINT, TASK, CASE, or DEAL values"
             }
           },
           {
@@ -10614,7 +10614,7 @@
         },
         "additionalProperties": false
       },
-      "ComplaintDetailResponse": {"type":"object","required":["complaint"],"properties":{"complaint":{"allOf":[{"$ref":"#/components/schemas/ComplaintQueueItem"},{"type":"object","required":["categoryId","categoryName","categoryNameAr","description","incidentAt","customer","vehicle","customerSource","manualCustomer","vehicleRelated","vehicleSource","manualVehicle","vehicleDataUnavailableReason","statusHistory","caseSummary"],"properties":{"categoryId":{"type":"string"},"categoryName":{"type":"string"},"categoryNameAr":{"type":"string"},"description":{"type":"string"},"incidentAt":{"type":["string","null"],"format":"date-time"},"customer":{"type":"object","required":["id","name","phone","identifier","source"],"properties":{"id":{"type":"string"},"name":{"type":"string"},"phone":{"type":["string","null"]},"identifier":{"type":["string","null"]},"source":{"type":"string","enum":["LOCAL","MANUAL","DMS"]}},"additionalProperties":false},"vehicle":{"anyOf":[{"type":"object","required":["id","vin","plate","make","model","year","source"],"properties":{"id":{"type":"string"},"vin":{"type":"string"},"plate":{"type":"string"},"make":{"type":"string"},"model":{"type":"string"},"year":{"type":"integer"},"source":{"type":"string","enum":["LOCAL","MANUAL","DMS"]}},"additionalProperties":false},{"type":"null"}]},"submittedVehicle":{"type":["object","null"],"properties":{"make":{"type":"string"},"model":{"type":"string"},"vin":{"type":["string","null"]}}},"customerSource":{"type":"string","enum":["LOCAL","MANUAL","DMS"]},"manualCustomer":{"type":"boolean"},"vehicleRelated":{"type":"boolean"},"vehicleSource":{"type":["string","null"],"enum":["LOCAL","MANUAL","DMS",null]},"manualVehicle":{"type":"boolean"},"vehicleDataUnavailableReason":{"type":["string","null"]},"statusHistory":{"type":"array","items":{"$ref":"#/components/schemas/ComplaintStatusTimelineItem"}},"caseSummary":{"anyOf":[{"$ref":"#/components/schemas/ComplaintCaseSummary"},{"type":"null"}]},"portalAnswers":{"type":"array","description":"Current custom form answers for authorized staff; empty for masked views. Baseline originals are excluded.","items":{"$ref":"#/components/schemas/PortalAnswer"}}},"additionalProperties":false}]}},"additionalProperties":false},
+      "ComplaintDetailResponse": {"type":"object","required":["complaint"],"properties":{"complaint":{"allOf":[{"$ref":"#/components/schemas/ComplaintQueueItem"},{"type":"object","required":["categoryId","categoryName","categoryNameAr","description","incidentAt","customer","vehicle","customerSource","manualCustomer","vehicleRelated","vehicleSource","manualVehicle","vehicleDataUnavailableReason","statusHistory","caseSummary"],"properties":{"categoryId":{"type":"string"},"categoryName":{"type":"string"},"categoryNameAr":{"type":"string"},"description":{"type":"string"},"incidentAt":{"type":["string","null"],"format":"date-time"},"customer":{"type":"object","required":["id","name","phone","identifier","source"],"properties":{"id":{"type":"string"},"name":{"type":"string"},"phone":{"type":["string","null"]},"identifier":{"type":["string","null"]},"source":{"type":"string","enum":["LOCAL","MANUAL","DMS"]}},"additionalProperties":false},"vehicle":{"anyOf":[{"type":"object","required":["id","vin","plate","make","model","year","source"],"properties":{"id":{"type":"string"},"vin":{"type":"string"},"plate":{"type":"string"},"make":{"type":"string"},"model":{"type":"string"},"year":{"type":"integer"},"source":{"type":"string","enum":["LOCAL","MANUAL","DMS"]}},"additionalProperties":false},{"type":"null"}]},"submittedVehicle":{"type":["object","null"],"properties":{"make":{"type":"string"},"model":{"type":"string"},"vin":{"type":["string","null"]}}},"customerSource":{"type":"string","enum":["LOCAL","MANUAL","DMS"]},"manualCustomer":{"type":"boolean"},"vehicleRelated":{"type":"boolean"},"vehicleSource":{"type":["string","null"],"enum":["LOCAL","MANUAL","DMS",null]},"manualVehicle":{"type":"boolean"},"vehicleDataUnavailableReason":{"type":["string","null"]},"investigationAuthor":{"anyOf":[{"type":"object","required":["name","nameAr"],"properties":{"name":{"type":"string"},"nameAr":{"type":"string"}},"additionalProperties":false},{"type":"null"}]},"statusHistory":{"type":"array","items":{"$ref":"#/components/schemas/ComplaintStatusTimelineItem"}},"caseSummary":{"anyOf":[{"$ref":"#/components/schemas/ComplaintCaseSummary"},{"type":"null"}]},"portalAnswers":{"type":"array","description":"Current custom form answers for authorized staff; empty for masked views. Baseline originals are excluded.","items":{"$ref":"#/components/schemas/PortalAnswer"}}},"additionalProperties":false}]}},"additionalProperties":false},
       "ComplaintCommentRequest": {
         "type": "object",
         "required": [
@@ -13871,11 +13871,12 @@
           "type": {
             "type": "string",
             "enum": [
+              "CUSTOMER",
+              "INTERNAL_TICKET",
               "COMPLAINT",
               "TASK",
               "CASE",
-              "DEAL",
-              "CUSTOMER"
+              "DEAL"
             ]
           },
           "id": {
