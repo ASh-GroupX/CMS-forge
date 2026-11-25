@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { addTicketNote } from '../../../../lib/staff-internal-tickets-actions';
 import { useRouter } from 'next/navigation';
 import { attachmentFileToBase64, normalizeAttachmentMime, validateStaffAttachmentFile } from '../../../../lib/attachment-file-policy';
+import { NoteTextarea } from '../../../../components/shared/note-textarea';
 
 export function TicketNoteForm({ ticketId }: { ticketId: string }) {
   const router = useRouter();
@@ -88,12 +89,12 @@ export function TicketNoteForm({ ticketId }: { ticketId: string }) {
       )}
       <form 
         onSubmit={handleSubmit}
-        className="flex items-center gap-2 rounded-xl border border-line-subtle bg-surface px-3 py-2 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand"
+        className="flex min-w-0 items-end gap-2 rounded-xl border border-line-subtle bg-surface px-3 py-2 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand"
       >
         <button 
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="rounded-md p-1.5 text-content-muted hover:text-content-strong disabled:opacity-50"
+          className="shrink-0 rounded-md p-1.5 text-content-muted hover:text-content-strong disabled:opacity-50"
           disabled={loading}
         >
           <Paperclip className="size-4" />
@@ -106,18 +107,17 @@ export function TicketNoteForm({ ticketId }: { ticketId: string }) {
           ref={fileInputRef}
           onChange={(e) => handleFilesChange(Array.from(e.target.files || []))}
         />
-        <input 
+        <NoteTextarea
+          aria-label="Add a private note..."
           name="note" 
-          type="text" 
           placeholder="Add a private note..." 
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-content-muted" 
           value={content}
           onChange={(e) => setContent(e.target.value)}
           disabled={loading}
         />
         <button 
           type="submit" 
-          className="rounded-md bg-brand p-1.5 text-white hover:bg-brand-hover disabled:opacity-50"
+          className="shrink-0 rounded-md bg-brand p-1.5 text-white hover:bg-brand-hover disabled:opacity-50"
           disabled={loading || (!content.trim() && files.length === 0)}
         >
           <Send className="size-3.5" />

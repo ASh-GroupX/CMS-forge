@@ -6,6 +6,7 @@ import { complaintDetailText } from '../../i18n/staff-complaint-detail';
 import { toast } from 'sonner';
 import { addStaffComplaintComment } from '../../lib/staff-complaint-comments-api';
 import { staffAttachmentAccept, uploadStaffComplaintAttachments } from '../../lib/staff-attachments-api';
+import { NoteTextarea } from '../shared/note-textarea';
 
 export function ComplaintNoteForm({ complaintId, locale }: { complaintId: string, locale: string }) {
   const text = complaintDetailText[locale === 'ar' ? 'ar' : 'en'];
@@ -65,13 +66,13 @@ export function ComplaintNoteForm({ complaintId, locale }: { complaintId: string
       )}
       <form 
         onSubmit={handleSubmit}
-        className="flex items-center gap-2 rounded-xl border border-line-subtle bg-surface px-3 py-2 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand"
+        className="flex min-w-0 items-end gap-2 rounded-xl border border-line-subtle bg-surface px-3 py-2 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand"
       >
         <button 
           type="button"
           aria-label={text.sections.attachments}
           onClick={() => fileInputRef.current?.click()}
-          className="rounded-md p-1.5 text-content-muted hover:text-content-strong disabled:opacity-50"
+          className="shrink-0 rounded-md p-1.5 text-content-muted hover:text-content-strong disabled:opacity-50"
           disabled={loading}
         >
           <Paperclip className="size-4" />
@@ -84,12 +85,10 @@ export function ComplaintNoteForm({ complaintId, locale }: { complaintId: string
           ref={fileInputRef}
           onChange={(e) => setFiles(Array.from(e.target.files || []))}
         />
-        <input 
+        <NoteTextarea
           aria-label={text.sections.internalComments}
           name="note" 
-          type="text" 
           placeholder={locale === 'ar' ? 'أضف ملاحظة...' : 'Add a note...'}
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-content-muted" 
           value={content}
           onChange={(e) => setContent(e.target.value)}
           disabled={loading}
@@ -97,7 +96,7 @@ export function ComplaintNoteForm({ complaintId, locale }: { complaintId: string
         <button 
           aria-label={text.workflow.submit}
           type="submit" 
-          className="rounded-md bg-brand p-1.5 text-white hover:bg-brand-hover disabled:opacity-50"
+          className="shrink-0 rounded-md bg-brand p-1.5 text-white hover:bg-brand-hover disabled:opacity-50"
           disabled={loading || (!content.trim() && files.length === 0)}
         >
           <Send className="size-3.5" />

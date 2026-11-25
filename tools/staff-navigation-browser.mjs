@@ -61,8 +61,19 @@ try {
     await duplicate.click();
     await page.getByRole('heading', { name: 'Existing ticket', exact: true }).waitFor();
     assert.equal(page.context().pages().length, 1);
-    await page.locator('input[name=note]').fill('Follow up on this existing problem.');
-    await page.locator('form:has(input[name=note]) button[type=submit]').click();
+    const noteEditor = page.locator('textarea[name=note]');
+    await noteEditor.fill('A long note should wrap naturally within the editor. '.repeat(8));
+    const noteLayout = await noteEditor.evaluate(element => ({
+      scrollWidth: element.scrollWidth,
+      clientWidth: element.clientWidth,
+      height: element.getBoundingClientRect().height,
+      lineHeight: parseFloat(getComputedStyle(element).lineHeight),
+    }));
+    assert.ok(noteLayout.scrollWidth <= noteLayout.clientWidth + 2, 'note editor must not scroll horizontally');
+    assert.ok(noteLayout.height > noteLayout.lineHeight * 2, 'note editor must expand for long text');
+    await page.screenshot({ path: `${output}/${locale}-wrapped-note.png`, fullPage: true });
+    await noteEditor.fill('Follow up on this existing problem.');
+    await page.locator('form:has(textarea[name=note]) button[type=submit]').click();
     await page.waitForFunction(() => window.followUpNote?.id === 'existing');
     await page.getByRole('link', { name: t.backToDraft, exact: true }).click();
     await page.locator('input[type=tel]').waitFor();

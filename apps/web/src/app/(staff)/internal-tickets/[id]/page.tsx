@@ -45,7 +45,7 @@ export default async function TicketDetailPage({ params, searchParams }: {
       <div className="grid h-[calc(100vh-17rem)] min-h-[600px] grid-cols-1 md:grid-cols-[1fr_2fr] gap-6">
       
       {/* LEFT PANE: Working Notes */}
-      <div className="flex flex-col rounded-2xl border border-line-subtle bg-surface shadow-sm overflow-hidden">
+      <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-line-subtle bg-surface shadow-sm">
         <div className="border-b border-line-subtle bg-surface-canvas/50 px-4 py-3">
           <h3 className="font-semibold text-content-strong flex items-center gap-2">
             <FileText className="size-4 text-brand" />
@@ -57,16 +57,16 @@ export default async function TicketDetailPage({ params, searchParams }: {
             <p className="text-sm text-content-muted text-center">No notes yet.</p>
           ) : (
             ticket.notes.map((note: any) => (
-              <div key={note.id} className="flex gap-3">
+              <div key={note.id} className="flex min-w-0 gap-3">
                 <div className="mt-1 grid size-8 shrink-0 place-items-center rounded-full bg-brand/10 text-brand font-bold text-xs">
                   {note.author?.nameEn?.[0] || 'U'}
                 </div>
-                <div className="flex flex-col flex-1 rounded-xl rounded-tl-sm bg-surface p-3 shadow-sm border border-line-subtle">
+                <div className="flex min-w-0 flex-1 flex-col rounded-xl rounded-tl-sm border border-line-subtle bg-surface p-3 shadow-sm">
                   <div className="mb-1.5 flex items-center justify-between">
                     <span className="text-sm font-bold text-content-strong">{note.author?.nameEn || 'Unknown User'}</span>
                     <span className="text-[10px] font-medium text-content-muted">{new Date(note.createdAt).toLocaleString(isAr ? 'ar-JO' : 'en-US', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Amman' })}</span>
                   </div>
-                  <p className="text-sm text-content-strong whitespace-pre-wrap leading-relaxed">{note.content}</p>
+                  <p className="break-words text-sm leading-relaxed text-content-strong whitespace-pre-wrap [overflow-wrap:anywhere]">{note.content}</p>
                   {note.attachments && note.attachments.length > 0 && (
                     <div className="mt-2 pt-2 border-t border-line-subtle flex flex-col gap-1.5">
                       <span className="text-xs font-bold text-content-muted">Attachments</span>

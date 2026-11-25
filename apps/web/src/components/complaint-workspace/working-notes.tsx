@@ -33,11 +33,11 @@ export function WorkingNotesList({ timeline, complaintId, comments, locale = 'en
         const isAttachment = note.type === 'ATTACHMENT';
         
         return (
-          <div key={note.id} className="flex gap-3">
+          <div key={note.id} className="flex min-w-0 gap-3">
             <div className="mt-1 grid size-8 shrink-0 place-items-center rounded-full bg-brand/10 text-brand font-bold text-xs">
               {note.actor?.name?.[0] || 'S'}
             </div>
-            <div className="flex flex-col flex-1 rounded-xl rounded-tl-sm bg-surface p-3 shadow-sm border border-line-subtle">
+            <div className="flex min-w-0 flex-1 flex-col rounded-xl rounded-tl-sm border border-line-subtle bg-surface p-3 shadow-sm">
               <div className="mb-1.5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-content-strong">{note.actor?.name || text.values.author}</span>
@@ -53,7 +53,7 @@ export function WorkingNotesList({ timeline, complaintId, comments, locale = 'en
               </div>
               
               {!isAttachment && (
-                <p className="text-sm text-content-strong whitespace-pre-wrap leading-relaxed">
+                <p className="break-words text-sm leading-relaxed text-content-strong whitespace-pre-wrap [overflow-wrap:anywhere]">
                   {note.body || note.summary}
                 </p>
               )}

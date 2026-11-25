@@ -37,6 +37,11 @@ try {
     const context = await browser.newContext({ viewport: { width: locale === 'en' ? 1440 : 390, height: 1000 } });
     await context.addCookies([{ name: 'cms_staff_session', value: 'navigation-test-session', url: base }]);
     const page = await context.newPage();
+    await page.route('**/api/internal-tickets', async route => {
+      if (route.request().method() !== 'POST') return route.continue();
+      state.created = route.request().postDataJSON();
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: 'created-ticket' }) });
+    });
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     const t = staffNavigationText[locale], phoneCopy = ticketPhoneRuleText[locale];
@@ -62,16 +67,16 @@ try {
       const record = JSON.parse(sessionStorage.getItem('cms:staff-work:staff-1:navigation') ?? '{}').value;
       return record?.entries[record.index]?.id === history.state?.cmsStaffEntry?.id && record.entries[record.index].href === location.pathname + location.search;
     });
-    await page.locator('input[name=note]').fill('Unsaved follow-up must survive native Back.');
+    await page.locator('textarea[name=note]').fill('Unsaved follow-up must survive native Back.');
     await page.getByRole('link', { name: t.backToDraft, exact: true }).click();
     await page.getByRole('dialog', { name: t.unsaved, exact: true }).waitFor();
     await page.getByRole('button', { name: t.stay, exact: true }).click();
-    assert.equal(await page.locator('input[name=note]').inputValue(), 'Unsaved follow-up must survive native Back.');
+    assert.equal(await page.locator('textarea[name=note]').inputValue(), 'Unsaved follow-up must survive native Back.');
     await page.evaluate(() => history.back());
     await page.waitForTimeout(250);
     await page.getByRole('dialog', { name: t.unsaved, exact: true }).waitFor();
     await page.getByRole('button', { name: t.stay, exact: true }).click();
-    assert.equal(await page.locator('input[name=note]').inputValue(), 'Unsaved follow-up must survive native Back.');
+    assert.equal(await page.locator('textarea[name=note]').inputValue(), 'Unsaved follow-up must survive native Back.');
     assert.ok(page.url().includes('/internal-tickets/existing'));
     await page.evaluate(() => history.back());
     await page.getByRole('dialog', { name: t.unsaved, exact: true }).waitFor();
@@ -79,10 +84,10 @@ try {
     await page.locator('#title').waitFor();
     assert.equal(await page.locator('#title').inputValue(), 'A separate customer problem');
     await page.getByRole('navigation', { name: t.navigation, exact: true }).getByRole('button', { name: t.forward, exact: true }).click();
-    await page.locator('input[name=note]').waitFor();
-    await page.locator('input[name=note]').fill('Unsaved follow-up must survive native Back.');
-    await page.locator('form:has(input[name=note]) button[type=submit]').click();
-    await page.getByText('Unsaved follow-up must survive native Back.', { exact: true }).waitFor();
+    await page.locator('textarea[name=note]').waitFor();
+    await page.locator('textarea[name=note]').fill('Unsaved follow-up must survive native Back.');
+    await page.locator('form:has(textarea[name=note]) button[type=submit]').click();
+    await page.locator('p').filter({ hasText: 'Unsaved follow-up must survive native Back.' }).waitFor();
     await page.getByRole('link', { name: t.backToDraft, exact: true }).click();
     await page.locator('input[type=tel]').waitFor();
     await page.waitForTimeout(500);
