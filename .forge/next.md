@@ -1,11 +1,10 @@
-# Multiline working notes
+# Reports redesign release
+Status: Ready to deploy
+Date: 2026-11-26
+Risk: High
+Model tier: T3_HIGH
+SRS: REQ-REPORT-001, ARCH-UI-001, UI-DESIGN-001
 
-Status: Completed
-Date: 2026-11-25
-Risk: Low
-Model tier: T2_STANDARD
-SRS: REQ-COMMENTS-001, REQ-COLLAB-001, ARCH-UI-001, UI-DESIGN-001
+Delivered in bounded slices: workspace navigation and visible drill-down; query/filter consistency and deferred record fetching; complete scoped exports and verification. Overview, Trends, Departments and officers, and Records share filters. Officer and workload clicks open visible records with keyboard focus. URL and session state preserve report context. Existing report dates explicitly mean creation dates. Mixed-record rates are not presented as a synthesized rate.
 
-Scope: Complaint and internal-ticket Working Notes editors wrap long text in a growing textarea. Saved note bodies wrap long unbroken content inside their cards. Browser navigation fixtures use textarea selectors and a controlled create response for the production Next proxy path.
-
-Proof: Passed web shell 255/255, EN/AR hydrated browser wrap and screenshot review, EN/AR production Next navigation, visual previews 96/96, typecheck, lint, OpenAPI, security check, production build, diff check. GitHub Actions run 45572415386 passed validation and VPS deployment for revision 478dd21f98de4c2e8211071d5f7293c4c588bb21; public health reported the exact revision. Signed-in live UAT remains Needs Human Review.
+Passed web 255/255, reports API 48/48, root 79/79 with coverage and visual/accessibility/performance proof, typecheck, lint, OpenAPI, security, production build, EN/AR workspace click/keyboard/URL restore/export chooser proof, and inspected screenshots. Fresh phase review blockers were repaired and re-reviewed with no remaining blocking finding. Production release pending.

@@ -396,3 +396,21 @@ test('command-center pseudo views stay server-side and map to bounded database f
   });
 });
 
+
+test('advanced export includes rows beyond the first thousand with the same scoped filter', async () => {
+  const service = createMockAnalyticsService();
+  const offsets: number[] = [];
+  service.complaintsRecords = async (filter, scope, limit = 25, offset = 0) => {
+    assert.equal(filter.view, 'overdue');
+    assert.equal(scope.branchId, 'branch-1');
+    offsets.push(offset);
+    return { items: Array.from({ length: Math.min(limit, 1003 - offset) }, (_, index) => ({
+      referenceNumber: 'CMP-' + (offset + index), subject: 'Export proof',
+    })) as any, total: 1003 };
+  };
+  const result = await service.exportAdvanced('complaints', { view: 'overdue' }, 'csv',
+    { role: RoleCode.CR_MANAGER, branchId: 'branch-1', departmentId: null, userId: 'manager' });
+  assert.deepEqual(offsets, [0]);
+  assert.equal(result.rowCount, 1003);
+  assert.match(result.body, /CMP-1002/);
+});

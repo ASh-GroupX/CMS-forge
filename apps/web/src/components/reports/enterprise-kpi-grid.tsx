@@ -34,13 +34,15 @@ interface EnterpriseKpiGridProps {
   locale: Locale;
   kpis: EnterpriseKpiData;
   activeFilterKey?: string | null;
-  onFilterClick?: (key: string) => void;
+  showRates?: boolean;
+  onFilterClick?: (key: string, title: string) => void;
 }
 
 export function EnterpriseKpiGrid({
   locale,
   kpis,
   activeFilterKey,
+  showRates = true,
   onFilterClick,
 }: EnterpriseKpiGridProps) {
   const t = reportsAnalyticsI18n[locale];
@@ -137,14 +139,23 @@ export function EnterpriseKpiGrid({
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-      {cards.map((c) => {
+      {cards.filter(card => showRates || !['sla', 'tat'].includes(card.key)).map((c) => {
         const Icon = c.icon;
+        const actionable = !!onFilterClick && !['sla', 'tat'].includes(c.key);
         const isActive = activeFilterKey === c.key;
         return (
           <Card
             key={c.key}
-            onClick={() => onFilterClick && onFilterClick(c.key)}
-            className={`p-3.5 flex flex-col justify-between transition-all cursor-pointer select-none rounded-xl border bg-card shadow-2xs hover:shadow-xs min-h-[96px] ${
+            role={actionable ? 'button' : undefined}
+            tabIndex={actionable ? 0 : undefined}
+            onKeyDown={event => {
+              if (actionable && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault();
+                onFilterClick?.(c.key, c.title);
+              }
+            }}
+            onClick={actionable ? () => onFilterClick?.(c.key, c.title) : undefined}
+            className={`p-3.5 flex flex-col justify-between transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring select-none rounded-xl border bg-card shadow-2xs hover:shadow-xs min-h-[96px] ${
               isActive ? c.activeBorder : c.borderColor
             } ${c.alert ? 'border-rose-300 dark:border-rose-900 bg-rose-50/40 dark:bg-rose-950/20' : ''}`}
           >

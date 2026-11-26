@@ -8,6 +8,9 @@ import type { ComplaintsAnalyticsFilter } from './reports.complaints.js';
 import type { TicketsAnalyticsFilter } from './reports.tickets.js';
 import type { DashboardReportScope, ReportExportAudit, ReportExportFormat, ReportExportResult } from './reports.service.js';
 
+// A single row query prevents offset drift when records change during export.
+const EXPORT_ALL_ROWS = 2_147_483_647;
+
 @Injectable()
 export class ReportsAnalyticsService {
   constructor(
@@ -69,9 +72,9 @@ export class ReportsAnalyticsService {
     let rows: Array<string | number | null>[] = [];
 
     if (type === 'complaints') {
-      const records = await this.complaintsRecords(filter, scope, 1000, 0);
+      const items = (await this.complaintsRecords(filter, scope, EXPORT_ALL_ROWS, 0)).items;
       headers = ['Reference', 'Subject', 'Status', 'Severity', 'Customer', 'Phone', 'Department', 'Owner', 'Created At', 'Resolved At', 'Closed At'];
-      rows = records.items.map((r) => [
+      rows = items.map((r) => [
         r.referenceNumber,
         r.subject,
         r.status,
@@ -85,9 +88,9 @@ export class ReportsAnalyticsService {
         r.closedAt,
       ]);
     } else if (type === 'internal_tickets') {
-      const records = await this.ticketsRecords(filter, scope, 1000, 0);
+      const items = (await this.ticketsRecords(filter, scope, EXPORT_ALL_ROWS, 0)).items;
       headers = ['Reference', 'Title', 'Status', 'Priority', 'Creating Department', 'Handling Department', 'Requested By', 'Assigned To', 'Created At', 'Due At', 'Resolved At'];
-      rows = records.items.map((r) => [
+      rows = items.map((r) => [
         r.referenceNumber,
         r.title,
         r.status,
@@ -196,7 +199,7 @@ export class ReportsAnalyticsService {
       contentType: format === 'csv' ? 'text/csv; charset=utf-8' : 'application/vnd.ms-excel; charset=utf-8',
       body: `${body}\n`,
       rowCount: rows.length,
-      rowLimit: 1000,
+      rowLimit: rows.length,
     };
   }
 }

@@ -137,7 +137,7 @@ export function computeCombinedKpis(
     unassigned: add(complaints?.unassigned, tickets?.unassigned),
     onTimeRate: tickets?.onTimeSlaRate ?? complaints?.slaComplianceRate ?? 100,
     avgTatDays: tickets?.avgResolutionDays ?? Math.round(((complaints?.avgResolutionHours ?? 0) / 24) * 10) / 10,
-    totalCreatedDelta: tickets?.deltas.totalCreated ?? complaints?.deltas.totalCreated ?? 0,
-    resolvedDelta: tickets?.deltas.resolved ?? complaints?.deltas.resolved ?? 0,
+    totalCreatedDelta: recordType === 'all' ? 0 : tickets?.deltas.totalCreated ?? complaints?.deltas.totalCreated ?? 0,
+    resolvedDelta: recordType === 'all' ? 0 : tickets?.deltas.resolved ?? complaints?.deltas.resolved ?? 0,
   };
 }

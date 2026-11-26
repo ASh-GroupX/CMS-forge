@@ -223,7 +223,7 @@ export function UnifiedFilterBar({
             {fb.status}
           </label>
           <select
-            value={selectedStatus ?? ''}
+            value={selectedStatus?.toUpperCase() ?? ''}
             onChange={(e) => onStatusChange(e.target.value || null)}
             aria-label={fb.status}
             className="h-9 rounded-lg border bg-background px-2.5 text-xs font-medium focus:outline-hidden focus:ring-2 focus:ring-primary"
@@ -234,6 +234,7 @@ export function UnifiedFilterBar({
             <option value="WAITING">{fb.waitingStatus}</option>
             <option value="RESOLVED">{fb.resolvedStatus}</option>
             <option value="OVERDUE">{fb.overdueStatus}</option>
+            <option value="UNASSIGNED">{t.kpis.unassigned}</option>
           </select>
         </div>
 

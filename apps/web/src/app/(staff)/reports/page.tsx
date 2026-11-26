@@ -11,9 +11,7 @@ import {
 import { getStaffSessionPrincipal } from '../../../lib/staff-session-api';
 import {
   fetchComplaintsAnalytics,
-  fetchComplaintsRecords,
   fetchTicketsAnalytics,
-  fetchTicketsRecords,
 } from '../../../lib/staff-reports-analytics-api';
 import { fetchDepartmentPerformance } from '../../../lib/staff-reports-departments-api';
 import { EnterpriseReportsDashboard } from '../../../components/reports/enterprise-reports-dashboard';
@@ -77,9 +75,7 @@ export default async function ReportsPage({
     principal,
     departmentsPerformance,
     complaintsAnalytics,
-    complaintsRecords,
     ticketsAnalytics,
-    ticketsRecords,
   ] = await Promise.all([
     getStaffReportRowsLoadResult({ ...apiInput, filters }),
     getStaffReportKpisLoadResult({
@@ -92,9 +88,7 @@ export default async function ReportsPage({
     getStaffSessionPrincipal(apiInput),
     fetchDepartmentPerformance({}, cookieHeader, apiUrl),
     fetchComplaintsAnalytics({}, cookieHeader, apiUrl),
-    fetchComplaintsRecords({}, 50, 0, cookieHeader, apiUrl),
     fetchTicketsAnalytics({}, cookieHeader, apiUrl),
-    fetchTicketsRecords({}, 50, 0, cookieHeader, apiUrl),
   ]);
 
   const loadState = [rows, kpis, catalog].some((item) => item.status === 'denied')
@@ -138,9 +132,9 @@ export default async function ReportsPage({
         branches={branches}
         departmentsPerformance={departmentsPerformance ?? []}
         complaintsAnalytics={complaintsAnalytics}
-        complaintsRecords={complaintsRecords?.items ?? []}
+        complaintsRecords={[]}
         ticketsAnalytics={ticketsAnalytics}
-        ticketsRecords={ticketsRecords?.items ?? []}
+        ticketsRecords={[]}
       />
 
       <details className="group rounded-2xl border bg-card shadow-xs">

@@ -1,0 +1,4 @@
+export const reportWorkspaceText = {
+  en: { clearOfficer: 'Clear officer filter', periodNote: 'Dates filter records by creation date. Select All Time to include older open work.', loading: 'Updating report…', failed: 'Report could not be loaded.', retry: 'Retry', complaints: 'Complaints', tickets: 'Internal tickets', navigation: 'Report views', views: { overview: 'Overview', trends: 'Trends', departments: 'Departments & officers', records: 'Records' } },
+  ar: { clearOfficer: 'إلغاء تصفية الموظف', periodNote: 'تُصفّى السجلات حسب تاريخ الإنشاء. اختر كل الفترات لتضمين الأعمال المفتوحة الأقدم.', loading: 'جارٍ تحديث التقرير…', failed: 'تعذر تحميل التقرير.', retry: 'إعادة المحاولة', complaints: 'الشكاوى', tickets: 'التذاكر الداخلية', navigation: 'طرق عرض التقارير', views: { overview: 'نظرة عامة', trends: 'الاتجاهات', departments: 'الأقسام والموظفون', records: 'السجلات' } },
+};

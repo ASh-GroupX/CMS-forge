@@ -1,6 +1,11 @@
 'use client';
+import { useReportUrl } from './use-report-url';
+import { OfficerPerformanceTable } from './officer-performance-table';
+import { Button } from '../ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
+import { reportWorkspaceText } from '../../i18n/report-workspace';
 import { useStaffUiState } from '../../lib/use-staff-ui-state';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Locale } from '../../i18n/staff-shell';
 import type { DepartmentPerformanceRow } from '../../lib/staff-reports-departments-api';
 import type {
@@ -11,15 +16,11 @@ import type {
 } from '../../lib/staff-reports-analytics-api';
 import { UnifiedFilterBar, type RecordTypeFilter, type DatePresetFilter } from './unified-filter-bar';
 import { DepartmentComparisonView } from './department-comparison-view';
-import { DepartmentDeepDiveView } from './department-deep-dive-view';
-import { EmployeeTasksDrawer } from './employee-tasks-drawer';
 import { EnterpriseKpiGrid } from './enterprise-kpi-grid';
 import { EnterpriseAnalyticsCharts } from './enterprise-analytics-charts';
 import { ReportStatusBoard } from './report-status-board';
-import { QuickCaseDrawer } from './quick-case-drawer';
 import { EnterpriseScopeHeader } from './enterprise-scope-header';
-import { resolveDates, useEnterpriseReportData } from './use-enterprise-report-data';
-import type { RecordTableItem } from './detailed-records-table';
+import { buildReportQuery, resolveDates, useEnterpriseReportData } from './use-enterprise-report-data';
 import { computeCombinedKpis } from './enterprise-reports-filters';
 interface EnterpriseReportsDashboardProps {
   locale: Locale;
@@ -48,6 +49,20 @@ export function EnterpriseReportsDashboard({
   ticketsAnalytics,
   ticketsRecords,
 }: EnterpriseReportsDashboardProps) {
+  const copy = reportWorkspaceText[locale];
+  const [officerId, setOfficerId] = useStaffUiState<string | null>('reportOfficer', null);
+  const [view, setView] = useStaffUiState('reportView', 'overview');
+  const resultsRef = useRef<HTMLElement>(null);
+  const [resultTitle, setResultTitle] = useStaffUiState('reportResultTitle', copy.views.records);
+  useEffect(() => {
+    if (view === 'records') {
+      const frame = requestAnimationFrame(() => {
+        resultsRef.current?.focus({ preventScroll: true });
+        resultsRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' });
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [view, resultTitle]);
   // Filters State
   const [recordType, setRecordType] = useStaffUiState<RecordTypeFilter>("recordType", 'all');
   const [selectedDeptId, setSelectedDeptId] = useStaffUiState<string | null>("selectedDeptId", null);
@@ -58,10 +73,8 @@ export function EnterpriseReportsDashboard({
   const [dateTo, setDateTo] = useStaffUiState("dateTo", '');
   const [search, setSearch] = useStaffUiState("search", '');
   // Modals / Drawers State
-  const [deepDiveDeptId, setDeepDiveDeptId] = useStaffUiState<string | null>("deepDiveDeptId", null);
-  const [inspectRecord, setInspectRecord] = useState<RecordTableItem | null>(null);
-  const [selectedEmployee, setSelectedEmployee] = useState<{ id: string; name: string } | null>(null);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const officerFilter = useMemo(() => officerId ? { ownerId: officerId, assignedEmployeeId: officerId } : undefined, [officerId]);
   const criteria = useMemo(() => ({
     recordType,
     departmentId: selectedDeptId,
@@ -72,6 +85,18 @@ export function EnterpriseReportsDashboard({
     dateTo,
     search,
   }), [recordType, selectedDeptId, selectedBranchId, selectedStatus, datePreset, dateFrom, dateTo, search]);
+  useReportUrl({ ...criteria, view, officerId }, restored => {
+    if (restored.recordType) setRecordType(restored.recordType);
+    if (restored.view) setView(restored.view);
+    if ('officerId' in restored) setOfficerId(restored.officerId ?? null);
+    if (restored.datePreset) setDatePreset(restored.datePreset);
+    if ('departmentId' in restored) setSelectedDeptId(restored.departmentId ?? null);
+    if ('branchId' in restored) setSelectedBranchId(restored.branchId ?? null);
+    if ('status' in restored) setSelectedStatus(restored.status ?? null);
+    if ('search' in restored) setSearch(restored.search ?? '');
+    if ('dateFrom' in restored) setDateFrom(restored.dateFrom ?? '');
+    if ('dateTo' in restored) setDateTo(restored.dateTo ?? '');
+  });
   const reportData = useEnterpriseReportData(criteria, {
     departments: departmentsPerformance,
     complaintsAnalytics,
@@ -81,6 +106,7 @@ export function EnterpriseReportsDashboard({
   });
 
   const handleClearAll = () => {
+    setOfficerId(null);
     setRecordType('all');
     setSelectedDeptId(null);
     setSelectedBranchId(null);
@@ -89,7 +115,7 @@ export function EnterpriseReportsDashboard({
     setDateFrom('');
     setDateTo('');
     setSearch('');
-    setDeepDiveDeptId(null);
+    setResultTitle(copy.views.records);
   };
   const filteredDepartments = useMemo(() => {
     return reportData.departments.filter((d) => {
@@ -103,63 +129,24 @@ export function EnterpriseReportsDashboard({
     });
   }, [reportData.departments, selectedBranchId, selectedDeptId, search]);
 
-  const deepDiveDept = useMemo(() => {
-    if (!deepDiveDeptId) return null;
-    return reportData.departments.find((d) => d.departmentId === deepDiveDeptId) ?? null;
-  }, [reportData.departments, deepDiveDeptId]);
   const combinedKpis = useMemo(
     () => computeCombinedKpis(reportData.complaintsAnalytics, reportData.ticketsAnalytics, recordType),
     [reportData.complaintsAnalytics, reportData.ticketsAnalytics, recordType],
   );
 
-  const handleInspect = (task: { id: string; refNumber: string; title: string; type: 'ticket' | 'complaint' }) => {
-    if (task.type === 'ticket') {
-      const tk = reportData.ticketsRecords.find((r) => r.id === task.id || r.referenceNumber === task.refNumber);
-      setInspectRecord({
-        id: task.id,
-        referenceNumber: tk?.referenceNumber || task.refNumber,
-        titleOrSubject: tk?.title || task.title,
-        status: tk?.status || 'OPEN',
-        departmentName: tk?.targetDepartmentName || '',
-        severityOrPriority: tk?.priority || 'NORMAL',
-        customerOrRequester: tk?.requestedByName || 'Requester',
-        ownerName: tk?.assignedEmployeeName || 'Unassigned',
-        createdAt: tk?.createdAt || new Date().toISOString(),
-        resolvedAt: tk?.resolvedAt || null,
-        isOverdue: Boolean(tk?.isOverdue),
-        linkHref: `/internal-tickets/${task.id}`,
-      });
-    } else {
-      const c = reportData.complaintsRecords.find((r) => r.id === task.id || r.referenceNumber === task.refNumber);
-      setInspectRecord({
-        id: task.id,
-        referenceNumber: c?.referenceNumber || task.refNumber,
-        titleOrSubject: c?.subject || task.title,
-        status: c?.status || 'NEW',
-        departmentName: c?.departmentName || '',
-        severityOrPriority: c?.severity || 'NORMAL',
-        customerOrRequester: c?.customerName || 'Customer',
-        ownerName: c?.ownerName || 'Unassigned',
-        createdAt: c?.createdAt || new Date().toISOString(),
-        resolvedAt: c?.resolvedAt || null,
-        isOverdue: Boolean(c?.isOverdue),
-        linkHref: `/complaints/${task.id}`,
-      });
-    }
-  };
-
   const handleExport = (type: 'complaints' | 'internal_tickets' | 'departments' | 'employees', format: 'csv' | 'excel' = 'csv') => {
     const params = new URLSearchParams({ format, type });
+    if (officerId) params.set(type === 'internal_tickets' ? 'assignedEmployeeId' : 'ownerId', officerId);
     if (selectedDeptId) params.set('departmentId', selectedDeptId);
     if (selectedBranchId) params.set('branchId', selectedBranchId);
-    if (dateFrom) params.set('dateFrom', dateFrom);
-    if (dateTo) params.set('dateTo', dateTo);
-    if (search.trim()) params.set('search', search.trim());
+    const query = buildReportQuery(criteria);
+    const filter = type === 'internal_tickets' ? query.tickets : type === 'complaints' ? query.complaints : query.department;
+    Object.entries(filter).forEach(([key, value]) => { if (value) params.set(key, value); });
     window.location.href = `/api/reports/export-advanced?${params.toString()}`;
     setIsExportOpen(false);
   };
 
-  const handleExportCsv = () => handleExport(recordType === 'complaints' ? 'complaints' : recordType === 'tickets' ? 'internal_tickets' : 'departments');
+  const handleExportCsv = () => recordType === 'all' ? setIsExportOpen(true) : handleExport(recordType === 'complaints' ? 'complaints' : 'internal_tickets');
 
   return (
     <div className="space-y-6 w-full min-w-0 max-w-full">
@@ -169,7 +156,7 @@ export function EnterpriseReportsDashboard({
         userDepartmentName={userDepartmentName}
         departments={departments}
         selectedDeptId={selectedDeptId}
-        onSelectDepartment={setSelectedDeptId}
+        onSelectDepartment={value => { setSelectedDeptId(value); setOfficerId(null); setResultTitle(copy.views.records); }}
         isExportOpen={isExportOpen}
         setIsExportOpen={setIsExportOpen}
         onTriggerExport={handleExport}
@@ -178,13 +165,13 @@ export function EnterpriseReportsDashboard({
       <UnifiedFilterBar
         locale={locale}
         recordType={recordType}
-        onRecordTypeChange={setRecordType}
+        onRecordTypeChange={value => { setRecordType(value); setOfficerId(null); setResultTitle(copy.views.records); }}
         selectedDeptId={selectedDeptId}
-        onDeptChange={setSelectedDeptId}
+        onDeptChange={value => { setSelectedDeptId(value); setOfficerId(null); setResultTitle(copy.views.records); }}
         selectedBranchId={selectedBranchId}
         onBranchChange={setSelectedBranchId}
         selectedStatus={selectedStatus}
-        onStatusChange={setSelectedStatus}
+        onStatusChange={(value) => { setSelectedStatus(value); setResultTitle(copy.views.records); }}
         datePreset={datePreset}
         onDatePresetChange={setDatePreset}
         dateFrom={dateFrom}
@@ -199,73 +186,75 @@ export function EnterpriseReportsDashboard({
         onExportCsv={handleExportCsv}
       />
 
-      <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">{copy.periodNote}</p>
+      {reportData.state === 'loading' && <p role="status">{copy.loading}</p>}
+      {reportData.state === 'error' && <div role="alert" className="flex items-center gap-3 text-destructive">
+        {copy.failed}<Button variant="outline" onClick={reportData.retry}>{copy.retry}</Button>
+      </div>}
+      <Tabs value={view} onValueChange={setView} dir={locale === 'ar' ? 'rtl' : 'ltr'}>
+        <TabsList className="h-auto flex flex-wrap justify-start gap-1" aria-label={copy.navigation}>
+          {Object.entries(copy.views).map(([key, label]) => <TabsTrigger key={key} value={key}>{label}</TabsTrigger>)}
+        </TabsList>
+        <TabsContent value="departments" className="space-y-6">
         <DepartmentComparisonView
           locale={locale}
           departments={filteredDepartments}
-          selectedDeptId={deepDiveDeptId}
-          onSelectDepartment={(deptId) => setDeepDiveDeptId((current) => current === deptId ? null : deptId)}
+          selectedDeptId={selectedDeptId}
+          onSelectDepartment={(deptId) => {
+            setOfficerId(null); setSelectedDeptId(deptId); setSelectedStatus(null);
+            setResultTitle(departments.find(department => department.id === deptId)?.name ?? copy.views.records);
+            setView('records');
+          }}
           onExportCsv={handleExportCsv}
         />
-        {deepDiveDept && (
-          <div id="department-detail-panel" className="rounded-2xl border-2 border-primary/20 bg-primary/[0.02] p-1 shadow-sm">
-            <DepartmentDeepDiveView
-              locale={locale}
-              department={deepDiveDept}
-              allTickets={reportData.ticketsRecords}
-              allComplaints={reportData.complaintsRecords}
-              officers={reportData.ticketsAnalytics?.officers ?? []}
-              onBackToComparison={() => setDeepDiveDeptId(null)}
-              onSelectEmployee={(id, name) => setSelectedEmployee({ id, name })}
-              onInspectTask={handleInspect}
-            />
-          </div>
-        )}
-        {!deepDiveDept && (
-          <>
+
+        {reportData.complaintsAnalytics && <OfficerPerformanceTable locale={locale}
+          officers={reportData.complaintsAnalytics.officers.map(officer => ({ ...officer, id: officer.officerId, name: locale === 'ar' ? officer.nameAr : officer.nameEn, complianceRate: officer.slaComplianceRate, avgTat: officer.avgResolutionHours, tatUnit: 'hours' as const }))}
+          onSelectOfficer={id => { setOfficerId(id); setRecordType('complaints'); setSelectedStatus(null); setResultTitle(copy.complaints); setView('records'); }} />}
+        {reportData.ticketsAnalytics && <OfficerPerformanceTable locale={locale} isTickets
+          officers={reportData.ticketsAnalytics.officers.map(officer => ({ ...officer, id: officer.employeeId, name: locale === 'ar' ? officer.nameAr : officer.nameEn, complianceRate: officer.onTimeRate, avgTat: officer.avgResolutionDays, tatUnit: 'days' as const }))}
+          onSelectOfficer={id => { setOfficerId(id); setRecordType('tickets'); setSelectedStatus(null); setResultTitle(copy.tickets); setView('records'); }} />}
+        </TabsContent>
+        <TabsContent value="overview" className="space-y-6">
           <EnterpriseKpiGrid
             locale={locale}
             kpis={combinedKpis}
+            showRates={recordType !== 'all'}
             activeFilterKey={selectedStatus}
-            onFilterClick={(key) => setSelectedStatus(
-              key === 'all' || key === 'sla' || key === 'tat' || selectedStatus === key ? null : key,
-            )}
+            onFilterClick={(key, title) => {
+              setOfficerId(null);
+              setSelectedStatus(key === 'all' ? null : key);
+              setResultTitle(title);
+              setView('records');
+            }}
           />
 
-          <EnterpriseAnalyticsCharts
-            locale={locale}
-            timeline={reportData.ticketsAnalytics?.timeline ?? reportData.complaintsAnalytics?.timeline ?? []}
-            statusBreakdown={reportData.ticketsAnalytics?.statusBreakdown ?? reportData.complaintsAnalytics?.statusBreakdown ?? []}
-            agingBuckets={reportData.ticketsAnalytics?.agingBuckets ?? reportData.complaintsAnalytics?.agingBuckets ?? []}
-            ticketsCount={reportData.ticketsTotal}
-            complaintsCount={reportData.complaintsTotal}
-          />
-
-          </>
-        )}
-        <ReportStatusBoard locale={locale} departmentId={selectedDeptId} branchId={selectedBranchId} search={search} type={recordType} departments={departments}
+        </TabsContent>
+        <TabsContent value="trends" className="space-y-6">
+          {[
+            { key: 'complaints', title: copy.complaints, data: reportData.complaintsAnalytics, complaints: reportData.complaintsTotal, tickets: 0 },
+            { key: 'tickets', title: copy.tickets, data: reportData.ticketsAnalytics, complaints: 0, tickets: reportData.ticketsTotal },
+          ].filter(item => item.data).map(item => (
+            <section key={item.key} className="space-y-3">
+              <h2 className="text-lg font-semibold">{item.title}</h2>
+              <EnterpriseAnalyticsCharts locale={locale} timeline={item.data!.timeline ?? []}
+                statusBreakdown={item.data!.statusBreakdown ?? []} agingBuckets={item.data!.agingBuckets ?? []}
+                ticketsCount={item.tickets} complaintsCount={item.complaints} />
+            </section>
+          ))}
+        </TabsContent>
+        <TabsContent value="records">
+        <section ref={resultsRef} tabIndex={-1} aria-label={resultTitle} className="space-y-4 scroll-mt-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <h2 className="text-xl font-semibold">{resultTitle}</h2>
+          {officerId && <Button variant="outline" onClick={() => setOfficerId(null)}>{copy.clearOfficer}</Button>}
+          <ReportStatusBoard showBoardFilters={false} locale={locale} departmentId={selectedDeptId} branchId={selectedBranchId} search={search} type={recordType} departments={departments}
+          {...(officerFilter ? { filterExtras: officerFilter } : {})}
           selectedStatus={selectedStatus} externalDateFrom={resolveDates(criteria).from} externalDateTo={resolveDates(criteria).to} />
-      </div>
+        </section>
+        </TabsContent>
+      </Tabs>
 
-      <EmployeeTasksDrawer
-        locale={locale}
-        isOpen={Boolean(selectedEmployee)}
-        onClose={() => setSelectedEmployee(null)}
-        employeeId={selectedEmployee?.id ?? null}
-        employeeName={selectedEmployee?.name ?? null}
-        allTickets={reportData.ticketsRecords}
-        allComplaints={reportData.complaintsRecords}
-        onInspectTask={handleInspect}
-      />
 
-      {inspectRecord && (
-        <QuickCaseDrawer
-          locale={locale}
-          record={inspectRecord}
-          isOpen={Boolean(inspectRecord)}
-          onClose={() => setInspectRecord(null)}
-        />
-      )}
     </div>
   );
 }

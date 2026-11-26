@@ -131,7 +131,7 @@ export function ReportStatusBoard({
     previousDates.current = [externalDateFrom, externalDateTo];
   }, [externalDateFrom, externalDateTo]);
   const view = ({ open: 'active', overdue: 'overdue', unassigned: 'unassigned', resolved: 'resolved' } as const)[selectedStatus as 'open' | 'overdue' | 'unassigned' | 'resolved']
-    ?? (selectedStatus === 'OPEN' ? 'active' : selectedStatus === 'OVERDUE' ? 'overdue' : undefined);
+    ?? (selectedStatus === 'OPEN' ? 'active' : selectedStatus === 'OVERDUE' ? 'overdue' : selectedStatus === 'UNASSIGNED' ? 'unassigned' : undefined);
   const matchesStatus = (status: string) => !selectedStatus || !!view || selectedStatus.toUpperCase() === status;
 
   useEffect(() => {
@@ -223,7 +223,8 @@ export function ReportStatusBoard({
     }
   };
 
-  const loadedTotal = visibleStatuses.reduce((sum, status) => sum + (columns[status]?.ticketTotal ?? 0) + (columns[status]?.complaintTotal ?? 0), 0);
+  const displayedStatuses = showBoardFilters ? visibleStatuses : statuses.filter(status => matchesStatus(status) && ((columns[status]?.ticketTotal ?? 0) + (columns[status]?.complaintTotal ?? 0) > 0));
+  const loadedTotal = displayedStatuses.reduce((sum, status) => sum + (columns[status]?.ticketTotal ?? 0) + (columns[status]?.complaintTotal ?? 0), 0);
 
   const dateFormatter = useMemo(() => new Intl.DateTimeFormat(ar ? 'ar-JO' : 'en-GB', {
     dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Amman',
@@ -237,27 +238,27 @@ export function ReportStatusBoard({
           <p className="text-xs text-muted-foreground">{copy.subtitle}</p>
         </div>
         {showBoardFilters && <ReportBoardFilters locale={locale} departmentId={boardDepartmentId} departments={departments} from={from} to={to} onDepartment={setBoardDepartmentId} onFrom={setFrom} onTo={setTo} />}
-        <ReportColumnSelector locale={locale} statuses={statuses} selected={visibleStatuses} onChange={setVisibleStatuses} />
+        {showBoardFilters && <ReportColumnSelector locale={locale} statuses={statuses} selected={visibleStatuses} onChange={setVisibleStatuses} />}
       </div>
       {loading && <p role="status" className="text-sm text-muted-foreground">{copy.loading}</p>}
       {failed && <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-destructive">
         <span>{copy.failed}</span>
         <Button type="button" variant="outline" size="sm" onClick={() => setReload((n) => n + 1)}>{copy.retry}</Button>
       </div>}
-      {!loading && !failed && visibleStatuses.length > 0 && loadedTotal === 0 && <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">{copy.noMatches}</p>}
-      <div role="region" aria-label={copy.title} tabIndex={0} className="flex gap-3 overflow-x-auto pb-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md">
-        {statuses.filter(status => visibleStatuses.includes(status)).map((status) => {
+      {!loading && !failed && loadedTotal === 0 && <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">{copy.noMatches}</p>}
+      <div role="region" aria-label={copy.title} tabIndex={0} className={showBoardFilters ? "flex gap-3 overflow-x-auto pb-2" : "grid gap-4"}>
+        {displayedStatuses.map((status) => {
           const column = columns[status] ?? emptyColumn();
           const group = [...column.tickets.map(toTicketItem), ...column.complaints.map(toComplaintItem)];
           const total = column.ticketTotal + column.complaintTotal;
           const hasMore = column.ticketOffset < column.ticketTotal || column.complaintOffset < column.complaintTotal;
           const nextCount = Math.min(pageSize, column.ticketTotal - column.ticketOffset) + Math.min(pageSize, column.complaintTotal - column.complaintOffset);
           const statusLabel = copy.statuses[status as keyof typeof copy.statuses] ?? status;
-          return <section key={status} aria-label={statusLabel} className="w-[min(21rem,85vw)] shrink-0 rounded-xl border bg-muted/20 p-3">
+          return <section key={status} aria-label={statusLabel} className={showBoardFilters ? "w-[min(21rem,85vw)] shrink-0 rounded-xl border bg-muted/20 p-3" : "min-w-0 rounded-xl border bg-muted/20 p-3"}>
             <header className="mb-3 flex items-center justify-between">
               <h4 className="text-sm font-bold">{statusLabel}</h4><Badge variant="outline">{total}</Badge>
             </header>
-            <div role="region" aria-label={statusLabel} tabIndex={0} className="max-h-[38rem] space-y-2 overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md">
+            <div role="region" aria-label={statusLabel} tabIndex={0} className={showBoardFilters ? "max-h-[38rem] space-y-2 overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md" : "grid gap-3 md:grid-cols-2 xl:grid-cols-3"}>
               {group.map((item) => <article key={`${item.kind}-${item.id}`} className="rounded-lg border bg-card p-3 shadow-xs">
                 <div className="flex justify-between gap-2"><Link href={reportRecordDetailHref(item.type, item.id, locale, returnTo)} className="text-xs font-bold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">{item.ref}</Link><Badge variant="outline" className="text-[10px]">{item.kind}</Badge></div>
                 <p className="mt-2 break-words text-sm font-semibold leading-snug">{item.title}</p>

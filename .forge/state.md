@@ -1,11 +1,12 @@
 # Current State
+Date: 2026-11-26
+Status: Reports redesign verified locally, release pending
+Risk: High
 
-Date: 2026-11-25
-Status: Multiline Working Notes deployed at 478dd21f98de4c2e8211071d5f7293c4c588bb21
-Risk: Low (staff-only note presentation)
-
-- Complaint and internal-ticket note composers use the shared shadcn textarea, wrap text, and grow to a bounded height; saved notes wrap within their cards.
-- Passed: web 255/255, EN/AR hydrated wrapping browser proof with screenshot review, EN/AR production Next navigation, visual 96/96, typecheck, lint, OpenAPI, security, build, and diff check.
-- Existing server-side session, RBAC, note persistence, status/audit, and customer portal boundaries are unchanged.
-- GitHub Actions run 45572415386 passed Validate and Test and Deploy to VPS. Public health returned 200 with the exact revision, databaseConfigured true, and redisConfigured true. Signed-out ticket and complaint detail pages returned 307 to sign-in. Signed-in live UAT and an independent backup restore were Not Run.
-- Pre-existing untracked outputs, tmp, and uploads remain outside the release.
+- Four report views, direct workload/department/officer drill-down, visible results and status feedback, English and Arabic.
+- Complete scoped exports use one records query. Combined-record export opens an explicit dataset chooser. Active dates/status/owner filters reach exports.
+- Summary loading avoids unused record pages; totals come from server analytics. Initial page avoids two unused record requests.
+- URL filters and session-scoped report view/officer state survive refresh and return.
+- Passed web 255/255, reports API 48/48, root 79/79 including coverage and visual/accessibility/performance, typecheck, lint, security, OpenAPI, build, and focused browser proof.
+- Independent review completed with its four blockers repaired. Production release pending. Live signed-in UAT has not run.
+- Existing untracked outputs, tmp, uploads remain excluded.

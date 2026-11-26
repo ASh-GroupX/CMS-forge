@@ -43,7 +43,8 @@
     "db:migrate:test": "node tools/db-migrate-test.mjs",
     "db:index:check": "node tools/db-index-check.mjs",
     "security:check": "node tools/security-check.mjs",
-    "ops:backup:check": "node tools/ops-backup-check.mjs"
+    "ops:backup:check": "node tools/ops-backup-check.mjs",
+    "test:reports:workspace": "node --import tsx tools/report-workspace-browser.mjs"
   },
   "prisma": {
     "seed": "tsx packages/database/prisma/seed.ts"
