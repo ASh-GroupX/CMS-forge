@@ -1,6 +1,9 @@
 import { hasStaffSessionCookie, incomingCookieHeader } from './staff-request-auth';
 
 export type DepartmentPerformanceFilter = {
+  status?: string | null;
+  view?: string | null;
+  search?: string | null;
   branchId?: string | null;
   departmentId?: string | null;
   dateFrom?: string | null;

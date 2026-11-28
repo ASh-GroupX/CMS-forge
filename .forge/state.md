@@ -1,12 +1,12 @@
 # Current State
 Date: 2026-11-28
-Status: Reports redesign deployed at c35fa298951ff9df3a8f57ab4da2b3744ff23af8
+Status: Report workspace corrections verified; production deployment pending
 Risk: High
 
-- Four report views, direct workload/department/officer drill-down, visible results and status feedback, English and Arabic.
-- Complete scoped exports use one records query. Combined-record export opens an explicit dataset chooser. Active dates/status/owner filters reach exports.
-- Summary loading avoids unused record pages; totals come from server analytics. Initial page avoids two unused record requests.
-- URL filters and session-scoped report view/officer state survive refresh and return.
-- Passed web 255/255, reports API 48/48, root 79/79 including coverage and visual/accessibility/performance, typecheck, lint, security, OpenAPI, build, and focused browser proof.
-- Independent review completed with its four blockers repaired. Production run 45813489054 passed validation and VPS deployment. Live health and revision were verified on 2026-11-28. Live signed-in UAT has not run.
-- Existing untracked outputs, tmp, uploads remain excluded.
+- Departments and officers expand details under their own row; one consolidated officer table follows record type.
+- Visible applied-filter chips; search/status/date propagate to department totals and officer records. Backup officers are included by matching assignments, with ratings scoped to the same tickets.
+- Paginated detail tables have 18 selectable fields, explicit per-user browser column save, contained scrolling, loading/error/retry/empty states.
+- Records has four status columns by two rows on desktop, responsive narrower layouts, individual card scrolling and additional status pages.
+- Review repair restores configured 1,000-row advanced export maximum and rejects excess explicitly; audit/result metadata includes limit.
+- Passed API reports 54/54, web 255/255, root 79/79 including coverage and visual/accessibility/performance, focused EN/AR browser proof, typecheck, lint, security, OpenAPI and build. Screenshots inspected. Fresh reviewer verified both blockers repaired and reported no remaining blocker.
+- Signed-in live UAT Not Run. Existing outputs, tmp, uploads remain excluded.

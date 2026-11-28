@@ -50,9 +50,7 @@ export async function fetchComplaintsOfficersPerformance(
   hasExplicitDate = true,
 ): Promise<OfficerComplaintPerformance[]> {
   const userWhere: Prisma.UserWhereInput = {
-    isActive: true,
-    ...(filter.departmentId ? { departmentId: filter.departmentId } : {}),
-    ...(filter.branchId ? { branchId: filter.branchId } : {}),
+    ownedComplaints: { some: buildComplaintWhere(filter) },
   };
 
   const users = await prisma.user.findMany({
@@ -63,6 +61,7 @@ export async function fetchComplaintsOfficersPerformance(
       nameAr: true,
       role: { select: { nameEn: true } },
       ownedComplaints: {
+        where: buildComplaintWhere(filter),
         select: {
           id: true,
           status: true,
@@ -73,21 +72,15 @@ export async function fetchComplaintsOfficersPerformance(
         },
       },
     },
-    take: 50,
   });
 
   const now = new Date();
   return users.map((u) => {
     const active = u.ownedComplaints.filter((c) => !TERMINAL_COMPLAINT_STATUSES.includes(c.status as ComplaintStatus));
-    const newAssigned = hasExplicitDate
-      ? u.ownedComplaints.filter((c) => c.createdAt >= dateFrom && c.createdAt <= dateTo).length
-      : u.ownedComplaints.length;
-    const res = hasExplicitDate
-      ? u.ownedComplaints.filter((c) => c.resolvedAt && c.resolvedAt >= dateFrom && c.resolvedAt <= dateTo)
-      : u.ownedComplaints.filter((c) => c.resolvedAt != null);
-    const cls = hasExplicitDate
-      ? u.ownedComplaints.filter((c) => c.closedAt && c.closedAt >= dateFrom && c.closedAt <= dateTo).length
-      : u.ownedComplaints.filter((c) => c.closedAt != null).length;
+    const newAssigned = u.ownedComplaints.length;
+    const resolved = u.ownedComplaints.filter(row => ['RESOLVED', 'COMPLETED', 'CLOSED'].includes(row.status));
+    const res = resolved.filter(row => row.resolvedAt != null);
+    const cls = u.ownedComplaints.filter(row => row.status === 'CLOSED').length;
     const ovd = active.filter((c) => c.slaEvents.some((e) => e.type === 'BREACH')).length;
 
     const compResolved = res.filter((c) => !c.slaEvents.some((e) => e.type === 'BREACH')).length;
@@ -112,7 +105,7 @@ export async function fetchComplaintsOfficersPerformance(
       role: u.role.nameEn,
       activeWorkload: active.length,
       newAssignments: newAssigned,
-      resolved: res.length,
+      resolved: resolved.length,
       closed: cls,
       overdue: ovd,
       slaComplianceRate: slaRate,

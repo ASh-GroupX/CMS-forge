@@ -397,20 +397,33 @@ test('command-center pseudo views stay server-side and map to bounded database f
 });
 
 
-test('advanced export includes rows beyond the first thousand with the same scoped filter', async () => {
+test('advanced export rejects over-limit results instead of silently truncating scoped data', async () => {
   const service = createMockAnalyticsService();
   const offsets: number[] = [];
   service.complaintsRecords = async (filter, scope, limit = 25, offset = 0) => {
     assert.equal(filter.view, 'overdue');
     assert.equal(scope.branchId, 'branch-1');
+    assert.equal(limit, 1000);
     offsets.push(offset);
     return { items: Array.from({ length: Math.min(limit, 1003 - offset) }, (_, index) => ({
       referenceNumber: 'CMP-' + (offset + index), subject: 'Export proof',
     })) as any, total: 1003 };
   };
-  const result = await service.exportAdvanced('complaints', { view: 'overdue' }, 'csv',
-    { role: RoleCode.CR_MANAGER, branchId: 'branch-1', departmentId: null, userId: 'manager' });
+  await assert.rejects(service.exportAdvanced('complaints', { view: 'overdue' }, 'csv',
+    { role: RoleCode.CR_MANAGER, branchId: 'branch-1', departmentId: null, userId: 'manager' }), /Narrow the report filters/);
   assert.deepEqual(offsets, [0]);
-  assert.equal(result.rowCount, 1003);
-  assert.match(result.body, /CMP-1002/);
+});
+
+test('advanced record exports accept the configured boundary and return its limit', async () => {
+  const service = createMockAnalyticsService();
+  service.ticketsRecords = async (_filter, _scope, limit = 25) => {
+    assert.equal(limit, 1000);
+    return { total: 1000, items: Array.from({ length: 1000 }, (_, i) => ({ referenceNumber: 'T-' + i, title: 'At boundary' })) as any };
+  };
+  const result = await service.exportAdvanced('internal_tickets', {}, 'csv', { role: RoleCode.ADMIN });
+  assert.equal(result.rowCount, 1000);
+  assert.equal(result.rowLimit, 1000);
+  assert.match(result.body, /T-999/);
+  service.ticketsRecords = async () => ({ total: 1001, items: [] });
+  await assert.rejects(service.exportAdvanced('internal_tickets', {}, 'csv', { role: RoleCode.ADMIN }), /Narrow the report filters/);
 });

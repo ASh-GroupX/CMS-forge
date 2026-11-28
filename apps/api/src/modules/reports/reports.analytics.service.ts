@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
 import { AuditService } from '../../core/audit.service.js';
 import { ReportsComplaintsRepository } from './reports.complaints.repository.js';
@@ -8,8 +8,12 @@ import type { ComplaintsAnalyticsFilter } from './reports.complaints.js';
 import type { TicketsAnalyticsFilter } from './reports.tickets.js';
 import type { DashboardReportScope, ReportExportAudit, ReportExportFormat, ReportExportResult } from './reports.service.js';
 
-// A single row query prevents offset drift when records change during export.
-const EXPORT_ALL_ROWS = 2_147_483_647;
+import { MAX_REPORT_EXPORT_ROWS } from './reports.service.js';
+import { AppException } from '../../core/http-kernel.js';
+
+function requireBoundedExport(total: number) {
+  if (total > MAX_REPORT_EXPORT_ROWS) throw new AppException('VALIDATION_FAILED', `Export exceeds ${MAX_REPORT_EXPORT_ROWS} rows. Narrow the report filters and try again.`, HttpStatus.BAD_REQUEST);
+}
 
 @Injectable()
 export class ReportsAnalyticsService {
@@ -72,7 +76,9 @@ export class ReportsAnalyticsService {
     let rows: Array<string | number | null>[] = [];
 
     if (type === 'complaints') {
-      const items = (await this.complaintsRecords(filter, scope, EXPORT_ALL_ROWS, 0)).items;
+      const result = await this.complaintsRecords(filter, scope, MAX_REPORT_EXPORT_ROWS, 0);
+      requireBoundedExport(result.total);
+      const items = result.items;
       headers = ['Reference', 'Subject', 'Status', 'Severity', 'Customer', 'Phone', 'Department', 'Owner', 'Created At', 'Resolved At', 'Closed At'];
       rows = items.map((r) => [
         r.referenceNumber,
@@ -88,7 +94,9 @@ export class ReportsAnalyticsService {
         r.closedAt,
       ]);
     } else if (type === 'internal_tickets') {
-      const items = (await this.ticketsRecords(filter, scope, EXPORT_ALL_ROWS, 0)).items;
+      const result = await this.ticketsRecords(filter, scope, MAX_REPORT_EXPORT_ROWS, 0);
+      requireBoundedExport(result.total);
+      const items = result.items;
       headers = ['Reference', 'Title', 'Status', 'Priority', 'Creating Department', 'Handling Department', 'Requested By', 'Assigned To', 'Created At', 'Due At', 'Resolved At'];
       rows = items.map((r) => [
         r.referenceNumber,
@@ -174,6 +182,7 @@ export class ReportsAnalyticsService {
       ]);
     }
 
+    requireBoundedExport(rows.length);
     await this.auditService?.record({
       eventType: 'REPORT',
       action: 'report_exported',
@@ -184,7 +193,7 @@ export class ReportsAnalyticsService {
       correlationId: audit.correlationId ?? null,
       ipAddress: audit.ipAddress ?? null,
       userAgent: audit.userAgent ?? null,
-      metadata: { type, format, rowCount: rows.length, filter },
+      metadata: { type, format, rowCount: rows.length, rowLimit: MAX_REPORT_EXPORT_ROWS, filter },
     });
 
     const prefix = format === 'csv' ? '\uFEFF' : '';
@@ -199,7 +208,7 @@ export class ReportsAnalyticsService {
       contentType: format === 'csv' ? 'text/csv; charset=utf-8' : 'application/vnd.ms-excel; charset=utf-8',
       body: `${body}\n`,
       rowCount: rows.length,
-      rowLimit: rows.length,
+      rowLimit: MAX_REPORT_EXPORT_ROWS,
     };
   }
 }

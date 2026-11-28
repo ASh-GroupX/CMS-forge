@@ -1,6 +1,7 @@
 'use client';
 import { useReportUrl } from './use-report-url';
-import { OfficerPerformanceTable } from './officer-performance-table';
+import { DepartmentWorkspace } from './department-workspace';
+import { ReportActiveFilters } from './report-active-filters';
 import { Button } from '../ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { reportWorkspaceText } from '../../i18n/report-workspace';
@@ -15,7 +16,6 @@ import type {
   TicketsAnalyticsResponse,
 } from '../../lib/staff-reports-analytics-api';
 import { UnifiedFilterBar, type RecordTypeFilter, type DatePresetFilter } from './unified-filter-bar';
-import { DepartmentComparisonView } from './department-comparison-view';
 import { EnterpriseKpiGrid } from './enterprise-kpi-grid';
 import { EnterpriseAnalyticsCharts } from './enterprise-analytics-charts';
 import { ReportStatusBoard } from './report-status-board';
@@ -121,10 +121,6 @@ export function EnterpriseReportsDashboard({
     return reportData.departments.filter((d) => {
       if (selectedBranchId && d.branchId !== selectedBranchId) return false;
       if (selectedDeptId && d.departmentId !== selectedDeptId) return false;
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        if (!d.nameEn.toLowerCase().includes(q) && !d.nameAr.toLowerCase().includes(q)) return false;
-      }
       return true;
     });
   }, [reportData.departments, selectedBranchId, selectedDeptId, search]);
@@ -186,6 +182,7 @@ export function EnterpriseReportsDashboard({
         onExportCsv={handleExportCsv}
       />
 
+      <ReportActiveFilters locale={locale} criteria={criteria} departments={departments} branches={branches} onClear={handleClearAll} />
       <p className="text-sm text-muted-foreground">{copy.periodNote}</p>
       {reportData.state === 'loading' && <p role="status">{copy.loading}</p>}
       {reportData.state === 'error' && <div role="alert" className="flex items-center gap-3 text-destructive">
@@ -196,24 +193,8 @@ export function EnterpriseReportsDashboard({
           {Object.entries(copy.views).map(([key, label]) => <TabsTrigger key={key} value={key}>{label}</TabsTrigger>)}
         </TabsList>
         <TabsContent value="departments" className="space-y-6">
-        <DepartmentComparisonView
-          locale={locale}
-          departments={filteredDepartments}
-          selectedDeptId={selectedDeptId}
-          onSelectDepartment={(deptId) => {
-            setOfficerId(null); setSelectedDeptId(deptId); setSelectedStatus(null);
-            setResultTitle(departments.find(department => department.id === deptId)?.name ?? copy.views.records);
-            setView('records');
-          }}
-          onExportCsv={handleExportCsv}
-        />
-
-        {reportData.complaintsAnalytics && <OfficerPerformanceTable locale={locale}
-          officers={reportData.complaintsAnalytics.officers.map(officer => ({ ...officer, id: officer.officerId, name: locale === 'ar' ? officer.nameAr : officer.nameEn, complianceRate: officer.slaComplianceRate, avgTat: officer.avgResolutionHours, tatUnit: 'hours' as const }))}
-          onSelectOfficer={id => { setOfficerId(id); setRecordType('complaints'); setSelectedStatus(null); setResultTitle(copy.complaints); setView('records'); }} />}
-        {reportData.ticketsAnalytics && <OfficerPerformanceTable locale={locale} isTickets
-          officers={reportData.ticketsAnalytics.officers.map(officer => ({ ...officer, id: officer.employeeId, name: locale === 'ar' ? officer.nameAr : officer.nameEn, complianceRate: officer.onTimeRate, avgTat: officer.avgResolutionDays, tatUnit: 'days' as const }))}
-          onSelectOfficer={id => { setOfficerId(id); setRecordType('tickets'); setSelectedStatus(null); setResultTitle(copy.tickets); setView('records'); }} />}
+        <DepartmentWorkspace locale={locale} departments={filteredDepartments} criteria={criteria}
+          complaints={reportData.complaintsAnalytics} tickets={reportData.ticketsAnalytics} />
         </TabsContent>
         <TabsContent value="overview" className="space-y-6">
           <EnterpriseKpiGrid

@@ -1,3 +1,4 @@
+import { checkDepartmentWorkspace } from './report-department-browser-check.mjs';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { createServer } from 'node:http';
@@ -32,7 +33,7 @@ const server = createServer((req, res) => {
     res.setHeader('Content-Type', req.url.endsWith('.js') ? 'text/javascript' : 'text/css');
     return res.end(readFileSync(`${output}${req.url}`));
   }
-  const locale = req.url?.includes('ar') ? 'ar' : 'en';
+  const locale = new URL(req.url, 'http://localhost').searchParams.get('locale') === 'ar' ? 'ar' : 'en';
   const query = new URL(req.url, 'http://localhost').searchParams;
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.end(`<!doctype html><html lang="${locale}"><head><link rel="stylesheet" href="/proof.css"></head><body><div id="root">${renderToString(React.createElement(Fixture, { locale, status: query.get('status'), from: query.get('from') }))}</div><script src="/fixture.js"></script></body></html>`);
@@ -89,5 +90,6 @@ try {
     assert.deepEqual(errors, []);
     await page.close();
   }
+  for (const locale of ['en', 'ar']) await checkDepartmentWorkspace(browser, 'http://127.0.0.1:' + server.address().port, output, locale);
   console.log('Report workspace click and keyboard drill-down passed EN/AR.');
 } finally { await browser.close(); await new Promise(done => server.close(done)); }

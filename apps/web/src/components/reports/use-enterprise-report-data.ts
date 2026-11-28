@@ -115,7 +115,7 @@ export function buildReportQuery(criteria: EnterpriseReportCriteria) {
       status: !pseudoView && normalizedStatus && ticketStatuses.has(normalizedStatus) ? normalizedStatus : null,
       view: ticketView,
     },
-    department: { branchId: criteria.branchId, departmentId: criteria.departmentId, dateFrom: dates.from, dateTo: dates.to },
+    department: { branchId: criteria.branchId, departmentId: criteria.departmentId, dateFrom: dates.from, dateTo: dates.to, search: criteria.search.trim() || null, status: pseudoView ? null : normalizedStatus, view: pseudoView },
   };
 }
 

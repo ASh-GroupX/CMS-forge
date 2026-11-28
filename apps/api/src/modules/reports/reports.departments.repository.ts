@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { ComplaintStatus, InternalTicketStatus, RoleCode } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
-import { parseDateRange } from './reports.complaints.js';
+import { departmentRecordFilters } from './reports.department-filters.js';
+import { buildTicketWhere } from './reports.tickets.js';
+import { buildComplaintWhere } from './reports.complaints.js';
 import type { DashboardReportScope } from './reports.service.js';
 
 export type DepartmentPerformanceFilter = {
+  status?: string | null;
+  view?: string | null;
+  search?: string | null;
   branchId?: string | null;
   departmentId?: string | null;
   dateFrom?: string | null;
@@ -92,19 +97,15 @@ export class ReportsDepartmentsRepository {
       return [];
     }
 
-    const { dateFrom, dateTo } = parseDateRange(filter.dateFrom, filter.dateTo);
     const now = new Date();
+    const recordFilters = departmentRecordFilters({ ...filter, branchId: effectiveBranchId });
     const deptIds = departments.map((d) => d.id);
 
     const [tickets, sentTickets, complaints] = await Promise.all([
       this.prisma.internalTicket.findMany({
         where: {
+          ...buildTicketWhere(recordFilters.tickets),
           targetDepartmentId: { in: deptIds },
-          OR: [
-            { createdAt: { gte: dateFrom, lte: dateTo } },
-            { status: { notIn: TERMINAL_TICKETS } },
-            { resolvedAt: { gte: dateFrom, lte: dateTo } },
-          ],
         },
         select: {
           id: true,
@@ -118,8 +119,7 @@ export class ReportsDepartmentsRepository {
       }),
       this.prisma.internalTicket.findMany({
         where: {
-          requestedBy: { departmentId: { in: deptIds } },
-          createdAt: { gte: dateFrom, lte: dateTo },
+          AND: [buildTicketWhere(recordFilters.tickets), { requestedBy: { departmentId: { in: deptIds } } }],
         },
         select: {
           id: true,
@@ -128,12 +128,8 @@ export class ReportsDepartmentsRepository {
       }),
       this.prisma.complaint.findMany({
         where: {
+          ...buildComplaintWhere(recordFilters.complaints),
           departmentId: { in: deptIds },
-          OR: [
-            { createdAt: { gte: dateFrom, lte: dateTo } },
-            { status: { notIn: TERMINAL_COMPLAINTS } },
-            { resolvedAt: { gte: dateFrom, lte: dateTo } },
-          ],
         },
         select: {
           id: true,
@@ -143,6 +139,7 @@ export class ReportsDepartmentsRepository {
           resolvedAt: true,
           firstResponseAt: true,
           customerId: true,
+          slaEvents: { select: { type: true } },
         },
       }),
     ]);
@@ -153,9 +150,7 @@ export class ReportsDepartmentsRepository {
       const deptComplaints = complaints.filter((c) => c.departmentId === dept.id);
       const uniqueCustomers = new Set(deptComplaints.map((c) => c.customerId || c.id)).size;
 
-      const createdTickets = deptTickets.filter(
-        (t) => t.createdAt >= dateFrom && t.createdAt <= dateTo,
-      );
+      const createdTickets = deptTickets;
       const openTickets = deptTickets.filter((t) => !TERMINAL_TICKETS.includes(t.status));
       const inProgressTickets = openTickets.filter((t) =>
         t.status === InternalTicketStatus.ASSIGNED || t.status === InternalTicketStatus.IN_PROGRESS,
@@ -166,10 +161,7 @@ export class ReportsDepartmentsRepository {
       const unassignedTickets = openTickets.filter((t) => !t.assignedEmployeeId);
       const resolvedTickets = deptTickets.filter(
         (t) =>
-          (t.status === InternalTicketStatus.RESOLVED || t.status === InternalTicketStatus.CLOSED) &&
-          t.resolvedAt &&
-          t.resolvedAt >= dateFrom &&
-          t.resolvedAt <= dateTo,
+          (t.status === InternalTicketStatus.RESOLVED || t.status === InternalTicketStatus.CLOSED),
       );
       const overdueTickets = openTickets.filter((t) => t.dueAt && t.dueAt < now);
 
@@ -193,9 +185,7 @@ export class ReportsDepartmentsRepository {
           ? Math.round((ticketsOnTimeCount / resolvedTickets.length) * 100)
           : 100;
 
-      const createdComplaints = deptComplaints.filter(
-        (c) => c.createdAt >= dateFrom && c.createdAt <= dateTo,
-      );
+      const createdComplaints = deptComplaints;
       const openComplaints = deptComplaints.filter(
         (c) => !TERMINAL_COMPLAINTS.includes(c.status),
       );
@@ -203,13 +193,10 @@ export class ReportsDepartmentsRepository {
         (c) =>
           (c.status === ComplaintStatus.RESOLVED ||
             c.status === ComplaintStatus.COMPLETED ||
-            c.status === ComplaintStatus.CLOSED) &&
-          c.resolvedAt &&
-          c.resolvedAt >= dateFrom &&
-          c.resolvedAt <= dateTo,
+            c.status === ComplaintStatus.CLOSED),
       );
       const overdueComplaints = openComplaints.filter(
-        (c) => (now.getTime() - c.createdAt.getTime()) / (1000 * 60 * 60) > 48,
+        (c) => c.slaEvents.some(event => event.type === 'BREACH'),
       );
 
       let complaintsTatTotalHours = 0;

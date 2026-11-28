@@ -87,12 +87,9 @@ export async function fetchTicketsOfficersPerformance(
   dateTo: Date,
   hasExplicitDate = true,
 ): Promise<OfficerTicketPerformance[]> {
-  const deptId = filter.targetDepartmentId;
   const users = await prisma.user.findMany({
     where: {
-      isActive: true,
-      ...(deptId ? { departmentId: deptId } : {}),
-      ...(filter.branchId ? { branchId: filter.branchId } : {}),
+      assignedInternalTickets: { some: buildTicketWhere(filter) },
     },
     select: {
       id: true,
@@ -102,6 +99,7 @@ export async function fetchTicketsOfficersPerformance(
       department: { select: { id: true, nameEn: true, nameAr: true } },
       role: { select: { nameEn: true } },
       assignedInternalTickets: {
+        where: buildTicketWhere(filter),
         select: {
           id: true,
           status: true,
@@ -111,24 +109,18 @@ export async function fetchTicketsOfficersPerformance(
           closedAt: true,
         },
       },
-      employeeTicketRatings: { select: { score: true } },
+      employeeTicketRatings: { where: { ticket: buildTicketWhere(filter) }, select: { score: true } },
     },
-    take: 50,
   });
 
   const now = new Date();
   return users.map((u) => {
     const tickets = u.assignedInternalTickets;
     const active = tickets.filter((t) => !TERMINAL_TICKET_STATUSES.includes(t.status as InternalTicketStatus));
-    const newAssigned = hasExplicitDate
-      ? tickets.filter((t) => t.createdAt >= dateFrom && t.createdAt <= dateTo).length
-      : tickets.length;
-    const res = hasExplicitDate
-      ? tickets.filter((t) => t.resolvedAt && t.resolvedAt >= dateFrom && t.resolvedAt <= dateTo)
-      : tickets.filter((t) => t.resolvedAt != null);
-    const cls = hasExplicitDate
-      ? tickets.filter((t) => t.closedAt && t.closedAt >= dateFrom && t.closedAt <= dateTo).length
-      : tickets.filter((t) => t.closedAt != null).length;
+    const newAssigned = tickets.length;
+    const resolved = tickets.filter(row => ['RESOLVED', 'CLOSED'].includes(row.status));
+    const res = resolved.filter(row => row.resolvedAt != null);
+    const cls = tickets.filter(row => row.status === 'CLOSED').length;
     const ovd = active.filter((t) => t.dueAt && t.dueAt < now).length;
 
     const onTime = res.filter((t) => t.dueAt && t.resolvedAt! <= t.dueAt).length;
@@ -160,7 +152,7 @@ export async function fetchTicketsOfficersPerformance(
       role: u.role.nameEn,
       activeWorkload: active.length,
       newAssignments: newAssigned,
-      resolved: res.length,
+      resolved: resolved.length,
       closed: cls,
       overdue: ovd,
       onTimeRate,

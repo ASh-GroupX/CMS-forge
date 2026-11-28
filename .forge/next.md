@@ -1,10 +1,15 @@
-# Reports redesign release
-Status: Completed
+# Report workspace corrections
+Status: Verified; deploy and verify live revision
 Date: 2026-11-28
 Risk: High
 Model tier: T3_HIGH
 SRS: REQ-REPORT-001, ARCH-UI-001, UI-DESIGN-001
 
-Delivered in bounded slices: workspace navigation and visible drill-down; query/filter consistency and deferred record fetching; complete scoped exports and verification. Overview, Trends, Departments and officers, and Records share filters. Officer and workload clicks open visible records with keyboard focus. URL and session state preserve report context. Existing report dates explicitly mean creation dates. Mixed-record rates are not presented as a synthesized rate.
+User correction supersedes department navigation design. Implement in three bounded slices:
+1. Type-aware department and single officer summary, inline row expansion with clear filter scope.
+2. Server-paginated detail table with customizable explicitly saved per-user columns and full available record fields.
+3. Desktop Records grid of four columns and two rows per status page, independent card scrolling and load-more, responsive narrower layouts.
 
-Passed web 255/255, reports API 48/48, root 79/79 with coverage and visual/accessibility/performance proof, typecheck, lint, OpenAPI, security, production build, EN/AR workspace click/keyboard/URL restore/export chooser proof, and inspected screenshots. Fresh phase review blockers were repaired and re-reviewed with no remaining blocking finding. Production run 45813489054 passed validation and VPS deployment. Live health and revision were verified on 2026-11-28.
+Verify focused English/Arabic browser interactions, column save/reload, selected-type requests, counts, expand/collapse, eight-card desktop geometry and independent scroll. Run applicable API/web/typecheck/lint/OpenAPI/build checks and fresh review. Deployment authorized after verification.
+
+Review repair slice: restore the established 1,000-row export limit (REQ-REPORT-001 AC3), reject excess results explicitly, and test scoped rejection; prior maxint export violated the SRS.

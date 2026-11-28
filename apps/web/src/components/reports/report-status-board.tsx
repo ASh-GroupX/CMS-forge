@@ -7,14 +7,13 @@ import { ArrowRight, CalendarClock, UserRound } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import type { Locale } from '../../i18n/staff-shell';
 import { reportsAnalyticsI18n } from '../../i18n/staff-reports-analytics';
 import type { ComplaintRecordRow, TicketRecordRow } from '../../lib/staff-reports-analytics-api';
 import { fetchComplaintsRecords, fetchTicketsRecords } from '../../lib/staff-reports-analytics-api';
 import { reportRecordDetailHref, type ReportReturnContext } from '../../lib/staff-report-navigation';
 import { ReportBoardFilters } from './report-board-filters';
+import { reportDetailText } from '../../i18n/report-detail-workspace';
 import { ReportColumnSelector } from './report-column-selector';
 
 type Item = {
@@ -105,6 +104,9 @@ export function ReportStatusBoard({
   externalDateFrom, externalDateTo, dateDimension, returnTo = 'reports', selectedStatus, filterExtras,
 }: Props) {
   const ar = locale === 'ar';
+  const detailCopy = reportDetailText[locale];
+  const [statusPage, setStatusPage] = useState(0);
+  useEffect(() => setStatusPage(0), [type, selectedStatus]);
   const copy = reportsAnalyticsI18n[locale].statusBoard;
   const [boardDepartmentId, setBoardDepartmentId] = useStaffUiState("boardDepartmentId", departmentId);
   const [from, setFrom] = useStaffUiState("from", externalDateFrom || '');
@@ -142,7 +144,7 @@ export function ReportStatusBoard({
     setLoadingMore(null);
     setMoreFailed(null);
     setColumns(emptyColumns());
-    const filterFor = (status: string) => buildStatusBoardFilters({ from: activeFrom, to: activeTo, search, branchId, departmentId: boardDepartmentId, status, ...(view ? { view } : {}), ...(dateDimension ? { dateDimension } : {}), ...(filterExtras ? { extras: filterExtras } : {}) });
+    const filterFor = (status: string) => buildStatusBoardFilters({ from: activeFrom, to: activeTo, search, branchId, departmentId: showBoardFilters ? boardDepartmentId : departmentId, status, ...(view ? { view } : {}), ...(dateDimension ? { dateDimension } : {}), ...(filterExtras ? { extras: filterExtras } : {}) });
     const ticketRequests = type === 'complaints' ? [] : ticketStatuses.filter(matchesStatus).map(async (status) => {
       const result = await fetchTicketsRecords(filterFor(status).tickets, pageSize, 0, undefined, undefined, { signal: controller.signal });
       if (!result) throw new Error('Report board request failed');
@@ -174,7 +176,7 @@ export function ReportStatusBoard({
       }
     });
     return () => controller.abort();
-  }, [boardDepartmentId, branchId, search, type, activeFrom, activeTo, dateDimension, selectedStatus, filterExtras, reload]);
+  }, [boardDepartmentId, departmentId, showBoardFilters, branchId, search, type, activeFrom, activeTo, dateDimension, selectedStatus, filterExtras, reload]);
 
   const toTicketItem = (t: TicketRecordRow): Item => ({
       id: t.id, type: 'ticket', ref: t.referenceNumber, title: t.title, status: t.status, kind: copy.ticket,
@@ -193,7 +195,7 @@ export function ReportStatusBoard({
     const version = filterVersion.current;
     setLoadingMore(status);
     setMoreFailed(null);
-    const filter = buildStatusBoardFilters({ from: activeFrom, to: activeTo, search, branchId, departmentId: boardDepartmentId, status, ...(view ? { view } : {}), ...(dateDimension ? { dateDimension } : {}), ...(filterExtras ? { extras: filterExtras } : {}) });
+    const filter = buildStatusBoardFilters({ from: activeFrom, to: activeTo, search, branchId, departmentId: showBoardFilters ? boardDepartmentId : departmentId, status, ...(view ? { view } : {}), ...(dateDimension ? { dateDimension } : {}), ...(filterExtras ? { extras: filterExtras } : {}) });
     try {
       const [ticketPage, complaintPage] = await Promise.all([
         type !== 'complaints' && column.ticketOffset < column.ticketTotal
@@ -223,7 +225,10 @@ export function ReportStatusBoard({
     }
   };
 
-  const displayedStatuses = showBoardFilters ? visibleStatuses : statuses.filter(status => matchesStatus(status) && ((columns[status]?.ticketTotal ?? 0) + (columns[status]?.complaintTotal ?? 0) > 0));
+  const statusOrder = ['NEW', 'SUBMITTED', 'ASSIGNED', 'IN_PROGRESS', 'WAITING', 'REOPENED', 'RESOLVED', 'CLOSED', ...statuses.filter(status => !['NEW', 'SUBMITTED', 'ASSIGNED', 'IN_PROGRESS', 'WAITING', 'REOPENED', 'RESOLVED', 'CLOSED'].includes(status))];
+  const displayedStatuses = showBoardFilters ? visibleStatuses : statusOrder.filter(status => matchesStatus(status) && (type === 'all' || (type === 'tickets' ? ticketStatuses : complaintStatuses).includes(status)));
+  const statusPages = Math.max(1, Math.ceil(displayedStatuses.length / 8));
+  const pageStatuses = showBoardFilters ? displayedStatuses : displayedStatuses.slice(statusPage * 8, (statusPage + 1) * 8);
   const loadedTotal = displayedStatuses.reduce((sum, status) => sum + (columns[status]?.ticketTotal ?? 0) + (columns[status]?.complaintTotal ?? 0), 0);
 
   const dateFormatter = useMemo(() => new Intl.DateTimeFormat(ar ? 'ar-JO' : 'en-GB', {
@@ -240,25 +245,30 @@ export function ReportStatusBoard({
         {showBoardFilters && <ReportBoardFilters locale={locale} departmentId={boardDepartmentId} departments={departments} from={from} to={to} onDepartment={setBoardDepartmentId} onFrom={setFrom} onTo={setTo} />}
         {showBoardFilters && <ReportColumnSelector locale={locale} statuses={statuses} selected={visibleStatuses} onChange={setVisibleStatuses} />}
       </div>
+      {!showBoardFilters && statusPages > 1 && <nav aria-label={detailCopy.statusPages} className="flex items-center justify-end gap-3">
+        <Button size="sm" variant="outline" disabled={statusPage === 0} onClick={() => setStatusPage(statusPage - 1)}>{detailCopy.previous}</Button>
+        <span className="text-sm">{detailCopy.page} {statusPage + 1} / {statusPages}</span>
+        <Button size="sm" variant="outline" disabled={statusPage + 1 >= statusPages} onClick={() => setStatusPage(statusPage + 1)}>{detailCopy.next}</Button>
+      </nav>}
       {loading && <p role="status" className="text-sm text-muted-foreground">{copy.loading}</p>}
       {failed && <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-destructive">
         <span>{copy.failed}</span>
         <Button type="button" variant="outline" size="sm" onClick={() => setReload((n) => n + 1)}>{copy.retry}</Button>
       </div>}
       {!loading && !failed && loadedTotal === 0 && <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">{copy.noMatches}</p>}
-      <div role="region" aria-label={copy.title} tabIndex={0} className={showBoardFilters ? "flex gap-3 overflow-x-auto pb-2" : "grid gap-4"}>
-        {displayedStatuses.map((status) => {
+      <div role="region" aria-label={copy.title} tabIndex={0} className={showBoardFilters ? "flex gap-3 overflow-x-auto pb-2" : "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"}>
+        {pageStatuses.map((status) => {
           const column = columns[status] ?? emptyColumn();
           const group = [...column.tickets.map(toTicketItem), ...column.complaints.map(toComplaintItem)];
           const total = column.ticketTotal + column.complaintTotal;
           const hasMore = column.ticketOffset < column.ticketTotal || column.complaintOffset < column.complaintTotal;
           const nextCount = Math.min(pageSize, column.ticketTotal - column.ticketOffset) + Math.min(pageSize, column.complaintTotal - column.complaintOffset);
           const statusLabel = copy.statuses[status as keyof typeof copy.statuses] ?? status;
-          return <section key={status} aria-label={statusLabel} className={showBoardFilters ? "w-[min(21rem,85vw)] shrink-0 rounded-xl border bg-muted/20 p-3" : "min-w-0 rounded-xl border bg-muted/20 p-3"}>
+          return <section key={status} aria-label={statusLabel} className={showBoardFilters ? "w-[min(21rem,85vw)] shrink-0 rounded-xl border bg-muted/20 p-3" : "flex min-w-0 flex-col rounded-xl border bg-muted/20 p-3"}>
             <header className="mb-3 flex items-center justify-between">
               <h4 className="text-sm font-bold">{statusLabel}</h4><Badge variant="outline">{total}</Badge>
             </header>
-            <div role="region" aria-label={statusLabel} tabIndex={0} className={showBoardFilters ? "max-h-[38rem] space-y-2 overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md" : "grid gap-3 md:grid-cols-2 xl:grid-cols-3"}>
+            <div role="region" aria-label={statusLabel} tabIndex={0} className={showBoardFilters ? "max-h-[38rem] space-y-2 overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md" : "h-[24rem] space-y-3 overflow-y-auto overscroll-contain rounded-md pe-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"}>
               {group.map((item) => <article key={`${item.kind}-${item.id}`} className="rounded-lg border bg-card p-3 shadow-xs">
                 <div className="flex justify-between gap-2"><Link href={reportRecordDetailHref(item.type, item.id, locale, returnTo)} className="text-xs font-bold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">{item.ref}</Link><Badge variant="outline" className="text-[10px]">{item.kind}</Badge></div>
                 <p className="mt-2 break-words text-sm font-semibold leading-snug">{item.title}</p>

@@ -215,6 +215,9 @@ export class ReportsController {
   async departmentPerformance(@Query() query: Record<string, string | undefined>, @Req() request: AuthenticatedRequest) {
     return this.analyticsService?.departmentPerformance(
       {
+        status: optionalText(query.status),
+        view: optionalText(query.view),
+        search: optionalText(query.search),
         branchId: optionalText(query.branchId),
         departmentId: optionalText(query.departmentId),
         dateFrom: optionalText(query.dateFrom),
